@@ -38,6 +38,8 @@ export function UserNav() {
         }
       });
 
+    if (!supabase) return;
+
     supabase.auth.getUser().then(({ data }) => {
       if (!data.user) {
         return;
@@ -63,7 +65,7 @@ export function UserNav() {
     });
 
     return () => subscription.unsubscribe();
-  }, [supabase.auth]);
+  }, [supabase]);
 
   if (!user) {
     return (
@@ -90,7 +92,7 @@ export function UserNav() {
     if (user.isDemo) {
       await fetch("/api/dev-logout", { method: "POST" });
     } else {
-      await supabase.auth.signOut();
+      await supabase?.auth.signOut();
     }
     router.push("/");
     router.refresh();

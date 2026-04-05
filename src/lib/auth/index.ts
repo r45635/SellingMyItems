@@ -23,6 +23,9 @@ export async function getUser() {
   }
 
   const supabase = await createSupabaseClient();
+  if (!supabase) {
+    return null;
+  }
   const {
     data: { user },
   } = await supabase.auth.getUser();
