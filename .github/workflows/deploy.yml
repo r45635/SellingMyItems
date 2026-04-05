@@ -49,13 +49,14 @@ jobs:
             docker compose down --remove-orphans || true
             docker compose up -d
 
+            # Reconnect Caddy reverse proxy to app network
+            echo "==> Reconnecting Caddy to app network..."
+            docker network connect sellingmyitems_default caddy 2>/dev/null || true
+
             # Post-deploy cleanup
             echo "==> Post-deploy prune..."
             docker image prune -af
             docker builder prune -af 2>/dev/null || true
-
-            echo "==> Disk space AFTER deploy:"
-            df -h / | tail -1
 
             echo "==> Disk space AFTER deploy:"
             df -h / | tail -1
