@@ -56,7 +56,7 @@ export function ItemTeaserCard({
           </Badge>
         )}
       </div>
-      <CardContent className="p-3">
+      <CardContent className="p-2.5">
         <h3 className="font-medium text-base sm:text-sm line-clamp-2 group-hover:text-orange-600 transition-colors">{title}</h3>
         {formattedDate && (
           <p className="text-xs text-muted-foreground mt-1">{formattedDate}</p>

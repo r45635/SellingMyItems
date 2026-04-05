@@ -27,7 +27,9 @@
     "hero": "Find unique items near you",
     "subtitle": "Browse projects and discover items for sale in your area",
     "browseProjects": "Browse projects",
-    "signInPrompt": "Sign in to see full item details, save favorites, and contact sellers"
+    "signInPrompt": "Sign in to see full item details, save favorites, and contact sellers",
+    "itemsForSale": "{count, plural, one {# item} other {# items}}",
+    "inSelection": "{count} in selection"
   },
   "auth": {
     "signIn": "Sign in",

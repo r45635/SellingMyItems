@@ -27,7 +27,9 @@
     "hero": "Trouvez des articles uniques près de chez vous",
     "subtitle": "Parcourez les projets et découvrez des articles en vente dans votre zone",
     "browseProjects": "Parcourir les projets",
-    "signInPrompt": "Connectez-vous pour voir les détails, sauvegarder vos favoris et contacter les vendeurs"
+    "signInPrompt": "Connectez-vous pour voir les détails, sauvegarder vos favoris et contacter les vendeurs",
+    "itemsForSale": "{count, plural, one {# article} other {# articles}}",
+    "inSelection": "{count} dans la sélection"
   },
   "auth": {
     "signIn": "Se connecter",

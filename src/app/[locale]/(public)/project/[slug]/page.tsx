@@ -44,7 +44,7 @@ export default async function ProjectPage({
     .orderBy(asc(items.sortOrder), asc(items.createdAt));
 
   return (
-    <div className="container px-4 md:px-6 py-8">
+    <div className="container px-4 md:px-6 py-6">
       <Link
         href="/"
         className="mb-6 inline-flex h-7 items-center gap-1 rounded-lg px-2.5 text-base sm:text-sm text-muted-foreground transition-all hover:bg-muted hover:text-foreground"
@@ -54,7 +54,7 @@ export default async function ProjectPage({
       </Link>
 
       {/* Project Header */}
-      <div className="mb-10">
+      <div className="mb-6">
         <h1 className="text-3xl font-extrabold tracking-tight mb-2">{project.name}</h1>
         {project.cityArea && (
           <div className="flex items-center gap-1.5 text-muted-foreground mb-4">
@@ -68,7 +68,7 @@ export default async function ProjectPage({
           </p>
         )}
         {categories.length > 0 && (
-          <div className="flex gap-2 mt-4 flex-wrap">
+          <div className="flex gap-2 mt-3 flex-wrap">
             {categories.map((category) => (
               <Badge key={category.id} variant="outline" className="rounded-full">
                 {category.name}
@@ -81,11 +81,11 @@ export default async function ProjectPage({
       {/* Items Grid */}
       {projectItems.length > 0 ? (
         <>
-          <div className="flex items-center gap-2 mb-6">
+          <div className="flex items-center gap-2 mb-4">
             <Package className="h-5 w-5 text-orange-500" />
             <h2 className="text-lg font-semibold">{projectItems.length} item{projectItems.length !== 1 ? "s" : ""}</h2>
           </div>
-          <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
+          <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
             {projectItems.map((item) => (
               <ItemTeaserCard
                 key={item.id}

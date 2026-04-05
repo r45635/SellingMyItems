@@ -99,15 +99,15 @@ export default async function WishlistPage() {
   const globalSummary = computeSummary(rows);
 
   return (
-    <div className="container px-4 md:px-6 py-8">
-      <h1 className="text-2xl font-bold mb-6">{t("title")}</h1>
+    <div className="container px-4 md:px-6 py-6">
+      <h1 className="text-2xl font-bold mb-4">{t("title")}</h1>
 
       {rows.length === 0 ? (
         <div className="rounded-lg border p-6 text-center text-muted-foreground">
           {t("empty")}
         </div>
       ) : (
-        <div className="space-y-8">
+        <div className="space-y-6">
           {Array.from(byProject.entries()).map(
             ([projectId, { projectName, projectSlug, items: projectItems }]) => {
               const projectSummary = computeSummary(projectItems);
@@ -334,7 +334,7 @@ export default async function WishlistPage() {
           )}
 
           {/* Global summary card */}
-          <div className="rounded-xl border-2 border-primary/20 bg-primary/5 p-5 space-y-3">
+          <div className="rounded-xl border-2 border-primary/20 bg-primary/5 p-4 space-y-3">
             <h3 className="font-bold text-lg">{t("summaryTitle")}</h3>
             <p className="text-sm text-muted-foreground">
               {t("itemCount", { count: rows.length })}
