@@ -90,58 +90,80 @@ export default async function ProjectItemsPage({
         </div>
       ) : (
         <div className="space-y-3">
-          {projectItems.map((item) => (
-            <div
-              key={item.id}
-              className="rounded-lg border p-4 flex items-center justify-between gap-4"
-            >
-              <div className="flex items-center gap-3">
-                <div className="relative h-12 w-12 shrink-0 rounded-md overflow-hidden bg-muted">
-                  {item.coverImageUrl ? (
-                    <Image
-                      src={item.coverImageUrl}
-                      alt={item.title}
-                      fill
-                      className="object-cover"
-                      sizes="48px"
-                    />
-                  ) : (
-                    <div className="flex items-center justify-center h-full">
-                      <ImageOff className="h-5 w-5 text-muted-foreground/40" />
-                    </div>
+          {projectItems.map((item) => {
+            const formattedPrice =
+              item.price != null
+                ? new Intl.NumberFormat(undefined, {
+                    style: "currency",
+                    currency: item.currency ?? "USD",
+                  }).format(item.price)
+                : null;
+
+            const badgeVariant =
+              item.status === "sold"
+                ? "destructive"
+                : item.status === "pending" || item.status === "reserved"
+                  ? "secondary"
+                  : item.status === "hidden"
+                    ? "outline"
+                    : "default";
+
+            return (
+              <div
+                key={item.id}
+                className="rounded-lg border p-4 space-y-2"
+              >
+                {/* Top row: status left, price right */}
+                <div className="flex items-center justify-between">
+                  <Badge variant={badgeVariant}>
+                    {t(`status.${item.status}`)}
+                  </Badge>
+                  {formattedPrice && (
+                    <span className="font-semibold text-primary">
+                      {formattedPrice}
+                    </span>
                   )}
                 </div>
-                <div>
-                <p className="font-medium">{item.title}</p>
-                <div className="flex items-center gap-2 mt-1">
-                  <Badge variant={item.status === "sold" ? "destructive" : item.status === "pending" ? "secondary" : "default"}>
-                    {item.status}
-                  </Badge>
-                  {item.price != null ? (
-                    <span className="text-sm text-muted-foreground">
-                      {item.price} {item.currency}
-                    </span>
-                  ) : null}
-                </div>
-                </div>
-              </div>
 
-              <div className="flex items-center gap-2">
-                <Link
-                  href={`/project/${project.slug}/item/${item.id}`}
-                  className="inline-flex h-8 items-center justify-center rounded-lg border border-border px-2.5 text-sm hover:bg-muted"
-                >
-                  Voir
-                </Link>
-                <Link
-                  href={`/seller/projects/${projectId}/items/${item.id}/edit`}
-                  className="inline-flex h-8 items-center justify-center rounded-lg bg-primary px-2.5 text-sm text-primary-foreground hover:bg-primary/80"
-                >
-                  Modifier
-                </Link>
+                {/* Content row: thumbnail + title + actions */}
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="relative h-12 w-12 shrink-0 rounded-md overflow-hidden bg-muted">
+                      {item.coverImageUrl ? (
+                        <Image
+                          src={item.coverImageUrl}
+                          alt={item.title}
+                          fill
+                          className="object-cover"
+                          sizes="48px"
+                        />
+                      ) : (
+                        <div className="flex items-center justify-center h-full">
+                          <ImageOff className="h-5 w-5 text-muted-foreground/40" />
+                        </div>
+                      )}
+                    </div>
+                    <p className="font-medium">{item.title}</p>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <Link
+                      href={`/project/${project.slug}/item/${item.id}`}
+                      className="inline-flex h-8 items-center justify-center rounded-lg border border-border px-2.5 text-sm hover:bg-muted"
+                    >
+                      Voir
+                    </Link>
+                    <Link
+                      href={`/seller/projects/${projectId}/items/${item.id}/edit`}
+                      className="inline-flex h-8 items-center justify-center rounded-lg bg-primary px-2.5 text-sm text-primary-foreground hover:bg-primary/80"
+                    >
+                      Modifier
+                    </Link>
+                  </div>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

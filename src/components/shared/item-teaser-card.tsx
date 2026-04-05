@@ -6,7 +6,7 @@ import { ImageOff } from "lucide-react";
 interface ItemTeaserCardProps {
   title: string;
   coverImageUrl?: string | null;
-  status?: "available" | "pending" | "sold";
+  status?: "available" | "pending" | "reserved" | "sold" | "hidden";
   href?: string;
 }
 
@@ -34,7 +34,7 @@ export function ItemTeaserCard({
         )}
         {status !== "available" && (
           <Badge
-            variant={status === "sold" ? "destructive" : "secondary"}
+            variant={status === "sold" ? "destructive" : status === "hidden" ? "outline" : "secondary"}
             className="absolute top-2 right-2"
           >
             {status}

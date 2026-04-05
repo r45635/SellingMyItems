@@ -243,7 +243,7 @@ export function ItemForm({
             <Label>{t("item.status")}</Label>
             <Select
               onValueChange={(value) =>
-                setValue("status", value as "available" | "pending" | "sold")
+                setValue("status", value as "available" | "pending" | "reserved" | "sold" | "hidden")
               }
               defaultValue={watch("status")}
             >
@@ -255,7 +255,9 @@ export function ItemForm({
                   {t("item.available")}
                 </SelectItem>
                 <SelectItem value="pending">{t("item.pending")}</SelectItem>
+                <SelectItem value="reserved">{t("item.reserved")}</SelectItem>
                 <SelectItem value="sold">{t("item.sold")}</SelectItem>
+                <SelectItem value="hidden">{t("item.hidden")}</SelectItem>
               </SelectContent>
             </Select>
           </div>

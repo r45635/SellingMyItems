@@ -57,7 +57,9 @@
     "status": "Statut",
     "available": "Disponible",
     "pending": "En attente",
+    "reserved": "Réservé",
     "sold": "Vendu",
+    "hidden": "Caché",
     "addToWishlist": "Ajouter à ma sélection",
     "removeFromWishlist": "Retirer de ma sélection",
     "signInToSeeDetails": "Connectez-vous pour voir les détails",
@@ -107,7 +109,14 @@
     "noItems": "Aucun article dans ce projet.",
     "intents": "Intentions d'achat",
     "messages": "Messages",
-    "settings": "Paramètres"
+    "settings": "Paramètres",
+    "status": {
+      "available": "Disponible",
+      "pending": "En attente",
+      "reserved": "Réservé",
+      "sold": "Vendu",
+      "hidden": "Caché"
+    }
   },
   "validation": {
     "required": "Ce champ est requis",

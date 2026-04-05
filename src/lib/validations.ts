@@ -36,7 +36,7 @@ export const itemFormSchema = z.object({
   currency: z.enum(["USD", "EUR", "CAD"]),
   notes: z.string().max(2000).optional(),
   categoryId: z.string().uuid().optional(),
-  status: z.enum(["available", "pending", "sold"]),
+  status: z.enum(["available", "pending", "reserved", "sold", "hidden"]),
 });
 
 export type ItemFormValues = z.infer<typeof itemFormSchema>;

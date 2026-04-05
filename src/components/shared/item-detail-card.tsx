@@ -16,7 +16,7 @@ interface ItemDetailCardProps {
   condition?: string | null;
   approximateAge?: string | null;
   notes?: string | null;
-  status?: "available" | "pending" | "sold";
+  status?: "available" | "pending" | "reserved" | "sold" | "hidden";
   categoryName?: string | null;
 }
 
@@ -67,7 +67,7 @@ export function ItemDetailCard({
       <CardHeader>
         <div className="flex items-start justify-between gap-2">
           <CardTitle className="text-xl">{title}</CardTitle>
-          <Badge variant={status === "sold" ? "destructive" : status === "pending" ? "secondary" : "default"}>
+          <Badge variant={status === "sold" ? "destructive" : status === "pending" || status === "reserved" ? "secondary" : status === "hidden" ? "outline" : "default"}>
             {status}
           </Badge>
         </div>

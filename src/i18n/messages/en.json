@@ -57,7 +57,9 @@
     "status": "Status",
     "available": "Available",
     "pending": "Pending",
+    "reserved": "Reserved",
     "sold": "Sold",
+    "hidden": "Hidden",
     "addToWishlist": "Add to wishlist",
     "removeFromWishlist": "Remove from wishlist",
     "signInToSeeDetails": "Sign in to see full details",
@@ -107,7 +109,14 @@
     "noItems": "No items in this project yet.",
     "intents": "Purchase Intents",
     "messages": "Messages",
-    "settings": "Settings"
+    "settings": "Settings",
+    "status": {
+      "available": "Available",
+      "pending": "Pending",
+      "reserved": "Reserved",
+      "sold": "Sold",
+      "hidden": "Hidden"
+    }
   },
   "validation": {
     "required": "This field is required",

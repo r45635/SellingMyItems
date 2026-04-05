@@ -15,7 +15,9 @@ import { relations } from "drizzle-orm";
 export const itemStatusEnum = pgEnum("item_status", [
   "available",
   "pending",
+  "reserved",
   "sold",
+  "hidden",
 ]);
 
 export const contactMethodEnum = pgEnum("contact_method", [
