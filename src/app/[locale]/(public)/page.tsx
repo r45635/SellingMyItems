@@ -65,27 +65,20 @@ export default async function HomePage() {
   return (
     <div className="flex flex-col">
       {/* Hero Section */}
-      <section className="relative overflow-hidden border-b bg-gradient-to-b from-orange-50/60 to-background py-10 md:py-16 lg:py-20">
+      <section className="relative overflow-hidden border-b bg-gradient-to-b from-orange-50/60 to-background py-5 md:py-6">
         <div className="container px-4 md:px-6">
-          <div className="flex flex-col items-center space-y-4 text-center">
-            <SmiLogo size="lg" showText={false} className="mb-2" />
-            <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl md:text-5xl lg:text-6xl">
-              {t("hero")}
-            </h1>
-            <p className="mx-auto max-w-[600px] text-lg text-muted-foreground md:text-xl">
-              {t("subtitle")}
-            </p>
-            <Link
-              href="/"
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-foreground px-6 text-sm font-semibold text-background shadow-lg transition-all hover:bg-foreground/90 hover:shadow-xl"
-            >
-              {t("browseProjects")}
-              <ArrowRight className="h-4 w-4" />
-            </Link>
+          <div className="flex items-center justify-center gap-4 text-center">
+            <SmiLogo size="md" showText={false} />
+            <div>
+              <h1 className="text-xl font-extrabold tracking-tight sm:text-2xl md:text-3xl">
+                {t("hero")}
+              </h1>
+              <p className="text-sm text-muted-foreground md:text-base mt-0.5">
+                {t("subtitle")}
+              </p>
+            </div>
           </div>
         </div>
-        {/* Decorative blobs */}
-        <div className="pointer-events-none absolute -top-24 left-1/2 -translate-x-1/2 h-[500px] w-[800px] rounded-full bg-orange-400/5 blur-3xl" />
       </section>
 
       {/* Sign-in prompt */}
