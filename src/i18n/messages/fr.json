@@ -82,7 +82,12 @@
     "title": "Ma sélection",
     "empty": "Votre sélection est vide",
     "sendIntent": "Envoyer une intention d'achat",
-    "removeItem": "Retirer"
+    "removeItem": "Retirer",
+    "itemCount": "{count, plural, one {# article} other {# articles}}",
+    "sellingPrice": "Prix de vente",
+    "originalValue": "Valeur d'origine",
+    "savings": "Vous économisez",
+    "summaryTitle": "Résumé de la sélection"
   },
   "intent": {
     "title": "Intention d'achat",

@@ -82,7 +82,12 @@
     "title": "My Selection",
     "empty": "Your selection is empty",
     "sendIntent": "Send purchase intent",
-    "removeItem": "Remove"
+    "removeItem": "Remove",
+    "itemCount": "{count, plural, one {# item} other {# items}}",
+    "sellingPrice": "Selling price",
+    "originalValue": "Original value",
+    "savings": "You save",
+    "summaryTitle": "Selection summary"
   },
   "intent": {
     "title": "Purchase Intent",
