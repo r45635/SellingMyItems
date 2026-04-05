@@ -124,14 +124,15 @@ export function ImageUpload({
                   Cover
                 </span>
               )}
+              {/* Always visible on touch devices, hover-only on desktop */}
               <Button
                 type="button"
                 variant="destructive"
                 size="icon"
-                className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                className="absolute top-1 right-1 h-7 w-7 sm:h-6 sm:w-6 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shadow-md"
                 onClick={() => removeImage(idx)}
               >
-                <X className="h-3 w-3" />
+                <X className="h-4 w-4 sm:h-3 sm:w-3" />
               </Button>
             </div>
           ))}
