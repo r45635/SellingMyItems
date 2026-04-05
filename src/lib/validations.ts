@@ -23,6 +23,25 @@ export const categoryFormSchema = z.object({
 
 export type CategoryFormValues = z.infer<typeof categoryFormSchema>;
 
+// ─── Item Constants ──────────────────────────────────────────────────────────
+
+export const ITEM_CONDITIONS = [
+  "new",
+  "like_new",
+  "very_good",
+  "good",
+  "fair",
+  "for_repair",
+] as const;
+
+export const ITEM_STATUSES = [
+  "available",
+  "pending",
+  "reserved",
+  "sold",
+  "hidden",
+] as const;
+
 // ─── Item Schemas ───────────────────────────────────────────────────────────
 
 export const itemFormSchema = z.object({
@@ -36,7 +55,7 @@ export const itemFormSchema = z.object({
   currency: z.enum(["USD", "EUR", "CAD"]),
   notes: z.string().max(2000).optional(),
   categoryId: z.string().uuid().optional(),
-  status: z.enum(["available", "pending", "reserved", "sold", "hidden"]),
+  status: z.enum(ITEM_STATUSES),
 });
 
 export type ItemFormValues = z.infer<typeof itemFormSchema>;

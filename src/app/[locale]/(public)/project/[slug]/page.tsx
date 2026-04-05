@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { MapPin, ArrowLeft, Package } from "lucide-react";
 import { db } from "@/db";
 import { items, projectCategories, projects } from "@/db/schema";
-import { and, asc, eq, isNull } from "drizzle-orm";
+import { and, asc, eq, isNull, ne } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { Link } from "@/i18n/navigation";
 
@@ -37,9 +37,10 @@ export default async function ProjectPage({
       title: items.title,
       coverImageUrl: items.coverImageUrl,
       status: items.status,
+      updatedAt: items.updatedAt,
     })
     .from(items)
-    .where(and(eq(items.projectId, project.id), isNull(items.deletedAt)))
+    .where(and(eq(items.projectId, project.id), isNull(items.deletedAt), ne(items.status, "hidden")))
     .orderBy(asc(items.sortOrder), asc(items.createdAt));
 
   return (
@@ -91,6 +92,7 @@ export default async function ProjectPage({
                 title={item.title}
                 coverImageUrl={item.coverImageUrl}
                 status={item.status}
+                updatedAt={item.updatedAt}
                 href={`/project/${slug}/item/${item.id}`}
               />
             ))}

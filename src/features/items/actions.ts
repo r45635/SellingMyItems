@@ -1,11 +1,13 @@
 "use server";
 
 import { requireSeller } from "@/lib/auth";
-import { itemFormSchema } from "@/lib/validations";
+import { itemFormSchema, ITEM_STATUSES } from "@/lib/validations";
 import { db } from "@/db";
 import { items, itemImages, itemLinks, projects, sellerAccounts } from "@/db/schema";
 import { and, eq, isNull } from "drizzle-orm";
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
+import { z } from "zod";
 
 const DEMO_SELLER_PROFILE_ID = "11111111-1111-1111-1111-111111111111";
 
@@ -228,7 +230,60 @@ export async function updateItemAction(formData: FormData) {
   redirect(`/seller/projects/${projectId}/items`);
 }
 
-export async function deleteItemAction(projectId: string, itemId: string) {
+const updateStatusSchema = z.object({
+  itemId: z.string().uuid(),
+  projectId: z.string().uuid(),
+  status: z.enum(ITEM_STATUSES),
+});
+
+export async function updateItemStatusAction(formData: FormData) {
+  const user = await requireSeller();
+
+  const parsed = updateStatusSchema.safeParse({
+    itemId: formData.get("itemId"),
+    projectId: formData.get("projectId"),
+    status: formData.get("status"),
+  });
+
+  if (!parsed.success) {
+    return { error: "Invalid data" };
+  }
+
+  const { itemId, projectId, status } = parsed.data;
+
+  const sellerAccountId = await getSellerAccountId(user);
+  if (!sellerAccountId) {
+    return { error: "Compte vendeur introuvable" };
+  }
+
+  const ownedProject = await db.query.projects.findFirst({
+    where: and(
+      eq(projects.id, projectId),
+      eq(projects.sellerId, sellerAccountId),
+      isNull(projects.deletedAt)
+    ),
+  });
+
+  if (!ownedProject) {
+    return { error: "Projet introuvable ou non autorisé" };
+  }
+
+  await db
+    .update(items)
+    .set({ status, updatedAt: new Date() })
+    .where(
+      and(
+        eq(items.id, itemId),
+        eq(items.projectId, projectId),
+        isNull(items.deletedAt)
+      )
+    );
+
+  revalidatePath(`/seller/projects/${projectId}/items`);
+  return { success: true };
+}
+
+export async function deleteItemAction(itemId: string, projectId: string) {
   const user = await requireSeller();
 
   const sellerAccountId = await getSellerAccountId(user);

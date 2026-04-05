@@ -59,7 +59,7 @@
     "pending": "En attente",
     "reserved": "Réservé",
     "sold": "Vendu",
-    "hidden": "Caché",
+    "hidden": "Suspendu",
     "addToWishlist": "Ajouter à ma sélection",
     "removeFromWishlist": "Retirer de ma sélection",
     "signInToSeeDetails": "Connectez-vous pour voir les détails",
@@ -67,7 +67,16 @@
     "currency": "Devise",
     "images": "Images",
     "files": "Fichiers joints",
-    "links": "Liens de référence"
+    "links": "Liens de référence",
+    "lastUpdated": "Dernière mise à jour",
+    "conditions": {
+      "new": "Neuf",
+      "like_new": "Comme neuf",
+      "very_good": "Très bon état",
+      "good": "Bon état",
+      "fair": "État correct",
+      "for_repair": "À rénover"
+    }
   },
   "wishlist": {
     "title": "Ma sélection",
@@ -115,7 +124,7 @@
       "pending": "En attente",
       "reserved": "Réservé",
       "sold": "Vendu",
-      "hidden": "Caché"
+      "hidden": "Suspendu"
     }
   },
   "validation": {

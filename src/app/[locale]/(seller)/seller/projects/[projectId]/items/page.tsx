@@ -5,9 +5,9 @@ import { requireSeller } from "@/lib/auth";
 import { db } from "@/db";
 import { items, projects, sellerAccounts } from "@/db/schema";
 import { and, desc, eq, isNull } from "drizzle-orm";
-import { Badge } from "@/components/ui/badge";
 import { notFound } from "next/navigation";
 import Image from "next/image";
+import { StatusSelect } from "@/features/items/components/status-select";
 
 const DEMO_SELLER_PROFILE_ID = "11111111-1111-1111-1111-111111111111";
 
@@ -99,15 +99,6 @@ export default async function ProjectItemsPage({
                   }).format(item.price)
                 : null;
 
-            const badgeVariant =
-              item.status === "sold"
-                ? "destructive"
-                : item.status === "pending" || item.status === "reserved"
-                  ? "secondary"
-                  : item.status === "hidden"
-                    ? "outline"
-                    : "default";
-
             return (
               <div
                 key={item.id}
@@ -115,9 +106,11 @@ export default async function ProjectItemsPage({
               >
                 {/* Top row: status left, price right */}
                 <div className="flex items-center justify-between">
-                  <Badge variant={badgeVariant}>
-                    {t(`status.${item.status}`)}
-                  </Badge>
+                  <StatusSelect
+                    itemId={item.id}
+                    projectId={projectId}
+                    currentStatus={item.status}
+                  />
                   {formattedPrice && (
                     <span className="font-semibold text-primary">
                       {formattedPrice}

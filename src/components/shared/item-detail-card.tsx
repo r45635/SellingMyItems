@@ -1,7 +1,9 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, Clock } from "lucide-react";
 import { ImageCarousel } from "./image-carousel";
+import { useTranslations } from "next-intl";
+import { ITEM_CONDITIONS } from "@/lib/validations";
 
 interface ItemDetailCardProps {
   title: string;
@@ -18,6 +20,7 @@ interface ItemDetailCardProps {
   notes?: string | null;
   status?: "available" | "pending" | "reserved" | "sold" | "hidden";
   categoryName?: string | null;
+  updatedAt?: Date | string | null;
 }
 
 export function ItemDetailCard({
@@ -35,7 +38,10 @@ export function ItemDetailCard({
   notes,
   status = "available",
   categoryName,
+  updatedAt,
 }: ItemDetailCardProps) {
+  const t = useTranslations("item");
+
   const formattedPrice =
     price != null
       ? new Intl.NumberFormat(undefined, {
@@ -60,6 +66,18 @@ export function ItemDetailCard({
         ? [{ url: coverImageUrl, alt: title }]
         : [];
 
+  const statusLabel = t(status);
+
+  // Translate condition if it's a known value, else show raw string
+  const isKnownCondition = condition && (ITEM_CONDITIONS as readonly string[]).includes(condition);
+  const conditionLabel = isKnownCondition ? t(`conditions.${condition}`) : condition;
+
+  const formattedDate = updatedAt
+    ? new Intl.DateTimeFormat(undefined, { dateStyle: "long" }).format(
+        typeof updatedAt === "string" ? new Date(updatedAt) : updatedAt
+      )
+    : null;
+
   return (
     <Card className="overflow-hidden">
       <ImageCarousel images={allImages} title={title} />
@@ -68,7 +86,7 @@ export function ItemDetailCard({
         <div className="flex items-start justify-between gap-2">
           <CardTitle className="text-xl">{title}</CardTitle>
           <Badge variant={status === "sold" ? "destructive" : status === "pending" || status === "reserved" ? "secondary" : status === "hidden" ? "outline" : "default"}>
-            {status}
+            {statusLabel}
           </Badge>
         </div>
         {(formattedPrice || formattedOriginalPrice) && (
@@ -85,25 +103,25 @@ export function ItemDetailCard({
       <CardContent className="space-y-3">
         {categoryName && (
           <div>
-            <span className="text-base sm:text-sm text-muted-foreground">Category: </span>
+            <span className="text-base sm:text-sm text-muted-foreground">{t("category")}: </span>
             <Badge variant="outline">{categoryName}</Badge>
           </div>
         )}
         {brand && (
           <div>
-            <span className="text-base sm:text-sm text-muted-foreground">Brand: </span>
+            <span className="text-base sm:text-sm text-muted-foreground">{t("brand")}: </span>
             <span className="text-base sm:text-sm">{brand}</span>
           </div>
         )}
         {condition && (
           <div>
-            <span className="text-base sm:text-sm text-muted-foreground">Condition: </span>
-            <span className="text-base sm:text-sm">{condition}</span>
+            <span className="text-base sm:text-sm text-muted-foreground">{t("condition")}: </span>
+            <span className="text-base sm:text-sm">{conditionLabel}</span>
           </div>
         )}
         {approximateAge && (
           <div>
-            <span className="text-base sm:text-sm text-muted-foreground">Age: </span>
+            <span className="text-base sm:text-sm text-muted-foreground">{t("age")}: </span>
             <span className="text-base sm:text-sm">{approximateAge}</span>
           </div>
         )}
@@ -111,9 +129,15 @@ export function ItemDetailCard({
         {notes && (
           <p className="text-base sm:text-sm text-muted-foreground italic">{notes}</p>
         )}
+        {formattedDate && (
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground pt-1">
+            <Clock className="h-3.5 w-3.5" />
+            <span>{t("lastUpdated")}: {formattedDate}</span>
+          </div>
+        )}
         {links.length > 0 && (
           <div className="space-y-1.5 pt-2 border-t">
-            <span className="text-sm font-medium">Links</span>
+            <span className="text-sm font-medium">{t("links")}</span>
             {links.map((link, idx) => (
               <a
                 key={idx}

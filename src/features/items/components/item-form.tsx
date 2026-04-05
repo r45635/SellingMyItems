@@ -3,7 +3,7 @@
 import { useTranslations } from "next-intl";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { itemFormSchema, type ItemFormValues } from "@/lib/validations";
+import { itemFormSchema, ITEM_CONDITIONS, type ItemFormValues } from "@/lib/validations";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -131,8 +131,22 @@ export function ItemForm({
               <Input id="brand" {...register("brand")} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="condition">{t("item.condition")}</Label>
-              <Input id="condition" {...register("condition")} />
+              <Label>{t("item.condition")}</Label>
+              <Select
+                onValueChange={(value) => setValue("condition", value ?? "")}
+                defaultValue={watch("condition") || undefined}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={t("item.condition")} />
+                </SelectTrigger>
+                <SelectContent>
+                  {ITEM_CONDITIONS.map((cond) => (
+                    <SelectItem key={cond} value={cond}>
+                      {t(`item.conditions.${cond}`)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 

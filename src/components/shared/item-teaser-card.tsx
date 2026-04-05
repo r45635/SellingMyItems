@@ -2,20 +2,35 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import Image from "next/image";
 import { ImageOff } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 interface ItemTeaserCardProps {
   title: string;
   coverImageUrl?: string | null;
   status?: "available" | "pending" | "reserved" | "sold" | "hidden";
+  statusLabel?: string;
   href?: string;
+  updatedAt?: Date | string | null;
 }
 
 export function ItemTeaserCard({
   title,
   coverImageUrl,
   status = "available",
+  statusLabel,
   href,
+  updatedAt,
 }: ItemTeaserCardProps) {
+  const t = useTranslations("item");
+
+  const formattedDate = updatedAt
+    ? new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(
+        typeof updatedAt === "string" ? new Date(updatedAt) : updatedAt
+      )
+    : null;
+
+  const label = statusLabel || t(status);
+
   const content = (
     <Card className="overflow-hidden transition-all hover:shadow-lg group border-0 shadow-sm">
       <div className="aspect-square relative bg-muted">
@@ -37,12 +52,15 @@ export function ItemTeaserCard({
             variant={status === "sold" ? "destructive" : status === "hidden" ? "outline" : "secondary"}
             className="absolute top-2 right-2 shadow-sm"
           >
-            {status}
+            {label}
           </Badge>
         )}
       </div>
       <CardContent className="p-3">
         <h3 className="font-medium text-base sm:text-sm line-clamp-2 group-hover:text-orange-600 transition-colors">{title}</h3>
+        {formattedDate && (
+          <p className="text-xs text-muted-foreground mt-1">{formattedDate}</p>
+        )}
       </CardContent>
     </Card>
   );

@@ -57,6 +57,11 @@ export default async function ItemPage({
     notFound();
   }
 
+  // Hidden (suspended) items are not visible to the public
+  if (item.status === "hidden") {
+    notFound();
+  }
+
   const profileId = user
     ? user.isDemo
       ? user.role === "seller"
@@ -119,6 +124,7 @@ export default async function ItemPage({
             notes={item.notes}
             status={item.status}
             categoryName={category?.name}
+            updatedAt={item.updatedAt}
           />
 
           <form action={isWishlisted ? removeWishlistItemAction : addWishlistItemAction}>
@@ -147,6 +153,7 @@ export default async function ItemPage({
             title={item.title}
             coverImageUrl={item.coverImageUrl}
             status={item.status}
+            updatedAt={item.updatedAt}
           />
           <div className="rounded-xl border bg-muted/30 p-8 text-center space-y-4">
             <Lock className="h-10 w-10 mx-auto text-muted-foreground/50" />

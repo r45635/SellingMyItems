@@ -59,7 +59,7 @@
     "pending": "Pending",
     "reserved": "Reserved",
     "sold": "Sold",
-    "hidden": "Hidden",
+    "hidden": "Suspended",
     "addToWishlist": "Add to wishlist",
     "removeFromWishlist": "Remove from wishlist",
     "signInToSeeDetails": "Sign in to see full details",
@@ -67,7 +67,16 @@
     "currency": "Currency",
     "images": "Images",
     "files": "Attached files",
-    "links": "Reference links"
+    "links": "Reference links",
+    "lastUpdated": "Last updated",
+    "conditions": {
+      "new": "New",
+      "like_new": "Like New",
+      "very_good": "Very Good",
+      "good": "Good",
+      "fair": "Fair",
+      "for_repair": "Needs Repair"
+    }
   },
   "wishlist": {
     "title": "My Selection",
@@ -115,7 +124,7 @@
       "pending": "Pending",
       "reserved": "Reserved",
       "sold": "Sold",
-      "hidden": "Hidden"
+      "hidden": "Suspended"
     }
   },
   "validation": {
