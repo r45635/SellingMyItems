@@ -24,10 +24,13 @@ jobs:
             echo "==> Disk space BEFORE deploy:"
             df -h / | tail -1
 
-            # Safe cleanup: only dangling images + build cache (preserve volumes & running containers)
-            echo "==> Pruning Docker (dangling images, build cache)..."
-            docker image prune -f 2>/dev/null || true
+            # Pre-deploy cleanup: remove ALL unused images + build cache (preserves volumes & running containers)
+            echo "==> Pre-deploy prune (all unused images + build cache)..."
+            docker image prune -af 2>/dev/null || true
             docker builder prune -af 2>/dev/null || true
+
+            echo "==> Disk space AFTER prune:"
+            df -h / | tail -1
 
             AVAIL=$(df / | tail -1 | awk '{print $4}')
             if [ "$AVAIL" -lt 1048576 ]; then
