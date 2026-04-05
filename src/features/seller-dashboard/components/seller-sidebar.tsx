@@ -10,6 +10,7 @@ import {
   ShoppingCart,
   Settings,
 } from "lucide-react";
+import { SmiLogo } from "@/components/shared/smi-logo";
 
 const sidebarItems = [
   { href: "/seller/projects", icon: FolderOpen, labelKey: "projects" },
@@ -23,11 +24,14 @@ export function SellerSidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="hidden md:flex w-64 flex-col border-r bg-background">
-      <div className="p-6">
-        <h2 className="font-semibold text-lg">{t("dashboard")}</h2>
+    <aside className="hidden md:flex w-64 flex-col border-r bg-muted/30">
+      <div className="p-5 border-b">
+        <Link href="/seller">
+          <SmiLogo size="sm" />
+        </Link>
+        <p className="text-xs text-muted-foreground mt-1.5 ml-10">{t("dashboard")}</p>
       </div>
-      <nav className="flex-1 px-3 space-y-1">
+      <nav className="flex-1 px-3 py-3 space-y-1">
         {sidebarItems.map((item) => {
           const isActive = pathname.startsWith(item.href);
           return (
@@ -35,9 +39,9 @@ export function SellerSidebar() {
               key={item.href}
               href={item.href}
               className={cn(
-                "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                 isActive
-                  ? "bg-accent text-accent-foreground"
+                  ? "bg-foreground text-background shadow-sm"
                   : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
               )}
             >

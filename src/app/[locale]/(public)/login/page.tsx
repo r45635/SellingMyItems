@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useState } from "react";
 import { useRouter } from "@/i18n/navigation";
+import { SmiLogo } from "@/components/shared/smi-logo";
 
 export default function LoginPage() {
   const t = useTranslations("auth");
@@ -50,37 +51,41 @@ export default function LoginPage() {
   return (
     <div className="flex items-center justify-center min-h-[60vh] px-4">
       <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle className="text-2xl text-center">{t("signIn")}</CardTitle>
+        <CardHeader className="text-center space-y-4">
+          <div className="flex justify-center">
+            <SmiLogo size="md" />
+          </div>
+          <CardTitle className="text-2xl">{t("signIn")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="rounded-lg border p-3 text-sm space-y-1">
-            <p className="font-medium">Mode demo local</p>
-            <p className="text-muted-foreground">guest / guest</p>
-            <p className="text-muted-foreground">seller / seller</p>
-          </div>
-
-          <div className="grid grid-cols-2 gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                setUsername("guest");
-                setPassword("guest");
-              }}
-            >
-              Remplir Guest
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                setUsername("seller");
-                setPassword("seller");
-              }}
-            >
-              Remplir Seller
-            </Button>
+          <div className="rounded-xl border bg-muted/40 p-4 text-sm space-y-2">
+            <p className="font-medium text-center">Demo</p>
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="w-full"
+                onClick={() => {
+                  setUsername("guest");
+                  setPassword("guest");
+                }}
+              >
+                🛒 Guest
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="w-full"
+                onClick={() => {
+                  setUsername("seller");
+                  setPassword("seller");
+                }}
+              >
+                🏷️ Seller
+              </Button>
+            </div>
           </div>
 
           <div className="relative">
@@ -119,7 +124,7 @@ export default function LoginPage() {
             </div>
             {error ? <p className="text-sm text-destructive">{error}</p> : null}
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "..." : "Se connecter"}
+              {loading ? "..." : t("signIn")}
             </Button>
           </form>
         </CardContent>

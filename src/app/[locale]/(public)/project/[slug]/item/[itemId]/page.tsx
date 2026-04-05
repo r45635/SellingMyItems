@@ -95,9 +95,9 @@ export default async function ItemPage({
     <div className="container px-4 md:px-6 py-8 max-w-3xl">
       <Link
         href={`/project/${slug}`}
-        className="mb-4 inline-flex h-7 items-center justify-center gap-1 rounded-lg px-2.5 text-[0.8rem] transition-all hover:bg-muted hover:text-foreground"
+        className="mb-6 inline-flex h-7 items-center gap-1 rounded-lg px-2.5 text-sm text-muted-foreground transition-all hover:bg-muted hover:text-foreground"
       >
-        <ArrowLeft className="mr-2 h-4 w-4" />
+        <ArrowLeft className="h-4 w-4" />
         Back to project
       </Link>
 
@@ -130,9 +130,13 @@ export default async function ItemPage({
             />
             <button
               type="submit"
-              className="inline-flex h-8 items-center justify-center rounded-lg border border-border px-3 text-sm hover:bg-muted"
+              className={`inline-flex h-10 items-center justify-center rounded-lg border px-4 text-sm font-medium transition-colors ${
+                isWishlisted
+                  ? "border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100"
+                  : "border-border hover:bg-muted"
+              }`}
             >
-              {isWishlisted ? "Retirer de ma selection" : "Ajouter a ma selection"}
+              {isWishlisted ? "❤️ Retirer de ma sélection" : "🤍 Ajouter à ma sélection"}
             </button>
           </form>
         </div>
@@ -144,14 +148,14 @@ export default async function ItemPage({
             coverImageUrl={item.coverImageUrl}
             status={item.status}
           />
-          <div className="rounded-lg border p-6 text-center space-y-3">
-            <Lock className="h-8 w-8 mx-auto text-muted-foreground" />
+          <div className="rounded-xl border bg-muted/30 p-8 text-center space-y-4">
+            <Lock className="h-10 w-10 mx-auto text-muted-foreground/50" />
             <p className="text-muted-foreground">
               Sign in to see full details, price, and more.
             </p>
             <Link
               href="/login"
-              className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg bg-primary px-2.5 text-sm font-medium text-primary-foreground transition-all hover:bg-primary/80"
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-foreground px-6 text-sm font-semibold text-background shadow-lg transition-all hover:bg-foreground/90"
             >
               Sign in
             </Link>

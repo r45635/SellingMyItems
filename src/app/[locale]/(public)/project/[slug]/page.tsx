@@ -1,10 +1,11 @@
 import { ItemTeaserCard } from "@/components/shared/item-teaser-card";
 import { Badge } from "@/components/ui/badge";
-import { MapPin } from "lucide-react";
+import { MapPin, ArrowLeft, Package } from "lucide-react";
 import { db } from "@/db";
 import { items, projectCategories, projects } from "@/db/schema";
 import { and, asc, eq, isNull } from "drizzle-orm";
 import { notFound } from "next/navigation";
+import { Link } from "@/i18n/navigation";
 
 export default async function ProjectPage({
   params,
@@ -43,22 +44,32 @@ export default async function ProjectPage({
 
   return (
     <div className="container px-4 md:px-6 py-8">
+      <Link
+        href="/"
+        className="mb-6 inline-flex h-7 items-center gap-1 rounded-lg px-2.5 text-sm text-muted-foreground transition-all hover:bg-muted hover:text-foreground"
+      >
+        <ArrowLeft className="h-4 w-4" />
+        Back
+      </Link>
+
       {/* Project Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">{project.name}</h1>
-        <div className="flex items-center gap-2 text-muted-foreground mb-4">
-          <MapPin className="h-4 w-4" />
-          <span>{project.cityArea}</span>
-        </div>
+      <div className="mb-10">
+        <h1 className="text-3xl font-extrabold tracking-tight mb-2">{project.name}</h1>
+        {project.cityArea && (
+          <div className="flex items-center gap-1.5 text-muted-foreground mb-4">
+            <MapPin className="h-4 w-4" />
+            <span>{project.cityArea}</span>
+          </div>
+        )}
         {project.description && (
-          <p className="text-muted-foreground max-w-2xl">
+          <p className="text-muted-foreground max-w-2xl leading-relaxed">
             {project.description}
           </p>
         )}
         {categories.length > 0 && (
           <div className="flex gap-2 mt-4 flex-wrap">
             {categories.map((category) => (
-              <Badge key={category.id} variant="outline">
+              <Badge key={category.id} variant="outline" className="rounded-full">
                 {category.name}
               </Badge>
             ))}
@@ -67,21 +78,28 @@ export default async function ProjectPage({
       </div>
 
       {/* Items Grid */}
-      <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
-        {projectItems.map((item) => (
-          <ItemTeaserCard
-            key={item.id}
-            title={item.title}
-            coverImageUrl={item.coverImageUrl}
-            status={item.status}
-            href={`/project/${slug}/item/${item.id}`}
-          />
-        ))}
-      </div>
-
-      {projectItems.length === 0 && (
-        <div className="text-center py-12 text-muted-foreground">
-          No items yet
+      {projectItems.length > 0 ? (
+        <>
+          <div className="flex items-center gap-2 mb-6">
+            <Package className="h-5 w-5 text-orange-500" />
+            <h2 className="text-lg font-semibold">{projectItems.length} item{projectItems.length !== 1 ? "s" : ""}</h2>
+          </div>
+          <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
+            {projectItems.map((item) => (
+              <ItemTeaserCard
+                key={item.id}
+                title={item.title}
+                coverImageUrl={item.coverImageUrl}
+                status={item.status}
+                href={`/project/${slug}/item/${item.id}`}
+              />
+            ))}
+          </div>
+        </>
+      ) : (
+        <div className="text-center py-16 text-muted-foreground">
+          <Package className="h-10 w-10 mx-auto mb-3 text-muted-foreground/30" />
+          <p>No items yet</p>
         </div>
       )}
     </div>

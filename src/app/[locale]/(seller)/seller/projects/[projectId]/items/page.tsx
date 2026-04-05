@@ -85,7 +85,7 @@ export default async function ProjectItemsPage({
       </div>
 
       {projectItems.length === 0 ? (
-        <div className="rounded-lg border p-6 text-center text-muted-foreground">
+        <div className="rounded-xl border-2 border-dashed p-12 text-center text-muted-foreground">
           {t("noItems")}
         </div>
       ) : (
@@ -111,7 +111,7 @@ export default async function ProjectItemsPage({
             return (
               <div
                 key={item.id}
-                className="rounded-lg border p-4 space-y-2"
+                className="rounded-xl border p-4 space-y-2 transition-shadow hover:shadow-sm"
               >
                 {/* Top row: status left, price right */}
                 <div className="flex items-center justify-between">

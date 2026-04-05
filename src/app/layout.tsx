@@ -13,8 +13,14 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "SellingMyItems",
-  description: "Publish items for sale and connect with buyers",
+  title: {
+    default: "SMI – SellingMyItems",
+    template: "%s | SMI",
+  },
+  description: "Publish items for sale and connect with buyers near you",
+  icons: {
+    icon: "/logo.svg",
+  },
 };
 
 export default function RootLayout({

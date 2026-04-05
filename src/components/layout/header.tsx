@@ -2,11 +2,11 @@
 
 import { Link } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
-import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Menu } from "lucide-react";
 import { LanguageSwitcher } from "./language-switcher";
 import { UserNav } from "./user-nav";
+import { SmiLogo } from "@/components/shared/smi-logo";
 
 export function Header() {
   const t = useTranslations("nav");
@@ -14,8 +14,8 @@ export function Header() {
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-14 items-center">
-        <Link href="/" className="mr-6 flex items-center space-x-2">
-          <span className="font-bold text-lg">SellingMyItems</span>
+        <Link href="/" className="mr-6 flex items-center">
+          <SmiLogo size="sm" />
         </Link>
 
         {/* Desktop nav */}
@@ -36,14 +36,17 @@ export function Header() {
               <span className="sr-only">Menu</span>
             </SheetTrigger>
             <SheetContent side="right" className="w-[300px]">
-              <nav className="flex flex-col space-y-4 mt-8">
-                <Link href="/" className="text-lg">
+              <div className="mt-4 mb-6">
+                <SmiLogo size="md" />
+              </div>
+              <nav className="flex flex-col space-y-4">
+                <Link href="/" className="text-lg font-medium">
                   {t("home")}
                 </Link>
-                <Link href="/wishlist" className="text-lg">
+                <Link href="/wishlist" className="text-lg font-medium">
                   {t("wishlist")}
                 </Link>
-                <Link href="/messages" className="text-lg">
+                <Link href="/messages" className="text-lg font-medium">
                   {t("messages")}
                 </Link>
               </nav>
