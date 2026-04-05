@@ -17,7 +17,8 @@ jobs:
           port: ${{ secrets.VPS_PORT || 22 }}
           script: |
             set -e
-            export GIT_SSH_COMMAND="ssh -i ~/.ssh/id_ed25519_github -o StrictHostKeyChecking=no"
+            export GIT_SSH_COMMAND="ssh -i $HOME/.ssh/id_ed25519_github -o StrictHostKeyChecking=no"
+            APP_DIR="${{ secrets.VPS_APP_DIR || '$HOME/sellingmyitems' }}"
 
             echo "==> Disk space BEFORE deploy:"
             df -h / | tail -1
@@ -27,14 +28,23 @@ jobs:
             docker system prune -af --volumes 2>/dev/null || true
 
             AVAIL=$(df / | tail -1 | awk '{print $4}')
-            # Require at least 1GB free (in 1K blocks)
             if [ "$AVAIL" -lt 1048576 ]; then
               echo "❌ Less than 1GB free disk space ($AVAIL KB). Aborting deploy."
               exit 1
             fi
 
-            cd ${{ secrets.VPS_APP_DIR || '~/sellingmyitems' }}
-            git pull origin main
+            # Clone repo on first deploy, then pull
+            if [ ! -d "$APP_DIR" ]; then
+              echo "==> First deploy: cloning repo..."
+              git clone git@github.com:r45635/SellingMyItems.git "$APP_DIR"
+              cd "$APP_DIR"
+              cp .env.example .env
+              echo "⚠  Default .env created — edit POSTGRES_PASSWORD before next deploy!"
+            else
+              cd "$APP_DIR"
+              git pull origin main
+            fi
+
             docker compose build --no-cache
             docker compose up -d
 
@@ -42,6 +52,9 @@ jobs:
             echo "==> Post-deploy prune..."
             docker image prune -af
             docker builder prune -af 2>/dev/null || true
+
+            echo "==> Disk space AFTER deploy:"
+            df -h / | tail -1
 
             echo "==> Disk space AFTER deploy:"
             df -h / | tail -1
