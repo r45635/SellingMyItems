@@ -3,6 +3,7 @@
 import { useCallback, useRef, useState } from "react";
 import { Upload, X, ImagePlus, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import imageCompression from "browser-image-compression";
 
 interface ImageUploadProps {
   images: string[];
@@ -16,6 +17,7 @@ export function ImageUpload({
   maxImages = 10,
 }: ImageUploadProps) {
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState("");
   const [error, setError] = useState("");
   const [isDragOver, setIsDragOver] = useState(false);
   const [confirmDeleteIndex, setConfirmDeleteIndex] = useState<number | null>(null);
@@ -38,8 +40,22 @@ export function ImageUpload({
       setError("");
 
       try {
+        // Compress images client-side before upload
+        setUploadStatus(`Compression de ${toUpload.length} image${toUpload.length > 1 ? "s" : ""}...`);
+        const compressed = await Promise.all(
+          toUpload.map((f) =>
+            imageCompression(f, {
+              maxSizeMB: 2,
+              maxWidthOrHeight: 1920,
+              useWebWorker: true,
+              fileType: "image/webp",
+            })
+          )
+        );
+
+        setUploadStatus("Envoi en cours...");
         const formData = new FormData();
-        toUpload.forEach((f) => formData.append("files", f));
+        compressed.forEach((f) => formData.append("files", f));
 
         const res = await fetch("/api/upload", {
           method: "POST",
@@ -58,6 +74,7 @@ export function ImageUpload({
         setError("Erreur réseau lors de l'upload");
       } finally {
         setIsUploading(false);
+        setUploadStatus("");
       }
     },
     [images, maxImages, onChange]
@@ -247,7 +264,7 @@ export function ImageUpload({
           {isUploading ? (
             <>
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-              <p className="text-sm text-muted-foreground">Upload en cours...</p>
+              <p className="text-sm text-muted-foreground">{uploadStatus || "Traitement..."}</p>
             </>
           ) : (
             <>
@@ -260,7 +277,7 @@ export function ImageUpload({
                   Glisser-déposer, coller ou cliquer
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  JPEG, PNG, WebP, GIF, AVIF • Max 5 Mo par image •{" "}
+                  JPEG, PNG, WebP, GIF, AVIF • Compression auto •{" "}
                   {images.length}/{maxImages}
                 </p>
               </div>
