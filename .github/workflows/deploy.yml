@@ -47,11 +47,10 @@ jobs:
             fi
 
             docker compose build --no-cache
-            docker compose down --remove-orphans || true
-            docker compose up -d
+            docker compose up -d --force-recreate --remove-orphans
 
-            # Reconnect Caddy reverse proxy to app network
-            echo "==> Reconnecting Caddy to app network..."
+            # Ensure Caddy reverse proxy is connected to app network
+            echo "==> Ensuring Caddy is connected to app network..."
             docker network connect sellingmyitems_default caddy 2>/dev/null || true
 
             # Post-deploy cleanup
