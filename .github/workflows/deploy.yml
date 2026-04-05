@@ -24,9 +24,10 @@ jobs:
             echo "==> Disk space BEFORE deploy:"
             df -h / | tail -1
 
-            # Aggressive cleanup before build to free space
-            echo "==> Pruning Docker (unused images, build cache, volumes)..."
-            docker system prune -af --volumes 2>/dev/null || true
+            # Safe cleanup: only dangling images + build cache (preserve volumes & running containers)
+            echo "==> Pruning Docker (dangling images, build cache)..."
+            docker image prune -f 2>/dev/null || true
+            docker builder prune -af 2>/dev/null || true
 
             AVAIL=$(df / | tail -1 | awk '{print $4}')
             if [ "$AVAIL" -lt 1048576 ]; then
@@ -53,11 +54,17 @@ jobs:
             echo "==> Waiting for app to be ready..."
             sleep 3
 
-            # Force Caddy to reconnect to app network
-            echo "==> Force-reconnecting Caddy to app network..."
+            # Ensure Caddy is running, then connect to app network
+            echo "==> Ensuring Caddy is running and connected..."
+            cd /opt/trystbrief && docker compose up -d caddy 2>/dev/null || true
+            cd "$APP_DIR"
+            sleep 2
             docker network disconnect sellingmyitems_default caddy 2>/dev/null || true
-            sleep 1
             docker network connect sellingmyitems_default caddy 2>/dev/null || true
+            
+            # Verify connectivity
+            echo "==> Verifying app is reachable through Caddy..."
+            curl -sf http://localhost:5050 -o /dev/null && echo "✅ App healthy" || echo "⚠️  App not responding on :5050"
 
             # Post-deploy cleanup
             echo "==> Post-deploy prune..."

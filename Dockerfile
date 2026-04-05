@@ -41,8 +41,9 @@ COPY --from=builder /app/public ./public
 COPY --from=deps /app/node_modules/sharp ./node_modules/sharp
 COPY --from=deps /app/node_modules/@img ./node_modules/@img
 
-# Uploads volume mount point
-RUN mkdir -p /app/public/uploads && chown nextjs:nodejs /app/public/uploads
+# Uploads volume mount point + Next.js cache directory
+RUN mkdir -p /app/public/uploads /app/.next/cache && \
+    chown -R nextjs:nodejs /app/public/uploads /app/.next/cache
 
 USER nextjs
 
