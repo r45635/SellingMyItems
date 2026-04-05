@@ -42,7 +42,7 @@ export function ItemTeaserCard({
         )}
       </div>
       <CardContent className="p-3">
-        <h3 className="font-medium text-sm line-clamp-2 group-hover:text-orange-600 transition-colors">{title}</h3>
+        <h3 className="font-medium text-base sm:text-sm line-clamp-2 group-hover:text-orange-600 transition-colors">{title}</h3>
       </CardContent>
     </Card>
   );

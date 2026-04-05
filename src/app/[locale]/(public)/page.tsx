@@ -50,7 +50,7 @@ export default async function HomePage() {
       {/* Sign-in prompt */}
       <section className="border-b bg-muted/40 py-8">
         <div className="container px-4 md:px-6">
-          <p className="text-center text-muted-foreground max-w-[600px] mx-auto">
+          <p className="text-center text-base sm:text-sm text-muted-foreground max-w-[600px] mx-auto">
             {t("signInPrompt")}
           </p>
         </div>
@@ -80,17 +80,17 @@ export default async function HomePage() {
                     {project.name}
                   </h3>
                   {project.cityArea && (
-                    <div className="flex items-center gap-1.5 text-sm text-muted-foreground mt-1.5">
+                    <div className="flex items-center gap-1.5 text-base sm:text-sm text-muted-foreground mt-1.5">
                       <MapPin className="h-3.5 w-3.5" />
                       <span>{project.cityArea}</span>
                     </div>
                   )}
                   {project.description && (
-                    <p className="text-sm text-muted-foreground mt-3 line-clamp-2">
+                    <p className="text-base sm:text-sm text-muted-foreground mt-3 line-clamp-2">
                       {project.description}
                     </p>
                   )}
-                  <span className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-orange-600 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <span className="mt-4 inline-flex items-center gap-1 text-base sm:text-sm font-medium text-orange-600 opacity-0 group-hover:opacity-100 transition-opacity">
                     View items <ArrowRight className="h-3.5 w-3.5" />
                   </span>
                 </Link>

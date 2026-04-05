@@ -85,31 +85,31 @@ export function ItemDetailCard({
       <CardContent className="space-y-3">
         {categoryName && (
           <div>
-            <span className="text-sm text-muted-foreground">Category: </span>
+            <span className="text-base sm:text-sm text-muted-foreground">Category: </span>
             <Badge variant="outline">{categoryName}</Badge>
           </div>
         )}
         {brand && (
           <div>
-            <span className="text-sm text-muted-foreground">Brand: </span>
-            <span className="text-sm">{brand}</span>
+            <span className="text-base sm:text-sm text-muted-foreground">Brand: </span>
+            <span className="text-base sm:text-sm">{brand}</span>
           </div>
         )}
         {condition && (
           <div>
-            <span className="text-sm text-muted-foreground">Condition: </span>
-            <span className="text-sm">{condition}</span>
+            <span className="text-base sm:text-sm text-muted-foreground">Condition: </span>
+            <span className="text-base sm:text-sm">{condition}</span>
           </div>
         )}
         {approximateAge && (
           <div>
-            <span className="text-sm text-muted-foreground">Age: </span>
-            <span className="text-sm">{approximateAge}</span>
+            <span className="text-base sm:text-sm text-muted-foreground">Age: </span>
+            <span className="text-base sm:text-sm">{approximateAge}</span>
           </div>
         )}
-        {description && <p className="text-sm">{description}</p>}
+        {description && <p className="text-base sm:text-sm">{description}</p>}
         {notes && (
-          <p className="text-sm text-muted-foreground italic">{notes}</p>
+          <p className="text-base sm:text-sm text-muted-foreground italic">{notes}</p>
         )}
         {links.length > 0 && (
           <div className="space-y-1.5 pt-2 border-t">
@@ -120,7 +120,7 @@ export function ItemDetailCard({
                 href={link.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1.5 text-sm text-primary hover:underline"
+                className="flex items-center gap-1.5 text-base sm:text-sm text-primary hover:underline"
               >
                 <ExternalLink className="h-3.5 w-3.5 shrink-0" />
                 {link.label || link.url}

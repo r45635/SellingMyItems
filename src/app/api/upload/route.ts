@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 import { randomUUID } from "crypto";
+import sharp from "sharp";
 
 const ALLOWED_TYPES = [
   "image/jpeg",
@@ -11,7 +12,9 @@ const ALLOWED_TYPES = [
   "image/avif",
 ];
 
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
+const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 MB (raw from phone camera)
+const MAX_DIMENSION = 1920; // Max width or height after resize
+const JPEG_QUALITY = 80;
 
 export async function POST(request: NextRequest) {
   // Check demo auth cookie (same as dev-session)
@@ -47,18 +50,27 @@ export async function POST(request: NextRequest) {
 
     if (file.size > MAX_FILE_SIZE) {
       return NextResponse.json(
-        { error: `Fichier trop volumineux (max 5 Mo): ${file.name}` },
+        { error: `Fichier trop volumineux (max 20 Mo): ${file.name}` },
         { status: 400 }
       );
     }
 
-    const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
-    const safeExt = ext.replace(/[^a-z0-9]/g, "").slice(0, 5);
-    const fileName = `${randomUUID()}.${safeExt}`;
+    const fileName = `${randomUUID()}.webp`;
     const filePath = path.join(uploadDir, fileName);
 
-    const buffer = Buffer.from(await file.arrayBuffer());
-    await writeFile(filePath, buffer);
+    const rawBuffer = Buffer.from(await file.arrayBuffer());
+
+    // Resize to max 1920px, convert to WebP, strip all EXIF/GPS metadata
+    const processed = await sharp(rawBuffer)
+      .rotate() // Auto-rotate based on EXIF orientation before stripping
+      .resize(MAX_DIMENSION, MAX_DIMENSION, {
+        fit: "inside",
+        withoutEnlargement: true,
+      })
+      .webp({ quality: JPEG_QUALITY })
+      .toBuffer();
+
+    await writeFile(filePath, processed);
 
     urls.push(`/uploads/${fileName}`);
   }
