@@ -1,0 +1,118 @@
+{
+  "common": {
+    "appName": "SellingMyItems",
+    "loading": "Chargement...",
+    "error": "Une erreur est survenue",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "create": "Créer",
+    "back": "Retour",
+    "search": "Rechercher",
+    "noResults": "Aucun résultat",
+    "signIn": "Se connecter",
+    "signOut": "Se déconnecter",
+    "language": "Langue"
+  },
+  "nav": {
+    "home": "Accueil",
+    "projects": "Projets",
+    "wishlist": "Ma sélection",
+    "messages": "Messages",
+    "account": "Compte",
+    "sellerDashboard": "Tableau de bord vendeur"
+  },
+  "home": {
+    "hero": "Trouvez des articles uniques près de chez vous",
+    "subtitle": "Parcourez les projets et découvrez des articles en vente dans votre zone",
+    "browseProjects": "Parcourir les projets",
+    "signInPrompt": "Connectez-vous pour voir les détails, sauvegarder vos favoris et contacter les vendeurs"
+  },
+  "auth": {
+    "signIn": "Se connecter",
+    "signInWith": "Se connecter avec {provider}",
+    "magicLink": "Envoyer un lien magique",
+    "emailPlaceholder": "votre@email.com",
+    "emailSent": "Vérifiez votre email pour le lien magique",
+    "continueWith": "Ou continuer avec"
+  },
+  "project": {
+    "title": "Projet",
+    "cityArea": "Zone",
+    "items": "Articles",
+    "categories": "Catégories",
+    "noItems": "Aucun article pour le moment",
+    "viewItem": "Voir l'article"
+  },
+  "item": {
+    "title": "Titre",
+    "brand": "Marque",
+    "description": "Description",
+    "condition": "État",
+    "age": "Âge approximatif",
+    "price": "Prix",
+    "notes": "Notes supplémentaires",
+    "status": "Statut",
+    "available": "Disponible",
+    "pending": "En attente",
+    "sold": "Vendu",
+    "addToWishlist": "Ajouter à ma sélection",
+    "removeFromWishlist": "Retirer de ma sélection",
+    "signInToSeeDetails": "Connectez-vous pour voir les détails",
+    "category": "Catégorie",
+    "currency": "Devise",
+    "images": "Images",
+    "files": "Fichiers joints",
+    "links": "Liens de référence"
+  },
+  "wishlist": {
+    "title": "Ma sélection",
+    "empty": "Votre sélection est vide",
+    "sendIntent": "Envoyer une intention d'achat",
+    "removeItem": "Retirer"
+  },
+  "intent": {
+    "title": "Intention d'achat",
+    "phone": "Numéro de téléphone",
+    "contactMethod": "Mode de contact préféré",
+    "pickupNotes": "Notes de retrait / disponibilité",
+    "submit": "Envoyer l'intention",
+    "submitted": "Votre intention d'achat a été envoyée",
+    "email": "Email",
+    "phoneOption": "Téléphone",
+    "appMessage": "Message dans l'app"
+  },
+  "messages": {
+    "title": "Messages",
+    "noThreads": "Aucune conversation pour le moment",
+    "sendMessage": "Envoyer le message",
+    "placeholder": "Écrivez votre message..."
+  },
+  "seller": {
+    "dashboard": "Tableau de bord vendeur",
+    "projects": "Projets",
+    "items": "Articles",
+    "createProject": "Nouveau projet",
+    "editProject": "Modifier le projet",
+    "createItem": "Nouvel article",
+    "editItem": "Modifier l'article",
+    "projectName": "Nom du projet",
+    "projectSlug": "Slug URL",
+    "projectCity": "Ville / Zone",
+    "manageCategories": "Gérer les catégories",
+    "categoryName": "Nom de la catégorie",
+    "noProjects": "Aucun projet. Créez votre premier projet !",
+    "noItems": "Aucun article dans ce projet.",
+    "intents": "Intentions d'achat",
+    "messages": "Messages",
+    "settings": "Paramètres"
+  },
+  "validation": {
+    "required": "Ce champ est requis",
+    "tooShort": "Doit contenir au moins {min} caractères",
+    "tooLong": "Doit contenir au maximum {max} caractères",
+    "invalidEmail": "Adresse email invalide",
+    "invalidUrl": "URL invalide"
+  }
+}

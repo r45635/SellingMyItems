@@ -1,0 +1,118 @@
+{
+  "common": {
+    "appName": "SellingMyItems",
+    "loading": "Loading...",
+    "error": "Something went wrong",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "back": "Back",
+    "search": "Search",
+    "noResults": "No results found",
+    "signIn": "Sign in",
+    "signOut": "Sign out",
+    "language": "Language"
+  },
+  "nav": {
+    "home": "Home",
+    "projects": "Projects",
+    "wishlist": "Wishlist",
+    "messages": "Messages",
+    "account": "Account",
+    "sellerDashboard": "Seller Dashboard"
+  },
+  "home": {
+    "hero": "Find unique items near you",
+    "subtitle": "Browse projects and discover items for sale in your area",
+    "browseProjects": "Browse projects",
+    "signInPrompt": "Sign in to see full item details, save favorites, and contact sellers"
+  },
+  "auth": {
+    "signIn": "Sign in",
+    "signInWith": "Sign in with {provider}",
+    "magicLink": "Send magic link",
+    "emailPlaceholder": "your@email.com",
+    "emailSent": "Check your email for a magic link",
+    "continueWith": "Or continue with"
+  },
+  "project": {
+    "title": "Project",
+    "cityArea": "Area",
+    "items": "Items",
+    "categories": "Categories",
+    "noItems": "No items yet",
+    "viewItem": "View item"
+  },
+  "item": {
+    "title": "Title",
+    "brand": "Brand",
+    "description": "Description",
+    "condition": "Condition",
+    "age": "Approximate age",
+    "price": "Price",
+    "notes": "Additional notes",
+    "status": "Status",
+    "available": "Available",
+    "pending": "Pending",
+    "sold": "Sold",
+    "addToWishlist": "Add to wishlist",
+    "removeFromWishlist": "Remove from wishlist",
+    "signInToSeeDetails": "Sign in to see full details",
+    "category": "Category",
+    "currency": "Currency",
+    "images": "Images",
+    "files": "Attached files",
+    "links": "Reference links"
+  },
+  "wishlist": {
+    "title": "My Selection",
+    "empty": "Your selection is empty",
+    "sendIntent": "Send purchase intent",
+    "removeItem": "Remove"
+  },
+  "intent": {
+    "title": "Purchase Intent",
+    "phone": "Phone number",
+    "contactMethod": "Preferred contact method",
+    "pickupNotes": "Pickup notes / availability",
+    "submit": "Submit intent",
+    "submitted": "Your purchase intent has been sent",
+    "email": "Email",
+    "phoneOption": "Phone",
+    "appMessage": "In-app message"
+  },
+  "messages": {
+    "title": "Messages",
+    "noThreads": "No conversations yet",
+    "sendMessage": "Send message",
+    "placeholder": "Type your message..."
+  },
+  "seller": {
+    "dashboard": "Seller Dashboard",
+    "projects": "Projects",
+    "items": "Items",
+    "createProject": "New project",
+    "editProject": "Edit project",
+    "createItem": "New item",
+    "editItem": "Edit item",
+    "projectName": "Project name",
+    "projectSlug": "URL slug",
+    "projectCity": "City / Area",
+    "manageCategories": "Manage categories",
+    "categoryName": "Category name",
+    "noProjects": "No projects yet. Create your first project!",
+    "noItems": "No items in this project yet.",
+    "intents": "Purchase Intents",
+    "messages": "Messages",
+    "settings": "Settings"
+  },
+  "validation": {
+    "required": "This field is required",
+    "tooShort": "Must be at least {min} characters",
+    "tooLong": "Must be at most {max} characters",
+    "invalidEmail": "Invalid email address",
+    "invalidUrl": "Invalid URL"
+  }
+}

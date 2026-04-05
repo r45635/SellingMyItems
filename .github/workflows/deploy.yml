@@ -1,0 +1,47 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          script: |
+            set -e
+            export GIT_SSH_COMMAND="ssh -i ~/.ssh/id_ed25519_github -o StrictHostKeyChecking=no"
+
+            echo "==> Disk space BEFORE deploy:"
+            df -h / | tail -1
+
+            # Aggressive cleanup before build to free space
+            echo "==> Pruning Docker (unused images, build cache, volumes)..."
+            docker system prune -af --volumes 2>/dev/null || true
+
+            AVAIL=$(df / | tail -1 | awk '{print $4}')
+            # Require at least 1GB free (in 1K blocks)
+            if [ "$AVAIL" -lt 1048576 ]; then
+              echo "❌ Less than 1GB free disk space ($AVAIL KB). Aborting deploy."
+              exit 1
+            fi
+
+            cd ${{ secrets.VPS_APP_DIR || '~/sellingmyitems' }}
+            git pull origin main
+            docker compose build --no-cache
+            docker compose up -d
+
+            # Post-deploy cleanup
+            echo "==> Post-deploy prune..."
+            docker image prune -af
+            docker builder prune -af 2>/dev/null || true
+
+            echo "==> Disk space AFTER deploy:"
+            df -h / | tail -1
