@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Link } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -11,6 +12,7 @@ import { BuildInfo } from "@/components/shared/build-info";
 
 export function Header() {
   const t = useTranslations("nav");
+  const [menuOpen, setMenuOpen] = useState(false);
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -31,7 +33,7 @@ export function Header() {
           <UserNav />
 
           {/* Mobile menu */}
-          <Sheet>
+          <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
             <SheetTrigger className="md:hidden inline-flex items-center justify-center rounded-lg p-2 hover:bg-muted">
               <Menu className="h-5 w-5" />
               <span className="sr-only">Menu</span>
@@ -41,13 +43,13 @@ export function Header() {
                 <SmiLogo size="md" />
               </div>
               <nav className="flex flex-col space-y-4">
-                <Link href="/" className="text-lg font-medium">
+                <Link href="/" className="text-lg font-medium" onClick={() => setMenuOpen(false)}>
                   {t("home")}
                 </Link>
-                <Link href="/wishlist" className="text-lg font-medium">
+                <Link href="/wishlist" className="text-lg font-medium" onClick={() => setMenuOpen(false)}>
                   {t("wishlist")}
                 </Link>
-                <Link href="/messages" className="text-lg font-medium">
+                <Link href="/messages" className="text-lg font-medium" onClick={() => setMenuOpen(false)}>
                   {t("messages")}
                 </Link>
               </nav>
