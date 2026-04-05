@@ -9,6 +9,7 @@ interface ItemDetailCardProps {
   images?: { url: string; alt?: string }[];
   links?: { url: string; label?: string }[];
   price?: number | null;
+  originalPrice?: number | null;
   currency?: string;
   brand?: string | null;
   description?: string | null;
@@ -25,6 +26,7 @@ export function ItemDetailCard({
   images = [],
   links = [],
   price,
+  originalPrice,
   currency = "USD",
   brand,
   description,
@@ -40,6 +42,14 @@ export function ItemDetailCard({
           style: "currency",
           currency,
         }).format(price)
+      : null;
+
+  const formattedOriginalPrice =
+    originalPrice != null
+      ? new Intl.NumberFormat(undefined, {
+          style: "currency",
+          currency,
+        }).format(originalPrice)
       : null;
 
   // Build the full list of images: itemImages first, then cover as fallback
@@ -61,8 +71,15 @@ export function ItemDetailCard({
             {status}
           </Badge>
         </div>
-        {formattedPrice && (
-          <p className="text-2xl font-bold text-primary">{formattedPrice}</p>
+        {(formattedPrice || formattedOriginalPrice) && (
+          <div className="flex items-baseline gap-2">
+            {formattedPrice && (
+              <p className="text-2xl font-bold text-primary">{formattedPrice}</p>
+            )}
+            {formattedOriginalPrice && (
+              <p className="text-lg text-muted-foreground line-through">{formattedOriginalPrice}</p>
+            )}
+          </div>
         )}
       </CardHeader>
       <CardContent className="space-y-3">

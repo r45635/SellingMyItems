@@ -52,6 +52,7 @@
     "condition": "Condition",
     "age": "Approximate age",
     "price": "Price",
+    "originalPrice": "Original price",
     "notes": "Additional notes",
     "status": "Status",
     "available": "Available",

@@ -32,6 +32,7 @@ export const itemFormSchema = z.object({
   condition: z.string().max(100).optional(),
   approximateAge: z.string().max(100).optional(),
   price: z.number().int().min(0).optional(),
+  originalPrice: z.number().int().min(0).optional(),
   currency: z.enum(["USD", "EUR", "CAD"]),
   notes: z.string().max(2000).optional(),
   categoryId: z.string().uuid().optional(),

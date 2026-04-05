@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useRef, useEffect } from "react";
 import Image from "next/image";
-import { ChevronLeft, ChevronRight, ImageOff } from "lucide-react";
+import { ChevronLeft, ChevronRight, ImageOff, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ImageCarouselProps {
@@ -12,6 +12,7 @@ interface ImageCarouselProps {
 
 export function ImageCarousel({ images, title }: ImageCarouselProps) {
   const [current, setCurrent] = useState(0);
+  const [zoomed, setZoomed] = useState(false);
   const touchStartX = useRef(0);
   const touchEndX = useRef(0);
 
@@ -30,6 +31,7 @@ export function ImageCarousel({ images, title }: ImageCarouselProps) {
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === "ArrowLeft") prev();
       if (e.key === "ArrowRight") next();
+      if (e.key === "Escape") setZoomed(false);
     };
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
@@ -65,16 +67,17 @@ export function ImageCarousel({ images, title }: ImageCarouselProps) {
     <div className="space-y-2">
       {/* Main image with navigation */}
       <div
-        className="aspect-video relative bg-muted group select-none"
+        className="aspect-video relative bg-muted group select-none cursor-pointer"
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
+        onClick={() => setZoomed(true)}
       >
         <Image
           src={images[current].url}
           alt={images[current].alt ?? `${title} ${current + 1}`}
           fill
-          className="object-cover"
+          className="object-contain"
           sizes="(max-width: 768px) 100vw, 50vw"
           priority={current === 0}
         />
@@ -153,6 +156,58 @@ export function ImageCarousel({ images, title }: ImageCarouselProps) {
               />
             </button>
           ))}
+        </div>
+      )}
+
+      {/* Fullscreen zoom overlay */}
+      {zoomed && (
+        <div
+          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center"
+          onClick={() => setZoomed(false)}
+        >
+          <button
+            type="button"
+            onClick={() => setZoomed(false)}
+            className="absolute top-4 right-4 text-white bg-black/50 rounded-full p-2 hover:bg-black/70 z-10"
+            aria-label="Close"
+          >
+            <X className="h-6 w-6" />
+          </button>
+          {images.length > 1 && (
+            <>
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); prev(); }}
+                className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full p-2 z-10"
+                aria-label="Previous"
+              >
+                <ChevronLeft className="h-6 w-6" />
+              </button>
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); next(); }}
+                className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full p-2 z-10"
+                aria-label="Next"
+              >
+                <ChevronRight className="h-6 w-6" />
+              </button>
+            </>
+          )}
+          <div className="relative w-full h-full max-w-[90vw] max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
+            <Image
+              src={images[current].url}
+              alt={images[current].alt ?? `${title} ${current + 1}`}
+              fill
+              className="object-contain"
+              sizes="90vw"
+              priority
+            />
+          </div>
+          {images.length > 1 && (
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/60 text-white text-sm px-3 py-1 rounded-full">
+              {current + 1} / {images.length}
+            </div>
+          )}
         </div>
       )}
     </div>

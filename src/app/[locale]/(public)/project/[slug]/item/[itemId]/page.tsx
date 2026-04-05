@@ -110,6 +110,7 @@ export default async function ItemPage({
             images={item.images.map((img) => ({ url: img.url, alt: img.altText ?? undefined }))}
             links={item.links.map((l) => ({ url: l.url, label: l.label ?? undefined }))}
             price={item.price}
+            originalPrice={item.originalPrice}
             currency={item.currency}
             brand={item.brand}
             description={item.description}

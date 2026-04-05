@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import { Upload, X, ImagePlus, Loader2 } from "lucide-react";
+import { Upload, X, ImagePlus, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface ImageUploadProps {
@@ -18,6 +18,9 @@ export function ImageUpload({
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState("");
   const [isDragOver, setIsDragOver] = useState(false);
+  const [confirmDeleteIndex, setConfirmDeleteIndex] = useState<number | null>(null);
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const uploadFiles = useCallback(
@@ -99,9 +102,37 @@ export function ImageUpload({
   const removeImage = useCallback(
     (index: number) => {
       onChange(images.filter((_, i) => i !== index));
+      setConfirmDeleteIndex(null);
     },
     [images, onChange]
   );
+
+  const moveImage = useCallback(
+    (from: number, to: number) => {
+      if (to < 0 || to >= images.length) return;
+      const updated = [...images];
+      const [moved] = updated.splice(from, 1);
+      updated.splice(to, 0, moved);
+      onChange(updated);
+    },
+    [images, onChange]
+  );
+
+  const handleDragStart = useCallback((idx: number) => {
+    setDraggedIndex(idx);
+  }, []);
+
+  const handleDragEnter = useCallback((idx: number) => {
+    setDragOverIndex(idx);
+  }, []);
+
+  const handleDragEnd = useCallback(() => {
+    if (draggedIndex !== null && dragOverIndex !== null && draggedIndex !== dragOverIndex) {
+      moveImage(draggedIndex, dragOverIndex);
+    }
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  }, [draggedIndex, dragOverIndex, moveImage]);
 
   return (
     <div className="space-y-3" onPaste={handlePaste}>
@@ -111,29 +142,87 @@ export function ImageUpload({
           {images.map((url, idx) => (
             <div
               key={`${url}-${idx}`}
-              className="relative group aspect-square rounded-lg overflow-hidden border bg-muted"
+              className={`relative group aspect-square rounded-lg overflow-hidden border bg-muted transition-all ${
+                draggedIndex === idx ? "opacity-40 scale-95" : ""
+              } ${dragOverIndex === idx && draggedIndex !== idx ? "ring-2 ring-primary" : ""}`}
+              draggable
+              onDragStart={() => handleDragStart(idx)}
+              onDragEnter={() => handleDragEnter(idx)}
+              onDragOver={(e) => e.preventDefault()}
+              onDragEnd={handleDragEnd}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={url}
                 alt={`Image ${idx + 1}`}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover pointer-events-none"
               />
               {idx === 0 && (
                 <span className="absolute top-1 left-1 bg-primary text-primary-foreground text-[10px] font-medium px-1.5 py-0.5 rounded">
                   Cover
                 </span>
               )}
-              {/* Always visible on touch devices, hover-only on desktop */}
-              <Button
-                type="button"
-                variant="destructive"
-                size="icon"
-                className="absolute top-1 right-1 h-7 w-7 sm:h-6 sm:w-6 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shadow-md"
-                onClick={() => removeImage(idx)}
-              >
-                <X className="h-4 w-4 sm:h-3 sm:w-3" />
-              </Button>
+              {/* Mobile reorder arrows */}
+              <div className="absolute bottom-1 left-1 flex gap-0.5 sm:hidden">
+                {idx > 0 && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="icon"
+                    className="h-6 w-6 shadow-md"
+                    onClick={() => moveImage(idx, idx - 1)}
+                  >
+                    <ChevronLeft className="h-3 w-3" />
+                  </Button>
+                )}
+                {idx < images.length - 1 && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="icon"
+                    className="h-6 w-6 shadow-md"
+                    onClick={() => moveImage(idx, idx + 1)}
+                  >
+                    <ChevronRight className="h-3 w-3" />
+                  </Button>
+                )}
+              </div>
+              {/* Delete button with confirmation */}
+              {confirmDeleteIndex === idx ? (
+                <div className="absolute inset-0 bg-destructive/80 flex flex-col items-center justify-center gap-1.5 animate-in fade-in duration-150">
+                  <p className="text-white text-xs font-medium">Supprimer ?</p>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      className="h-7 px-2 text-xs"
+                      onClick={() => setConfirmDeleteIndex(null)}
+                    >
+                      Non
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      className="h-7 px-2 text-xs bg-white text-destructive hover:bg-white/90"
+                      onClick={() => removeImage(idx)}
+                    >
+                      Oui
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="icon"
+                  className="absolute top-1 right-1 h-7 w-7 sm:h-6 sm:w-6 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shadow-md"
+                  onClick={() => setConfirmDeleteIndex(idx)}
+                >
+                  <X className="h-4 w-4 sm:h-3 sm:w-3" />
+                </Button>
+              )}
             </div>
           ))}
         </div>

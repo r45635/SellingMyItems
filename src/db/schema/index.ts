@@ -113,6 +113,7 @@ export const items = pgTable("items", {
   condition: text("condition"),
   approximateAge: text("approximate_age"),
   price: integer("price"),
+  originalPrice: integer("original_price"),
   currency: text("currency").default("USD").notNull(),
   notes: text("notes"),
   status: itemStatusEnum("status").default("available").notNull(),

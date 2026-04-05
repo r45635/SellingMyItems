@@ -63,6 +63,7 @@ export function ItemForm({
       condition: "",
       approximateAge: "",
       price: undefined,
+      originalPrice: undefined,
       currency: "USD",
       notes: "",
       status: "available",
@@ -135,7 +136,7 @@ export function ItemForm({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="price">{t("item.price")}</Label>
               <Input
@@ -156,6 +157,29 @@ export function ItemForm({
                 </p>
               )}
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="originalPrice">{t("item.originalPrice")}</Label>
+              <Input
+                id="originalPrice"
+                type="number"
+                {...register("originalPrice", {
+                  setValueAs: (v: string) => {
+                    if (v === "" || v === undefined || v === null) return undefined;
+                    const n = parseInt(v, 10);
+                    return Number.isNaN(n) ? undefined : n;
+                  },
+                })}
+                placeholder="50"
+              />
+              {errors.originalPrice && (
+                <p className="text-sm text-destructive">
+                  {errors.originalPrice.message}
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>{t("item.currency")}</Label>
               <Select

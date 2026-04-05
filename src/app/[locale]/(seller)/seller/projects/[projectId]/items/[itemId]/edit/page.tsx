@@ -92,6 +92,7 @@ export default async function EditItemPage({
           condition: item.condition ?? "",
           approximateAge: item.approximateAge ?? "",
           price: item.price ?? undefined,
+          originalPrice: item.originalPrice ?? undefined,
           currency: (item.currency as "USD" | "EUR" | "CAD") ?? "USD",
           notes: item.notes ?? "",
           categoryId: item.categoryId ?? undefined,

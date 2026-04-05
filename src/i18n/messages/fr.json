@@ -52,6 +52,7 @@
     "condition": "État",
     "age": "Âge approximatif",
     "price": "Prix",
+    "originalPrice": "Prix d'origine",
     "notes": "Notes supplémentaires",
     "status": "Statut",
     "available": "Disponible",

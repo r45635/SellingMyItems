@@ -1,12 +1,13 @@
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
-import { Plus, ArrowLeft } from "lucide-react";
+import { Plus, ArrowLeft, ImageOff } from "lucide-react";
 import { requireSeller } from "@/lib/auth";
 import { db } from "@/db";
 import { items, projects, sellerAccounts } from "@/db/schema";
 import { and, desc, eq, isNull } from "drizzle-orm";
 import { Badge } from "@/components/ui/badge";
 import { notFound } from "next/navigation";
+import Image from "next/image";
 
 const DEMO_SELLER_PROFILE_ID = "11111111-1111-1111-1111-111111111111";
 
@@ -46,6 +47,7 @@ export default async function ProjectItemsPage({
           status: items.status,
           price: items.price,
           currency: items.currency,
+          coverImageUrl: items.coverImageUrl,
           updatedAt: items.updatedAt,
         })
         .from(items)
@@ -93,7 +95,23 @@ export default async function ProjectItemsPage({
               key={item.id}
               className="rounded-lg border p-4 flex items-center justify-between gap-4"
             >
-              <div>
+              <div className="flex items-center gap-3">
+                <div className="relative h-12 w-12 shrink-0 rounded-md overflow-hidden bg-muted">
+                  {item.coverImageUrl ? (
+                    <Image
+                      src={item.coverImageUrl}
+                      alt={item.title}
+                      fill
+                      className="object-cover"
+                      sizes="48px"
+                    />
+                  ) : (
+                    <div className="flex items-center justify-center h-full">
+                      <ImageOff className="h-5 w-5 text-muted-foreground/40" />
+                    </div>
+                  )}
+                </div>
+                <div>
                 <p className="font-medium">{item.title}</p>
                 <div className="flex items-center gap-2 mt-1">
                   <Badge variant={item.status === "sold" ? "destructive" : item.status === "pending" ? "secondary" : "default"}>
@@ -104,6 +122,7 @@ export default async function ProjectItemsPage({
                       {item.price} {item.currency}
                     </span>
                   ) : null}
+                </div>
                 </div>
               </div>
 
