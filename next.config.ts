@@ -1,10 +1,25 @@
 import type { NextConfig } from "next";
 import createNextIntlPlugin from "next-intl/plugin";
+import { execSync } from "child_process";
 
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
+// Inject build info at build time
+const gitHash = (() => {
+  try {
+    return execSync("git rev-parse --short HEAD").toString().trim();
+  } catch {
+    return "dev";
+  }
+})();
+const buildDate = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+
 const nextConfig: NextConfig = {
   output: "standalone",
+  env: {
+    NEXT_PUBLIC_BUILD_ID: gitHash,
+    NEXT_PUBLIC_BUILD_DATE: buildDate,
+  },
   images: {
     remotePatterns: [
       {

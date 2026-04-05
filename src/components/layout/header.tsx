@@ -7,6 +7,7 @@ import { Menu } from "lucide-react";
 import { LanguageSwitcher } from "./language-switcher";
 import { UserNav } from "./user-nav";
 import { SmiLogo } from "@/components/shared/smi-logo";
+import { BuildInfo } from "@/components/shared/build-info";
 
 export function Header() {
   const t = useTranslations("nav");
@@ -50,6 +51,9 @@ export function Header() {
                   {t("messages")}
                 </Link>
               </nav>
+              <div className="mt-auto pt-6 border-t">
+                <BuildInfo />
+              </div>
             </SheetContent>
           </Sheet>
         </div>
