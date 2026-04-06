@@ -25,11 +25,15 @@ export function ImageUpload({
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Track latest images via ref to avoid stale closures in async uploadFiles
+  const imagesRef = useRef(images);
+  imagesRef.current = images;
+
   const uploadFiles = useCallback(
     async (files: File[]) => {
       if (files.length === 0) return;
 
-      const remaining = maxImages - images.length;
+      const remaining = maxImages - imagesRef.current.length;
       if (remaining <= 0) {
         setError(`Maximum ${maxImages} images`);
         return;
@@ -69,7 +73,7 @@ export function ImageUpload({
           return;
         }
 
-        onChange([...images, ...data.urls]);
+        onChange([...imagesRef.current, ...data.urls]);
       } catch {
         setError("Erreur réseau lors de l'upload");
       } finally {
@@ -77,7 +81,7 @@ export function ImageUpload({
         setUploadStatus("");
       }
     },
-    [images, maxImages, onChange]
+    [maxImages, onChange]
   );
 
   const handleDrop = useCallback(

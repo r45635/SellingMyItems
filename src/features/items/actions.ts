@@ -4,7 +4,7 @@ import { requireSeller } from "@/lib/auth";
 import { itemFormSchema, ITEM_STATUSES } from "@/lib/validations";
 import { db } from "@/db";
 import { items, itemImages, itemLinks, projects, sellerAccounts } from "@/db/schema";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNull, inArray, notInArray } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
@@ -175,29 +175,67 @@ export async function updateItemAction(formData: FormData) {
       )
     );
 
-  // Replace images: only if the form explicitly signals image changes
-  const hasImageField = formData.has("imageUrl") || formData.has("imagesSubmitted");
-  if (hasImageField) {
-    const imageUrlValues = formData.getAll("imageUrl").map(String).filter(Boolean);
-    await db.delete(itemImages).where(eq(itemImages.itemId, itemId));
-    if (imageUrlValues.length > 0) {
-      await db.insert(itemImages).values(
-        imageUrlValues.map((url, idx) => ({
+  // Diff-based image update: only delete removed, insert new, update sort order
+  const submittedUrls = formData.getAll("imageUrl").map(String).filter(Boolean);
+
+  // Fetch current images from DB
+  const currentImages = await db
+    .select({ id: itemImages.id, url: itemImages.url })
+    .from(itemImages)
+    .where(eq(itemImages.itemId, itemId));
+
+  const currentUrlSet = new Set(currentImages.map((img) => img.url));
+  const submittedUrlSet = new Set(submittedUrls);
+
+  // Images to remove (in DB but not in submitted list)
+  const toRemoveIds = currentImages
+    .filter((img) => !submittedUrlSet.has(img.url))
+    .map((img) => img.id);
+
+  // Images to add (in submitted list but not in DB)
+  const toAdd = submittedUrls.filter((url) => !currentUrlSet.has(url));
+
+  // Apply changes in a transaction
+  await db.transaction(async (tx) => {
+    // Delete removed images
+    if (toRemoveIds.length > 0) {
+      await tx.delete(itemImages).where(inArray(itemImages.id, toRemoveIds));
+    }
+
+    // Insert new images
+    if (toAdd.length > 0) {
+      await tx.insert(itemImages).values(
+        toAdd.map((url) => ({
           itemId,
           url,
-          sortOrder: idx,
+          sortOrder: 0, // Will be corrected below
         }))
       );
-      await db
-        .update(items)
-        .set({ coverImageUrl: imageUrlValues[0] })
-        .where(eq(items.id, itemId));
-    } else {
-      await db
-        .update(items)
-        .set({ coverImageUrl: null })
-        .where(eq(items.id, itemId));
     }
+
+    // Update sort order for all remaining images to match submitted order
+    for (let idx = 0; idx < submittedUrls.length; idx++) {
+      await tx
+        .update(itemImages)
+        .set({ sortOrder: idx })
+        .where(
+          and(eq(itemImages.itemId, itemId), eq(itemImages.url, submittedUrls[idx]))
+        );
+    }
+  });
+
+  // Update cover image
+  if (submittedUrls.length > 0) {
+    await db
+      .update(items)
+      .set({ coverImageUrl: submittedUrls[0] })
+      .where(eq(items.id, itemId));
+  } else if (currentImages.length > 0 && submittedUrls.length === 0) {
+    // Only clear cover if user explicitly removed all images
+    await db
+      .update(items)
+      .set({ coverImageUrl: null })
+      .where(eq(items.id, itemId));
   }
 
   // Replace links: delete old, insert new
