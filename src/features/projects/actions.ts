@@ -10,7 +10,7 @@ import { redirect } from "next/navigation";
 const DEMO_SELLER_PROFILE_ID = "11111111-1111-1111-1111-111111111111";
 const DEMO_GUEST_PROFILE_ID = "22222222-2222-2222-2222-222222222222";
 
-function getProfileIdForUser(user: { id: string; isDemo?: boolean; role?: "guest" | "seller" }) {
+function getProfileIdForUser(user: { id: string; isDemo?: boolean; role?: "purchaser" | "seller" }) {
   if (!user.isDemo) {
     return user.id;
   }

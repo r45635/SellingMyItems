@@ -19,7 +19,7 @@ const DEMO_GUEST_PROFILE_ID = "22222222-2222-2222-2222-222222222222";
 function getProfileIdForUser(user: {
   id: string;
   isDemo?: boolean;
-  role?: "guest" | "seller";
+  role?: "purchaser" | "seller";
 }) {
   if (!user.isDemo) return user.id;
   return user.role === "seller"

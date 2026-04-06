@@ -33,11 +33,27 @@
   },
   "auth": {
     "signIn": "Sign in",
+    "signUp": "Sign up",
     "signInWith": "Sign in with {provider}",
     "magicLink": "Send magic link",
     "emailPlaceholder": "your@email.com",
     "emailSent": "Check your email for a magic link",
-    "continueWith": "Or continue with"
+    "continueWith": "Or continue with",
+    "password": "Password",
+    "confirmPassword": "Confirm password",
+    "passwordMismatch": "Passwords do not match",
+    "passwordTooShort": "Password must be at least 6 characters",
+    "selectRole": "I am a...",
+    "rolePurchaser": "Buyer",
+    "roleSeller": "Seller",
+    "noAccount": "No account?",
+    "alreadyHaveAccount": "Already have an account?",
+    "checkEmail": "Check your email",
+    "confirmationSent": "We sent you a confirmation link. Click it to activate your account.",
+    "backToLogin": "Back to login",
+    "switchToDemo": "Use demo mode",
+    "switchToReal": "Use email login",
+    "authNotConfigured": "Authentication is not configured"
   },
   "project": {
     "title": "Project",

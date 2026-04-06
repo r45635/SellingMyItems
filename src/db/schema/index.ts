@@ -33,11 +33,14 @@ export const intentStatusEnum = pgEnum("intent_status", [
   "declined",
 ]);
 
+export const userRoleEnum = pgEnum("user_role", ["purchaser", "seller"]);
+
 // ─── Users / Profiles ───────────────────────────────────────────────────────
 
 export const profiles = pgTable("profiles", {
   id: uuid("id").primaryKey(), // matches Supabase auth.users.id
   email: text("email").notNull(),
+  role: userRoleEnum("role").default("purchaser").notNull(),
   displayName: text("display_name"),
   avatarUrl: text("avatar_url"),
   phone: text("phone"),

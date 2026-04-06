@@ -19,12 +19,17 @@ services:
       context: .
       args:
         DATABASE_URL: postgresql://${POSTGRES_USER:-sellingmyitems}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-sellingmyitems}
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:-}
+        NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY: ${NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY:-}
     restart: unless-stopped
     ports:
       - "${APP_PORT:-5050}:3000"
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-sellingmyitems}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-sellingmyitems}
       NODE_ENV: production
+      NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:-}
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY: ${NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY:-}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:-}
     volumes:
       - uploads:/app/public/uploads
     depends_on:

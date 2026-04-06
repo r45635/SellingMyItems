@@ -19,7 +19,7 @@ import type { User as SupabaseUser } from "@supabase/supabase-js";
 
 type NavUser = {
   email: string;
-  role: "guest" | "seller";
+  role: "purchaser" | "seller";
   isDemo: boolean;
 };
 
@@ -30,6 +30,7 @@ export function UserNav() {
   const supabase = createClient();
 
   useEffect(() => {
+    // Fetch session from server (covers both demo and real users)
     fetch("/api/dev-session")
       .then((response) => response.json())
       .then((data) => {
@@ -44,24 +45,42 @@ export function UserNav() {
       if (!data.user) {
         return;
       }
-      setUser({
-        email: data.user.email ?? "user@unknown.local",
-        role: "guest",
-        isDemo: false,
-      });
+      // Fetch the role from server API (reads from DB)
+      fetch("/api/dev-session")
+        .then((r) => r.json())
+        .then((d) => {
+          if (d?.user) {
+            setUser(d.user);
+          } else {
+            setUser({
+              email: data.user.email ?? "user@unknown.local",
+              role: "purchaser",
+              isDemo: false,
+            });
+          }
+        });
     });
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!session?.user) {
+        setUser(null);
         return;
       }
-      setUser({
-        email: session.user.email ?? "user@unknown.local",
-        role: "guest",
-        isDemo: false,
-      });
+      fetch("/api/dev-session")
+        .then((r) => r.json())
+        .then((d) => {
+          if (d?.user) {
+            setUser(d.user);
+          } else {
+            setUser({
+              email: session.user.email ?? "user@unknown.local",
+              role: "purchaser",
+              isDemo: false,
+            });
+          }
+        });
     });
 
     return () => subscription.unsubscribe();
@@ -128,12 +147,14 @@ export function UserNav() {
           </Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem>
-          <Link href="/seller" className="flex items-center cursor-pointer w-full">
-            <LayoutDashboard className="mr-2 h-4 w-4" />
-            {t("nav.sellerDashboard")}
-          </Link>
-        </DropdownMenuItem>
+        {user.role === "seller" ? (
+          <DropdownMenuItem>
+            <Link href="/seller" className="flex items-center cursor-pointer w-full">
+              <LayoutDashboard className="mr-2 h-4 w-4" />
+              {t("nav.sellerDashboard")}
+            </Link>
+          </DropdownMenuItem>
+        ) : null}
         <DropdownMenuSeparator />
         <DropdownMenuItem>
           <Link href="/account" className="flex items-center cursor-pointer w-full">

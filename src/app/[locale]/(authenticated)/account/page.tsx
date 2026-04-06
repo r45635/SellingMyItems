@@ -11,7 +11,7 @@ const DEMO_GUEST_PROFILE_ID = "22222222-2222-2222-2222-222222222222";
 function getProfileIdForUser(user: {
   id: string;
   isDemo?: boolean;
-  role?: "guest" | "seller";
+  role?: "purchaser" | "seller";
 }) {
   if (!user.isDemo) return user.id;
   return user.role === "seller"
@@ -102,7 +102,7 @@ export default async function AccountPage() {
         </div>
 
         <div className="text-sm text-muted-foreground">
-          Rôle : {user.role} {user.isDemo && "(demo)"}
+          Rôle : {user.role === "seller" ? "Vendeur / Seller" : "Acheteur / Buyer"} {user.isDemo && "(demo)"}
         </div>
 
         <button

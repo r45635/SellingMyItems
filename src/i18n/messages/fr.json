@@ -33,11 +33,27 @@
   },
   "auth": {
     "signIn": "Se connecter",
+    "signUp": "S'inscrire",
     "signInWith": "Se connecter avec {provider}",
     "magicLink": "Envoyer un lien magique",
     "emailPlaceholder": "votre@email.com",
     "emailSent": "Vérifiez votre email pour le lien magique",
-    "continueWith": "Ou continuer avec"
+    "continueWith": "Ou continuer avec",
+    "password": "Mot de passe",
+    "confirmPassword": "Confirmer le mot de passe",
+    "passwordMismatch": "Les mots de passe ne correspondent pas",
+    "passwordTooShort": "Le mot de passe doit contenir au moins 6 caractères",
+    "selectRole": "Je suis...",
+    "rolePurchaser": "Acheteur",
+    "roleSeller": "Vendeur",
+    "noAccount": "Pas de compte ?",
+    "alreadyHaveAccount": "Déjà un compte ?",
+    "checkEmail": "Vérifiez votre email",
+    "confirmationSent": "Nous vous avons envoyé un lien de confirmation. Cliquez dessus pour activer votre compte.",
+    "backToLogin": "Retour à la connexion",
+    "switchToDemo": "Mode démo",
+    "switchToReal": "Connexion par email",
+    "authNotConfigured": "L'authentification n'est pas configurée"
   },
   "project": {
     "title": "Projet",
