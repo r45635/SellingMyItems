@@ -36,6 +36,10 @@ fi
 echo "==> Pruning Docker to free space..."
 docker system prune -af --volumes 2>/dev/null || true
 
+# ── Shared proxy network (for Caddy ↔ App connectivity) ─────────────────────
+echo "==> Creating shared-proxy network (if missing)..."
+docker network create shared-proxy 2>/dev/null || echo "    shared-proxy network already exists."
+
 REPO_URL="${REPO_URL:-git@github.com:r45635/SellingMyItems.git}"
 
 echo "==> Cloning repo to $APP_DIR..."

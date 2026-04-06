@@ -19,6 +19,7 @@ services:
       context: .
       args:
         DATABASE_URL: postgresql://${POSTGRES_USER:-sellingmyitems}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-sellingmyitems}
+    container_name: sellingmyitems-app
     restart: unless-stopped
     ports:
       - "${APP_PORT:-5050}:3000"
@@ -30,7 +31,14 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    networks:
+      - default
+      - shared-proxy
 
 volumes:
   pgdata:
   uploads:
+
+networks:
+  shared-proxy:
+    external: true

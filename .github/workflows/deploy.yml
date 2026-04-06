@@ -38,6 +38,9 @@ jobs:
               exit 1
             fi
 
+            # Ensure shared-proxy network exists (idempotent, needed for Caddy ↔ App connectivity)
+            docker network create shared-proxy 2>/dev/null || true
+
             # Clone repo on first deploy, then pull
             if [ ! -d "$APP_DIR" ]; then
               echo "==> First deploy: cloning repo..."
@@ -57,16 +60,8 @@ jobs:
             echo "==> Waiting for app to be ready..."
             sleep 3
 
-            # Ensure Caddy is running, then connect to app network
-            echo "==> Ensuring Caddy is running and connected..."
-            cd /opt/trystbrief && docker compose up -d caddy 2>/dev/null || true
-            cd "$APP_DIR"
-            sleep 2
-            docker network disconnect sellingmyitems_default caddy 2>/dev/null || true
-            docker network connect sellingmyitems_default caddy 2>/dev/null || true
-            
             # Verify connectivity
-            echo "==> Verifying app is reachable through Caddy..."
+            echo "==> Verifying app is reachable..."
             curl -sf http://localhost:5050 -o /dev/null && echo "✅ App healthy" || echo "⚠️  App not responding on :5050"
 
             # Post-deploy cleanup
