@@ -12,10 +12,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { User, LogOut, LayoutDashboard, Heart, MessageSquare } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "@/i18n/navigation";
 import { useEffect, useState } from "react";
-import type { User as SupabaseUser } from "@supabase/supabase-js";
+import { signOutAction } from "@/lib/auth/actions";
 
 type NavUser = {
   email: string;
@@ -27,10 +26,8 @@ export function UserNav() {
   const t = useTranslations();
   const router = useRouter();
   const [user, setUser] = useState<NavUser | null>(null);
-  const supabase = createClient();
 
   useEffect(() => {
-    // Fetch session from server (covers both demo and real users)
     fetch("/api/dev-session")
       .then((response) => response.json())
       .then((data) => {
@@ -38,53 +35,7 @@ export function UserNav() {
           setUser(data.user);
         }
       });
-
-    if (!supabase) return;
-
-    supabase.auth.getUser().then(({ data }) => {
-      if (!data.user) {
-        return;
-      }
-      // Fetch the role from server API (reads from DB)
-      fetch("/api/dev-session")
-        .then((r) => r.json())
-        .then((d) => {
-          if (d?.user) {
-            setUser(d.user);
-          } else {
-            setUser({
-              email: data.user.email ?? "user@unknown.local",
-              role: "purchaser",
-              isDemo: false,
-            });
-          }
-        });
-    });
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session?.user) {
-        setUser(null);
-        return;
-      }
-      fetch("/api/dev-session")
-        .then((r) => r.json())
-        .then((d) => {
-          if (d?.user) {
-            setUser(d.user);
-          } else {
-            setUser({
-              email: session.user.email ?? "user@unknown.local",
-              role: "purchaser",
-              isDemo: false,
-            });
-          }
-        });
-    });
-
-    return () => subscription.unsubscribe();
-  }, [supabase]);
+  }, []);
 
   if (!user) {
     return (
@@ -104,14 +55,12 @@ export function UserNav() {
       .toUpperCase() ?? "U";
 
   async function handleSignOut() {
-    if (!user) {
-      return;
-    }
+    if (!user) return;
 
     if (user.isDemo) {
       await fetch("/api/dev-logout", { method: "POST" });
     } else {
-      await supabase?.auth.signOut();
+      await signOutAction();
     }
     router.push("/");
     router.refresh();

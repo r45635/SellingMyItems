@@ -38,8 +38,9 @@ export const userRoleEnum = pgEnum("user_role", ["purchaser", "seller"]);
 // ─── Users / Profiles ───────────────────────────────────────────────────────
 
 export const profiles = pgTable("profiles", {
-  id: uuid("id").primaryKey(), // matches Supabase auth.users.id
-  email: text("email").notNull(),
+  id: uuid("id").defaultRandom().primaryKey(),
+  email: text("email").notNull().unique(),
+  passwordHash: text("password_hash").notNull(),
   role: userRoleEnum("role").default("purchaser").notNull(),
   displayName: text("display_name"),
   avatarUrl: text("avatar_url"),
@@ -48,6 +49,20 @@ export const profiles = pgTable("profiles", {
     .defaultNow()
     .notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
+// ─── Sessions ───────────────────────────────────────────────────────────────
+
+export const sessions = pgTable("sessions", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => profiles.id, { onDelete: "cascade" }),
+  token: text("token").notNull().unique(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),
 });
@@ -277,9 +292,17 @@ export const conversationMessages = pgTable("conversation_messages", {
 
 export const profilesRelations = relations(profiles, ({ many }) => ({
   sellerAccounts: many(sellerAccounts),
+  sessions: many(sessions),
   wishlists: many(buyerWishlists),
   intents: many(buyerIntents),
   threads: many(conversationThreads),
+}));
+
+export const sessionsRelations = relations(sessions, ({ one }) => ({
+  user: one(profiles, {
+    fields: [sessions.userId],
+    references: [profiles.id],
+  }),
 }));
 
 export const sellerAccountsRelations = relations(

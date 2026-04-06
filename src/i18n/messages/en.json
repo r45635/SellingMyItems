@@ -43,6 +43,8 @@
     "confirmPassword": "Confirm password",
     "passwordMismatch": "Passwords do not match",
     "passwordTooShort": "Password must be at least 6 characters",
+    "emailTaken": "An account with this email already exists",
+    "invalidCredentials": "Invalid email or password",
     "selectRole": "I am a...",
     "rolePurchaser": "Buyer",
     "roleSeller": "Seller",

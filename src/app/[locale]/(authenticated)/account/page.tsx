@@ -22,7 +22,7 @@ function getProfileIdForUser(user: {
 async function ensureProfile(profileId: string, email: string) {
   await db
     .insert(profiles)
-    .values({ id: profileId, email, displayName: email.split("@")[0] })
+    .values({ id: profileId, email, passwordHash: "", displayName: email.split("@")[0] })
     .onConflictDoNothing({ target: profiles.id });
 }
 

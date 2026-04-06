@@ -9,7 +9,7 @@ import { useState } from "react";
 import { useRouter } from "@/i18n/navigation";
 import { Link } from "@/i18n/navigation";
 import { SmiLogo } from "@/components/shared/smi-logo";
-import { createClient } from "@/lib/supabase/client";
+import { signUpAction } from "@/lib/auth/actions";
 import { ShoppingBag, Store } from "lucide-react";
 
 export default function SignupPage() {
@@ -21,67 +21,36 @@ export default function SignupPage() {
   const [role, setRole] = useState<"purchaser" | "seller">("purchaser");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState(false);
 
   async function handleSignUp(e: React.FormEvent) {
     e.preventDefault();
     setError("");
-
-    if (password !== confirmPassword) {
-      setError(t("passwordMismatch"));
-      return;
-    }
-
-    if (password.length < 6) {
-      setError(t("passwordTooShort"));
-      return;
-    }
-
-    const supabase = createClient();
-    if (!supabase) {
-      setError(t("authNotConfigured"));
-      return;
-    }
-
     setLoading(true);
 
-    const { error: signUpError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { role },
-      },
-    });
+    const formData = new FormData();
+    formData.set("email", email);
+    formData.set("password", password);
+    formData.set("confirmPassword", confirmPassword);
+    formData.set("role", role);
+
+    const result = await signUpAction(formData);
 
     setLoading(false);
 
-    if (signUpError) {
-      setError(signUpError.message);
+    if (result.error) {
+      // Try i18n key first, fallback to raw message
+      const msg = t.has(result.error) ? t(result.error) : result.error;
+      setError(msg);
       return;
     }
 
-    setSuccess(true);
-  }
-
-  if (success) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh] px-4">
-        <Card className="w-full max-w-md">
-          <CardContent className="pt-6 text-center space-y-4">
-            <div className="text-4xl">✉️</div>
-            <h2 className="text-xl font-semibold">{t("checkEmail")}</h2>
-            <p className="text-muted-foreground text-sm">
-              {t("confirmationSent")}
-            </p>
-            <Link href="/login">
-              <Button variant="outline" className="mt-4">
-                {t("backToLogin")}
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
-      </div>
-    );
+    // Signed up + logged in — redirect based on role
+    if (result.role === "seller") {
+      router.push("/seller");
+    } else {
+      router.push("/");
+    }
+    router.refresh();
   }
 
   return (

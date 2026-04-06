@@ -10,7 +10,7 @@ import { useState } from "react";
 import { useRouter } from "@/i18n/navigation";
 import { Link } from "@/i18n/navigation";
 import { SmiLogo } from "@/components/shared/smi-logo";
-import { createClient } from "@/lib/supabase/client";
+import { signInAction } from "@/lib/auth/actions";
 
 export default function LoginPage() {
   const t = useTranslations("auth");
@@ -24,28 +24,27 @@ export default function LoginPage() {
   async function handleRealSignIn(e: React.FormEvent) {
     e.preventDefault();
     setError("");
-
-    const supabase = createClient();
-    if (!supabase) {
-      setError(t("authNotConfigured"));
-      return;
-    }
-
     setLoading(true);
 
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    const formData = new FormData();
+    formData.set("email", email);
+    formData.set("password", password);
+
+    const result = await signInAction(formData);
 
     setLoading(false);
 
-    if (signInError) {
-      setError(signInError.message);
+    if (result.error) {
+      const msg = t.has(result.error) ? t(result.error) : result.error;
+      setError(msg);
       return;
     }
 
-    router.push("/");
+    if (result.role === "seller") {
+      router.push("/seller");
+    } else {
+      router.push("/");
+    }
     router.refresh();
   }
 

@@ -23,6 +23,7 @@ async function ensureSellerAccount(profileId: string, email: string) {
     .values({
       id: profileId,
       email,
+      passwordHash: "",
       displayName: email.split("@")[0],
     })
     .onConflictDoNothing({ target: profiles.id });

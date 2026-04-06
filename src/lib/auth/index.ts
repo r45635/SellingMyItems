@@ -1,9 +1,8 @@
-import { createClient as createSupabaseClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
-import { profiles } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { profiles, sessions } from "@/db/schema";
+import { eq, and, gt } from "drizzle-orm";
 
 export type UserRole = "purchaser" | "seller";
 
@@ -14,43 +13,13 @@ export type AppUser = {
   isDemo: boolean;
 };
 
-/**
- * Ensure a profile row exists in the local DB for this Supabase user.
- * Uses role from user_metadata (set during signup) or defaults to "purchaser".
- */
-async function ensureProfile(
-  userId: string,
-  email: string,
-  metadataRole?: string
-): Promise<UserRole> {
-  const existing = await db.query.profiles.findFirst({
-    where: eq(profiles.id, userId),
-    columns: { role: true },
-  });
-  if (existing) {
-    return existing.role;
-  }
-
-  const role: UserRole =
-    metadataRole === "seller" ? "seller" : "purchaser";
-
-  await db
-    .insert(profiles)
-    .values({
-      id: userId,
-      email,
-      role,
-      displayName: email.split("@")[0],
-    })
-    .onConflictDoNothing({ target: profiles.id });
-
-  return role;
-}
+const SESSION_COOKIE = "session_token";
 
 export async function getUser(): Promise<AppUser | null> {
   const cookieStore = await cookies();
-  const demoRole = cookieStore.get("demo_role")?.value;
 
+  // Demo mode
+  const demoRole = cookieStore.get("demo_role")?.value;
   if (demoRole === "guest" || demoRole === "seller") {
     return {
       id: demoRole === "seller"
@@ -62,27 +31,26 @@ export async function getUser(): Promise<AppUser | null> {
     } satisfies AppUser;
   }
 
-  const supabase = await createSupabaseClient();
-  if (!supabase) {
-    return null;
-  }
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    return null;
-  }
+  // Real user via session token
+  const token = cookieStore.get(SESSION_COOKIE)?.value;
+  if (!token) return null;
 
-  const role = await ensureProfile(
-    user.id,
-    user.email ?? "user@unknown.local",
-    (user.user_metadata as Record<string, unknown>)?.role as string | undefined
-  );
+  const session = await db.query.sessions.findFirst({
+    where: and(eq(sessions.token, token), gt(sessions.expiresAt, new Date())),
+    columns: { userId: true },
+  });
+  if (!session) return null;
+
+  const profile = await db.query.profiles.findFirst({
+    where: eq(profiles.id, session.userId),
+    columns: { id: true, email: true, role: true },
+  });
+  if (!profile) return null;
 
   return {
-    id: user.id,
-    email: user.email ?? "user@unknown.local",
-    role,
+    id: profile.id,
+    email: profile.email,
+    role: profile.role,
     isDemo: false,
   } satisfies AppUser;
 }
