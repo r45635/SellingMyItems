@@ -238,25 +238,56 @@ export async function updateItemAction(formData: FormData) {
       .where(eq(items.id, itemId));
   }
 
-  // Replace links: delete old, insert new
+  // Diff-based link update: only delete removed, insert new
   const linkValues = formData.getAll("link").map(String).filter(Boolean);
-  await db.delete(itemLinks).where(eq(itemLinks.itemId, itemId));
-  if (linkValues.length > 0) {
-    const parsedLinks = linkValues.map((raw) => {
+  const parsedLinks = linkValues
+    .map((raw) => {
       try { return JSON.parse(raw) as { url: string; label?: string }; }
       catch { return null; }
-    }).filter(Boolean) as { url: string; label?: string }[];
+    })
+    .filter(Boolean) as { url: string; label?: string }[];
 
-    if (parsedLinks.length > 0) {
-      await db.insert(itemLinks).values(
-        parsedLinks.map((l) => ({
+  // Fetch current links from DB
+  const currentLinks = await db
+    .select({ id: itemLinks.id, url: itemLinks.url, label: itemLinks.label })
+    .from(itemLinks)
+    .where(eq(itemLinks.itemId, itemId));
+
+  // Build a key for comparison (url + normalized label)
+  const linkKey = (url: string, label?: string | null) =>
+    `${url}||${(label ?? "").trim()}`;
+
+  const currentKeyMap = new Map(
+    currentLinks.map((l) => [linkKey(l.url, l.label), l.id])
+  );
+  const submittedKeySet = new Set(
+    parsedLinks.map((l) => linkKey(l.url, l.label))
+  );
+
+  // Links to remove (in DB but not in submitted list)
+  const linkIdsToRemove = currentLinks
+    .filter((l) => !submittedKeySet.has(linkKey(l.url, l.label)))
+    .map((l) => l.id);
+
+  // Links to add (in submitted list but not in DB)
+  const linksToAdd = parsedLinks.filter(
+    (l) => !currentKeyMap.has(linkKey(l.url, l.label))
+  );
+
+  await db.transaction(async (tx) => {
+    if (linkIdsToRemove.length > 0) {
+      await tx.delete(itemLinks).where(inArray(itemLinks.id, linkIdsToRemove));
+    }
+    if (linksToAdd.length > 0) {
+      await tx.insert(itemLinks).values(
+        linksToAdd.map((l) => ({
           itemId,
           url: l.url,
           label: l.label || null,
         }))
       );
     }
-  }
+  });
 
   redirect(`/seller/projects/${projectId}/items`);
 }
