@@ -45,6 +45,7 @@
     "passwordTooShort": "Password must be at least 6 characters",
     "emailTaken": "An account with this email already exists",
     "invalidCredentials": "Invalid email or password",
+    "accountDisabled": "This account has been disabled",
     "selectRole": "I am a...",
     "rolePurchaser": "Buyer",
     "roleSeller": "Seller",
@@ -53,8 +54,6 @@
     "checkEmail": "Check your email",
     "confirmationSent": "We sent you a confirmation link. Click it to activate your account.",
     "backToLogin": "Back to login",
-    "switchToDemo": "Use demo mode",
-    "switchToReal": "Use email login",
     "authNotConfigured": "Authentication is not configured"
   },
   "project": {

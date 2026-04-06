@@ -9,8 +9,6 @@ import { notFound } from "next/navigation";
 import Image from "next/image";
 import { StatusSelect } from "@/features/items/components/status-select";
 
-const DEMO_SELLER_PROFILE_ID = "11111111-1111-1111-1111-111111111111";
-
 export default async function ProjectItemsPage({
   params,
 }: {
@@ -20,9 +18,8 @@ export default async function ProjectItemsPage({
   const t = await getTranslations("seller");
   const user = await requireSeller();
 
-  const profileId = user.isDemo ? DEMO_SELLER_PROFILE_ID : user.id;
   const sellerAccount = await db.query.sellerAccounts.findFirst({
-    where: eq(sellerAccounts.userId, profileId),
+    where: eq(sellerAccounts.userId, user.id),
   });
 
   const project = sellerAccount

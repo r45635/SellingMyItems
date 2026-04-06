@@ -3,48 +3,15 @@
 import { requireSeller } from "@/lib/auth";
 import { projectFormSchema } from "@/lib/validations";
 import { db } from "@/db";
-import { profiles, projects, sellerAccounts } from "@/db/schema";
+import { projects, sellerAccounts } from "@/db/schema";
 import { and, eq, isNull } from "drizzle-orm";
 import { redirect } from "next/navigation";
 
-const DEMO_SELLER_PROFILE_ID = "11111111-1111-1111-1111-111111111111";
-const DEMO_GUEST_PROFILE_ID = "22222222-2222-2222-2222-222222222222";
-
-function getProfileIdForUser(user: { id: string; isDemo?: boolean; role?: "purchaser" | "seller" }) {
-  if (!user.isDemo) {
-    return user.id;
-  }
-  return user.role === "seller" ? DEMO_SELLER_PROFILE_ID : DEMO_GUEST_PROFILE_ID;
-}
-
-async function ensureSellerAccount(profileId: string, email: string) {
-  await db
-    .insert(profiles)
-    .values({
-      id: profileId,
-      email,
-      passwordHash: "",
-      displayName: email.split("@")[0],
-    })
-    .onConflictDoNothing({ target: profiles.id });
-
-  const existingSeller = await db.query.sellerAccounts.findFirst({
-    where: eq(sellerAccounts.userId, profileId),
+async function getSellerAccount(userId: string) {
+  const sellerAccount = await db.query.sellerAccounts.findFirst({
+    where: eq(sellerAccounts.userId, userId),
   });
-
-  if (existingSeller) {
-    return existingSeller;
-  }
-
-  const [createdSeller] = await db
-    .insert(sellerAccounts)
-    .values({
-      userId: profileId,
-      isActive: true,
-    })
-    .returning();
-
-  return createdSeller;
+  return sellerAccount ?? null;
 }
 
 export async function createProjectAction(formData: FormData) {
@@ -62,8 +29,10 @@ export async function createProjectAction(formData: FormData) {
     return { error: validated.error.flatten().fieldErrors };
   }
 
-  const profileId = getProfileIdForUser(user);
-  const sellerAccount = await ensureSellerAccount(profileId, user.email);
+  const sellerAccount = await getSellerAccount(user.id);
+  if (!sellerAccount) {
+    return { error: { form: ["Compte vendeur introuvable"] } };
+  }
 
   try {
     await db.insert(projects).values({
@@ -96,8 +65,10 @@ export async function updateProjectAction(formData: FormData) {
     return { error: validated.error.flatten().fieldErrors };
   }
 
-  const profileId = getProfileIdForUser(user);
-  const sellerAccount = await ensureSellerAccount(profileId, user.email);
+  const sellerAccount = await getSellerAccount(user.id);
+  if (!sellerAccount) {
+    return { error: { form: ["Compte vendeur introuvable"] } };
+  }
 
   try {
     await db
@@ -126,8 +97,8 @@ export async function updateProjectAction(formData: FormData) {
 export async function deleteProjectAction(projectId: string) {
   const user = await requireSeller();
 
-  const profileId = getProfileIdForUser(user);
-  const sellerAccount = await ensureSellerAccount(profileId, user.email);
+  const sellerAccount = await getSellerAccount(user.id);
+  if (!sellerAccount) return;
 
   await db
     .update(projects)

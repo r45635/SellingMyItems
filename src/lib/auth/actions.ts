@@ -96,11 +96,15 @@ export async function signInAction(formData: FormData) {
 
   const profile = await db.query.profiles.findFirst({
     where: eq(profiles.email, email),
-    columns: { id: true, passwordHash: true, role: true },
+    columns: { id: true, passwordHash: true, role: true, isActive: true },
   });
 
   if (!profile || !profile.passwordHash) {
     return { error: "invalidCredentials" };
+  }
+
+  if (!profile.isActive) {
+    return { error: "accountDisabled" };
   }
 
   const valid = await bcrypt.compare(password, profile.passwordHash);

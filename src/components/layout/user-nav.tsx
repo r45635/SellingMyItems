@@ -12,19 +12,16 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { User, LogOut, LayoutDashboard, Heart, MessageSquare } from "lucide-react";
-import { useRouter } from "@/i18n/navigation";
 import { useEffect, useState } from "react";
 import { signOutAction } from "@/lib/auth/actions";
 
 type NavUser = {
   email: string;
   role: "purchaser" | "seller";
-  isDemo: boolean;
 };
 
 export function UserNav() {
   const t = useTranslations();
-  const router = useRouter();
   const [user, setUser] = useState<NavUser | null>(null);
 
   useEffect(() => {
@@ -56,14 +53,8 @@ export function UserNav() {
 
   async function handleSignOut() {
     if (!user) return;
-
-    if (user.isDemo) {
-      await fetch("/api/dev-logout", { method: "POST" });
-    } else {
-      await signOutAction();
-    }
-    router.push("/");
-    router.refresh();
+    await signOutAction();
+    window.location.href = "/";
   }
 
   return (
@@ -77,9 +68,6 @@ export function UserNav() {
         <div className="flex items-center justify-start gap-2 p-2">
           <div className="flex flex-col space-y-1 leading-none">
             <p className="text-sm font-medium">{user.email}</p>
-            {user.isDemo ? (
-              <p className="text-xs text-muted-foreground">Demo {user.role}</p>
-            ) : null}
           </div>
         </div>
         <DropdownMenuSeparator />

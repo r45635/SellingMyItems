@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
 import { useState } from "react";
 import { Link } from "@/i18n/navigation";
 import { SmiLogo } from "@/components/shared/smi-logo";
@@ -17,9 +16,8 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [mode, setMode] = useState<"real" | "demo">("real");
 
-  async function handleRealSignIn(e: React.FormEvent) {
+  async function handleSignIn(e: React.FormEvent) {
     e.preventDefault();
     setError("");
     setLoading(true);
@@ -42,27 +40,6 @@ export default function LoginPage() {
     window.location.href = result.role === "seller" ? "/seller" : "/";
   }
 
-  async function handleDemoSignIn(e: React.FormEvent) {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-
-    const response = await fetch("/api/dev-login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username: email, password }),
-    });
-
-    setLoading(false);
-
-    if (!response.ok) {
-      setError("Identifiants invalides. Utilise guest/guest ou seller/seller.");
-      return;
-    }
-
-    window.location.href = email === "seller" ? "/seller" : "/";
-  }
-
   return (
     <div className="flex items-center justify-center min-h-[60vh] px-4">
       <Card className="w-full max-w-md">
@@ -73,136 +50,47 @@ export default function LoginPage() {
           <CardTitle className="text-2xl">{t("signIn")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {mode === "real" ? (
-            <form onSubmit={handleRealSignIn} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder={t("emailPlaceholder")}
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  autoComplete="email"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">{t("password")}</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  autoComplete="current-password"
-                />
-              </div>
-              {error ? (
-                <p className="text-sm text-destructive">{error}</p>
-              ) : null}
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? "..." : t("signIn")}
-              </Button>
-              <p className="text-center text-sm text-muted-foreground">
-                {t("noAccount")}{" "}
-                <Link
-                  href="/signup"
-                  className="text-primary hover:underline"
-                >
-                  {t("signUp")}
-                </Link>
-              </p>
-            </form>
-          ) : (
-            <>
-              <div className="rounded-xl border bg-muted/40 p-4 text-sm space-y-2">
-                <p className="font-medium text-center">Demo</p>
-                <div className="grid grid-cols-2 gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="w-full"
-                    onClick={() => {
-                      setEmail("guest");
-                      setPassword("guest");
-                    }}
-                  >
-                    🛒 Guest
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="w-full"
-                    onClick={() => {
-                      setEmail("seller");
-                      setPassword("seller");
-                    }}
-                  >
-                    🏷️ Seller
-                  </Button>
-                </div>
-              </div>
-              <form onSubmit={handleDemoSignIn} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="demo-username">Login</Label>
-                  <Input
-                    id="demo-username"
-                    type="text"
-                    placeholder="guest ou seller"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="demo-password">Mot de passe</Label>
-                  <Input
-                    id="demo-password"
-                    type="password"
-                    placeholder="identique au login"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                  />
-                </div>
-                {error ? (
-                  <p className="text-sm text-destructive">{error}</p>
-                ) : null}
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? "..." : t("signIn")}
-                </Button>
-              </form>
-            </>
-          )}
-
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <Separator className="w-full" />
+          <form onSubmit={handleSignIn} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder={t("emailPlaceholder")}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                autoComplete="email"
+              />
             </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground">
-                {mode === "real" ? "Demo" : t("signIn")}
-              </span>
+            <div className="space-y-2">
+              <Label htmlFor="password">{t("password")}</Label>
+              <Input
+                id="password"
+                type="password"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                autoComplete="current-password"
+              />
             </div>
-          </div>
-
-          <Button
-            variant="ghost"
-            size="sm"
-            className="w-full text-muted-foreground"
-            onClick={() => {
-              setMode(mode === "real" ? "demo" : "real");
-              setEmail("");
-              setPassword("");
-              setError("");
-            }}
-          >
-            {mode === "real" ? t("switchToDemo") : t("switchToReal")}
-          </Button>
+            {error ? (
+              <p className="text-sm text-destructive">{error}</p>
+            ) : null}
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? "..." : t("signIn")}
+            </Button>
+            <p className="text-center text-sm text-muted-foreground">
+              {t("noAccount")}{" "}
+              <Link
+                href="/signup"
+                className="text-primary hover:underline"
+              >
+                {t("signUp")}
+              </Link>
+            </p>
+          </form>
         </CardContent>
       </Card>
     </div>

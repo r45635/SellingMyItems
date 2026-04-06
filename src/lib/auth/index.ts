@@ -10,7 +10,6 @@ export type AppUser = {
   id: string;
   email: string;
   role: UserRole;
-  isDemo: boolean;
 };
 
 const SESSION_COOKIE = "session_token";
@@ -18,20 +17,6 @@ const SESSION_COOKIE = "session_token";
 export async function getUser(): Promise<AppUser | null> {
   const cookieStore = await cookies();
 
-  // Demo mode
-  const demoRole = cookieStore.get("demo_role")?.value;
-  if (demoRole === "guest" || demoRole === "seller") {
-    return {
-      id: demoRole === "seller"
-        ? "11111111-1111-1111-1111-111111111111"
-        : "22222222-2222-2222-2222-222222222222",
-      email: `${demoRole}@local.test`,
-      role: demoRole === "seller" ? "seller" : "purchaser",
-      isDemo: true,
-    } satisfies AppUser;
-  }
-
-  // Real user via session token
   const token = cookieStore.get(SESSION_COOKIE)?.value;
   if (!token) return null;
 
@@ -42,7 +27,7 @@ export async function getUser(): Promise<AppUser | null> {
   if (!session) return null;
 
   const profile = await db.query.profiles.findFirst({
-    where: eq(profiles.id, session.userId),
+    where: and(eq(profiles.id, session.userId), eq(profiles.isActive, true)),
     columns: { id: true, email: true, role: true },
   });
   if (!profile) return null;
@@ -51,7 +36,6 @@ export async function getUser(): Promise<AppUser | null> {
     id: profile.id,
     email: profile.email,
     role: profile.role,
-    isDemo: false,
   } satisfies AppUser;
 }
 

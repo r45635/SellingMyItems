@@ -9,9 +9,6 @@ import { submitIntentAction } from "@/features/intents/actions";
 import Image from "next/image";
 import { ImageOff, Tag } from "lucide-react";
 
-const DEMO_SELLER_PROFILE_ID = "11111111-1111-1111-1111-111111111111";
-const DEMO_GUEST_PROFILE_ID = "22222222-2222-2222-2222-222222222222";
-
 function formatCurrency(amount: number, currency: string) {
   return new Intl.NumberFormat(undefined, { style: "currency", currency }).format(amount);
 }
@@ -39,11 +36,7 @@ export default async function WishlistPage() {
   const tIntent = await getTranslations("intent");
   const user = await requireUser();
 
-  const profileId = user.isDemo
-    ? user.role === "seller"
-      ? DEMO_SELLER_PROFILE_ID
-      : DEMO_GUEST_PROFILE_ID
-    : user.id;
+  const profileId = user.id;
 
   const wishlists = await db
     .select({ id: buyerWishlists.id, projectId: buyerWishlists.projectId })

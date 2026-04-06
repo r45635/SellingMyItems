@@ -11,24 +11,10 @@ import { eq, desc } from "drizzle-orm";
 import { Link } from "@/i18n/navigation";
 import { sendMessageAction } from "@/features/messages/actions";
 
-const DEMO_SELLER_PROFILE_ID = "11111111-1111-1111-1111-111111111111";
-const DEMO_GUEST_PROFILE_ID = "22222222-2222-2222-2222-222222222222";
-
-function getProfileIdForUser(user: {
-  id: string;
-  isDemo?: boolean;
-  role?: "purchaser" | "seller";
-}) {
-  if (!user.isDemo) return user.id;
-  return user.role === "seller"
-    ? DEMO_SELLER_PROFILE_ID
-    : DEMO_GUEST_PROFILE_ID;
-}
-
 export default async function MessagesPage() {
   const t = await getTranslations("messages");
   const user = await requireUser();
-  const profileId = getProfileIdForUser(user);
+  const profileId = user.id;
 
   const threads = await db.query.conversationThreads.findMany({
     where: eq(conversationThreads.buyerId, profileId),

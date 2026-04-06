@@ -45,6 +45,7 @@
     "passwordTooShort": "Le mot de passe doit contenir au moins 6 caractères",
     "emailTaken": "Un compte avec cet email existe déjà",
     "invalidCredentials": "Email ou mot de passe incorrect",
+    "accountDisabled": "Ce compte a été désactivé",
     "selectRole": "Je suis...",
     "rolePurchaser": "Acheteur",
     "roleSeller": "Vendeur",
@@ -53,8 +54,6 @@
     "checkEmail": "Vérifiez votre email",
     "confirmationSent": "Nous vous avons envoyé un lien de confirmation. Cliquez dessus pour activer votre compte.",
     "backToLogin": "Retour à la connexion",
-    "switchToDemo": "Mode démo",
-    "switchToReal": "Connexion par email",
     "authNotConfigured": "L'authentification n'est pas configurée"
   },
   "project": {

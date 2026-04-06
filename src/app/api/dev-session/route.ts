@@ -12,7 +12,6 @@ export async function GET() {
     user: {
       email: user.email,
       role: user.role,
-      isDemo: user.isDemo,
     },
   });
 }

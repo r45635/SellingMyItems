@@ -3,6 +3,7 @@ import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 import { randomUUID } from "crypto";
 import sharp from "sharp";
+import { getUser } from "@/lib/auth";
 
 const ALLOWED_TYPES = [
   "image/jpeg",
@@ -17,9 +18,8 @@ const MAX_DIMENSION = 1920; // Max width or height after resize
 const JPEG_QUALITY = 80;
 
 export async function POST(request: NextRequest) {
-  // Check demo auth cookie (same as dev-session)
-  const demoRole = request.cookies.get("demo_role")?.value;
-  if (!demoRole) {
+  const user = await getUser();
+  if (!user) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 

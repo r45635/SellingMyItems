@@ -7,7 +7,6 @@ import {
   buyerWishlistItems,
   buyerWishlists,
   items,
-  profiles,
   projects,
   sellerAccounts,
 } from "@/db/schema";
@@ -16,31 +15,9 @@ import { purchaseIntentSchema } from "@/lib/validations";
 import { and, eq, inArray, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
-const DEMO_SELLER_PROFILE_ID = "11111111-1111-1111-1111-111111111111";
-const DEMO_GUEST_PROFILE_ID = "22222222-2222-2222-2222-222222222222";
-
-function getProfileIdForUser(user: {
-  id: string;
-  isDemo?: boolean;
-  role?: "purchaser" | "seller";
-}) {
-  if (!user.isDemo) return user.id;
-  return user.role === "seller"
-    ? DEMO_SELLER_PROFILE_ID
-    : DEMO_GUEST_PROFILE_ID;
-}
-
-async function ensureProfile(profileId: string, email: string) {
-  await db
-    .insert(profiles)
-    .values({ id: profileId, email, passwordHash: "", displayName: email.split("@")[0] })
-    .onConflictDoNothing({ target: profiles.id });
-}
-
 export async function submitIntentAction(formData: FormData) {
   const user = await requireUser();
-  const profileId = getProfileIdForUser(user);
-  await ensureProfile(profileId, user.email);
+  const profileId = user.id;
 
   const itemIds = formData.getAll("itemId").map(String).filter(Boolean);
 
@@ -104,7 +81,7 @@ export async function updateIntentStatusAction(
   status: "reviewed" | "accepted" | "declined"
 ) {
   const user = await requireSeller();
-  const profileId = getProfileIdForUser(user);
+  const profileId = user.id;
 
   const sellerAccount = await db.query.sellerAccounts.findFirst({
     where: eq(sellerAccounts.userId, profileId),

@@ -6,13 +6,11 @@ import { db } from "@/db";
 import { projects, sellerAccounts } from "@/db/schema";
 import { and, desc, eq, isNull } from "drizzle-orm";
 
-const DEMO_SELLER_PROFILE_ID = "11111111-1111-1111-1111-111111111111";
-
 export default async function SellerProjectsPage() {
   const t = await getTranslations("seller");
   const user = await requireSeller();
 
-  const profileId = user.isDemo ? DEMO_SELLER_PROFILE_ID : user.id;
+  const profileId = user.id;
 
   const sellerAccount = await db.query.sellerAccounts.findFirst({
     where: eq(sellerAccounts.userId, profileId),

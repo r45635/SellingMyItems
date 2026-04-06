@@ -5,32 +5,9 @@ import { profiles } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
-const DEMO_SELLER_PROFILE_ID = "11111111-1111-1111-1111-111111111111";
-const DEMO_GUEST_PROFILE_ID = "22222222-2222-2222-2222-222222222222";
-
-function getProfileIdForUser(user: {
-  id: string;
-  isDemo?: boolean;
-  role?: "purchaser" | "seller";
-}) {
-  if (!user.isDemo) return user.id;
-  return user.role === "seller"
-    ? DEMO_SELLER_PROFILE_ID
-    : DEMO_GUEST_PROFILE_ID;
-}
-
-async function ensureProfile(profileId: string, email: string) {
-  await db
-    .insert(profiles)
-    .values({ id: profileId, email, passwordHash: "", displayName: email.split("@")[0] })
-    .onConflictDoNothing({ target: profiles.id });
-}
-
 async function updateProfileAction(formData: FormData) {
   "use server";
   const user = await requireUser();
-  const profileId = getProfileIdForUser(user);
-  await ensureProfile(profileId, user.email);
 
   const displayName = String(formData.get("displayName") ?? "").trim();
   const phone = String(formData.get("phone") ?? "").trim();
@@ -42,7 +19,7 @@ async function updateProfileAction(formData: FormData) {
       phone: phone || null,
       updatedAt: new Date(),
     })
-    .where(eq(profiles.id, profileId));
+    .where(eq(profiles.id, user.id));
 
   revalidatePath("/account");
 }
@@ -50,11 +27,9 @@ async function updateProfileAction(formData: FormData) {
 export default async function AccountPage() {
   const t = await getTranslations("nav");
   const user = await requireUser();
-  const profileId = getProfileIdForUser(user);
-  await ensureProfile(profileId, user.email);
 
   const profile = await db.query.profiles.findFirst({
-    where: eq(profiles.id, profileId),
+    where: eq(profiles.id, user.id),
   });
 
   return (
@@ -102,7 +77,7 @@ export default async function AccountPage() {
         </div>
 
         <div className="text-sm text-muted-foreground">
-          Rôle : {user.role === "seller" ? "Vendeur / Seller" : "Acheteur / Buyer"} {user.isDemo && "(demo)"}
+          Rôle : {user.role === "seller" ? "Vendeur / Seller" : "Acheteur / Buyer"}
         </div>
 
         <button

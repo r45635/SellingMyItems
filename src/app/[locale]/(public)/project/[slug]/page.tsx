@@ -2,7 +2,7 @@ import { ItemTeaserCard } from "@/components/shared/item-teaser-card";
 import { Badge } from "@/components/ui/badge";
 import { MapPin, ArrowLeft, Package } from "lucide-react";
 import { db } from "@/db";
-import { items, projectCategories, projects } from "@/db/schema";
+import { items, profiles, projectCategories, projects, sellerAccounts } from "@/db/schema";
 import { and, asc, eq, isNull, ne } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { Link } from "@/i18n/navigation";
@@ -22,6 +22,18 @@ export default async function ProjectPage({
   });
 
   if (!project) {
+    notFound();
+  }
+
+  // Check that the seller's profile is active
+  const seller = await db
+    .select({ isActive: profiles.isActive })
+    .from(sellerAccounts)
+    .innerJoin(profiles, eq(sellerAccounts.userId, profiles.id))
+    .where(and(eq(sellerAccounts.id, project.sellerId), eq(profiles.isActive, true)))
+    .limit(1);
+
+  if (seller.length === 0) {
     notFound();
   }
 

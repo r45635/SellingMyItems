@@ -18,9 +18,6 @@ import {
   removeWishlistItemAction,
 } from "@/features/wishlist/actions";
 
-const DEMO_SELLER_PROFILE_ID = "11111111-1111-1111-1111-111111111111";
-const DEMO_GUEST_PROFILE_ID = "22222222-2222-2222-2222-222222222222";
-
 export default async function ItemPage({
   params,
 }: {
@@ -62,13 +59,7 @@ export default async function ItemPage({
     notFound();
   }
 
-  const profileId = user
-    ? user.isDemo
-      ? user.role === "seller"
-        ? DEMO_SELLER_PROFILE_ID
-        : DEMO_GUEST_PROFILE_ID
-      : user.id
-    : null;
+  const profileId = user ? user.id : null;
 
   const wishlist = profileId
     ? await db.query.buyerWishlists.findFirst({

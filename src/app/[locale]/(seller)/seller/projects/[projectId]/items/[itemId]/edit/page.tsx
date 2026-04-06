@@ -8,8 +8,6 @@ import { items, itemImages, itemLinks, projectCategories, projects, sellerAccoun
 import { and, asc, eq, isNull } from "drizzle-orm";
 import { notFound } from "next/navigation";
 
-const DEMO_SELLER_PROFILE_ID = "11111111-1111-1111-1111-111111111111";
-
 export default async function EditItemPage({
   params,
 }: {
@@ -19,7 +17,7 @@ export default async function EditItemPage({
   const t = await getTranslations("seller");
   const user = await requireSeller();
 
-  const profileId = user.isDemo ? DEMO_SELLER_PROFILE_ID : user.id;
+  const profileId = user.id;
   const sellerAccount = await db.query.sellerAccounts.findFirst({
     where: eq(sellerAccounts.userId, profileId),
   });

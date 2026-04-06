@@ -11,21 +11,10 @@ import {
 import { and, eq, isNull, desc, inArray } from "drizzle-orm";
 import { sendMessageAction } from "@/features/messages/actions";
 
-const DEMO_SELLER_PROFILE_ID = "11111111-1111-1111-1111-111111111111";
-
-function getProfileIdForUser(user: {
-  id: string;
-  isDemo?: boolean;
-  role?: "purchaser" | "seller";
-}) {
-  if (!user.isDemo) return user.id;
-  return DEMO_SELLER_PROFILE_ID;
-}
-
 export default async function SellerMessagesPage() {
   const t = await getTranslations("messages");
   const user = await requireSeller();
-  const profileId = getProfileIdForUser(user);
+  const profileId = user.id;
 
   const sellerAccount = await db.query.sellerAccounts.findFirst({
     where: eq(sellerAccounts.userId, profileId),

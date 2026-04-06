@@ -1,30 +1,45 @@
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { db } from "@/db";
-import { projects, items, buyerWishlists, buyerWishlistItems } from "@/db/schema";
-import { and, count, desc, eq, isNull, ne } from "drizzle-orm";
+import { profiles, projects, sellerAccounts, items, buyerWishlists, buyerWishlistItems } from "@/db/schema";
+import { and, count, desc, eq, isNull, ne, inArray } from "drizzle-orm";
 import { MapPin, ArrowRight, Tag, Package, ShoppingBag, Heart } from "lucide-react";
 import { SmiLogo } from "@/components/shared/smi-logo";
 import { getUser } from "@/lib/auth";
 
-const DEMO_SELLER_PROFILE_ID = "11111111-1111-1111-1111-111111111111";
-const DEMO_GUEST_PROFILE_ID = "22222222-2222-2222-2222-222222222222";
-
 export default async function HomePage() {
   const t = await getTranslations("home");
+
+  // Get seller accounts whose profile is active
+  const activeSellerIds = await db
+    .select({ id: sellerAccounts.id })
+    .from(sellerAccounts)
+    .innerJoin(profiles, eq(sellerAccounts.userId, profiles.id))
+    .where(and(eq(profiles.isActive, true), eq(sellerAccounts.isActive, true)));
+
+  const activeSellerIdSet = activeSellerIds.map((s) => s.id);
+
   const [publicProjects, user] = await Promise.all([
-    db
-      .select({
-        id: projects.id,
-        name: projects.name,
-        slug: projects.slug,
-        cityArea: projects.cityArea,
-        description: projects.description,
-      })
-      .from(projects)
-      .where(eq(projects.isPublic, true))
-      .orderBy(desc(projects.createdAt))
-      .limit(12),
+    activeSellerIdSet.length > 0
+      ? db
+          .select({
+            id: projects.id,
+            name: projects.name,
+            slug: projects.slug,
+            cityArea: projects.cityArea,
+            description: projects.description,
+          })
+          .from(projects)
+          .where(
+            and(
+              eq(projects.isPublic, true),
+              isNull(projects.deletedAt),
+              inArray(projects.sellerId, activeSellerIdSet)
+            )
+          )
+          .orderBy(desc(projects.createdAt))
+          .limit(12)
+      : Promise.resolve([]),
     getUser(),
   ]);
 
@@ -43,12 +58,6 @@ export default async function HomePage() {
   // Count wishlist items per project (only if user is logged in)
   let wishlistCountMap = new Map<string, number>();
   if (user) {
-    const profileId = user.isDemo
-      ? user.role === "seller"
-        ? DEMO_SELLER_PROFILE_ID
-        : DEMO_GUEST_PROFILE_ID
-      : user.id;
-
     const wishlistCounts = await db
       .select({
         projectId: buyerWishlists.projectId,
@@ -56,7 +65,7 @@ export default async function HomePage() {
       })
       .from(buyerWishlistItems)
       .innerJoin(buyerWishlists, eq(buyerWishlistItems.wishlistId, buyerWishlists.id))
-      .where(eq(buyerWishlists.userId, profileId))
+      .where(eq(buyerWishlists.userId, user.id))
       .groupBy(buyerWishlists.projectId);
 
     wishlistCountMap = new Map(wishlistCounts.map((r) => [r.projectId, r.count]));

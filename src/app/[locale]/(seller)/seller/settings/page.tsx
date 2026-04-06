@@ -5,29 +5,9 @@ import { profiles, sellerAccounts } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
-const DEMO_SELLER_PROFILE_ID = "11111111-1111-1111-1111-111111111111";
-
-function getProfileIdForUser(user: {
-  id: string;
-  isDemo?: boolean;
-  role?: "purchaser" | "seller";
-}) {
-  if (!user.isDemo) return user.id;
-  return DEMO_SELLER_PROFILE_ID;
-}
-
-async function ensureProfile(profileId: string, email: string) {
-  await db
-    .insert(profiles)
-    .values({ id: profileId, email, passwordHash: "", displayName: email.split("@")[0] })
-    .onConflictDoNothing({ target: profiles.id });
-}
-
 async function updateSellerProfileAction(formData: FormData) {
   "use server";
   const user = await requireSeller();
-  const profileId = getProfileIdForUser(user);
-  await ensureProfile(profileId, user.email);
 
   const displayName = String(formData.get("displayName") ?? "").trim();
   const phone = String(formData.get("phone") ?? "").trim();
@@ -39,7 +19,7 @@ async function updateSellerProfileAction(formData: FormData) {
       phone: phone || null,
       updatedAt: new Date(),
     })
-    .where(eq(profiles.id, profileId));
+    .where(eq(profiles.id, user.id));
 
   revalidatePath("/seller/settings");
 }
@@ -47,15 +27,13 @@ async function updateSellerProfileAction(formData: FormData) {
 export default async function SellerSettingsPage() {
   const t = await getTranslations("seller");
   const user = await requireSeller();
-  const profileId = getProfileIdForUser(user);
-  await ensureProfile(profileId, user.email);
 
   const profile = await db.query.profiles.findFirst({
-    where: eq(profiles.id, profileId),
+    where: eq(profiles.id, user.id),
   });
 
   const sellerAccount = await db.query.sellerAccounts.findFirst({
-    where: eq(sellerAccounts.userId, profileId),
+    where: eq(sellerAccounts.userId, user.id),
   });
 
   return (

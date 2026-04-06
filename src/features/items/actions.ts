@@ -9,19 +9,9 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-const DEMO_SELLER_PROFILE_ID = "11111111-1111-1111-1111-111111111111";
-
-function getProfileIdForUser(user: { id: string; isDemo?: boolean; role?: "purchaser" | "seller" }) {
-  if (!user.isDemo) {
-    return user.id;
-  }
-  return user.role === "seller" ? DEMO_SELLER_PROFILE_ID : user.id;
-}
-
-async function getSellerAccountId(user: { id: string; email: string; isDemo?: boolean; role?: "purchaser" | "seller" }) {
-  const profileId = getProfileIdForUser(user);
+async function getSellerAccountId(user: { id: string; email: string }) {
   const sellerAccount = await db.query.sellerAccounts.findFirst({
-    where: eq(sellerAccounts.userId, profileId),
+    where: eq(sellerAccounts.userId, user.id),
   });
   return sellerAccount?.id ?? null;
 }
