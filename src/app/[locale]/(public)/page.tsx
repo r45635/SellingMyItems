@@ -91,13 +91,15 @@ export default async function HomePage() {
       </section>
 
       {/* Sign-in prompt */}
-      <section className="border-b bg-muted/40 py-4">
-        <div className="container px-4 md:px-6">
-          <p className="text-center text-sm text-muted-foreground max-w-[600px] mx-auto">
-            {t("signInPrompt")}
-          </p>
-        </div>
-      </section>
+      {!user && (
+        <section className="border-b bg-muted/40 py-4">
+          <div className="container px-4 md:px-6">
+            <p className="text-center text-sm text-muted-foreground max-w-[600px] mx-auto">
+              {t("signInPrompt")}
+            </p>
+          </div>
+        </section>
+      )}
 
       {/* Projects */}
       <section className="py-8 md:py-10">
