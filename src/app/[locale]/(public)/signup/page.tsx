@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useState } from "react";
-import { useRouter } from "@/i18n/navigation";
 import { Link } from "@/i18n/navigation";
 import { SmiLogo } from "@/components/shared/smi-logo";
 import { signUpAction } from "@/lib/auth/actions";
@@ -14,7 +13,6 @@ import { ShoppingBag, Store } from "lucide-react";
 
 export default function SignupPage() {
   const t = useTranslations("auth");
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -44,13 +42,8 @@ export default function SignupPage() {
       return;
     }
 
-    // Signed up + logged in — redirect based on role
-    if (result.role === "seller") {
-      router.push("/seller");
-    } else {
-      router.push("/");
-    }
-    router.refresh();
+    // Full page reload so UserNav picks up the session cookie
+    window.location.href = result.role === "seller" ? "/seller" : "/";
   }
 
   return (

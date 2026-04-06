@@ -1,7 +1,7 @@
 "use server";
 
 import { db } from "@/db";
-import { profiles, sessions } from "@/db/schema";
+import { profiles, sessions, sellerAccounts } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
@@ -55,6 +55,14 @@ export async function signUpAction(formData: FormData) {
       displayName: email.split("@")[0],
     })
     .returning({ id: profiles.id });
+
+  // Auto-create seller account for seller role
+  if (role === "seller") {
+    await db.insert(sellerAccounts).values({
+      userId: newProfile.id,
+      isActive: true,
+    });
+  }
 
   // Create session
   const token = generateToken();

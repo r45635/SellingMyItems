@@ -7,14 +7,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useState } from "react";
-import { useRouter } from "@/i18n/navigation";
 import { Link } from "@/i18n/navigation";
 import { SmiLogo } from "@/components/shared/smi-logo";
 import { signInAction } from "@/lib/auth/actions";
 
 export default function LoginPage() {
   const t = useTranslations("auth");
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -40,12 +38,8 @@ export default function LoginPage() {
       return;
     }
 
-    if (result.role === "seller") {
-      router.push("/seller");
-    } else {
-      router.push("/");
-    }
-    router.refresh();
+    // Full page reload so UserNav picks up the session cookie
+    window.location.href = result.role === "seller" ? "/seller" : "/";
   }
 
   async function handleDemoSignIn(e: React.FormEvent) {
@@ -66,12 +60,7 @@ export default function LoginPage() {
       return;
     }
 
-    if (email === "seller") {
-      router.push("/seller");
-    } else {
-      router.push("/");
-    }
-    router.refresh();
+    window.location.href = email === "seller" ? "/seller" : "/";
   }
 
   return (
