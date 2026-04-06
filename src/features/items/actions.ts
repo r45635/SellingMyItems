@@ -175,26 +175,29 @@ export async function updateItemAction(formData: FormData) {
       )
     );
 
-  // Replace images: delete old, insert new
-  const imageUrlValues = formData.getAll("imageUrl").map(String).filter(Boolean);
-  await db.delete(itemImages).where(eq(itemImages.itemId, itemId));
-  if (imageUrlValues.length > 0) {
-    await db.insert(itemImages).values(
-      imageUrlValues.map((url, idx) => ({
-        itemId,
-        url,
-        sortOrder: idx,
-      }))
-    );
-    await db
-      .update(items)
-      .set({ coverImageUrl: imageUrlValues[0] })
-      .where(eq(items.id, itemId));
-  } else {
-    await db
-      .update(items)
-      .set({ coverImageUrl: null })
-      .where(eq(items.id, itemId));
+  // Replace images: only if the form explicitly signals image changes
+  const hasImageField = formData.has("imageUrl") || formData.has("imagesSubmitted");
+  if (hasImageField) {
+    const imageUrlValues = formData.getAll("imageUrl").map(String).filter(Boolean);
+    await db.delete(itemImages).where(eq(itemImages.itemId, itemId));
+    if (imageUrlValues.length > 0) {
+      await db.insert(itemImages).values(
+        imageUrlValues.map((url, idx) => ({
+          itemId,
+          url,
+          sortOrder: idx,
+        }))
+      );
+      await db
+        .update(items)
+        .set({ coverImageUrl: imageUrlValues[0] })
+        .where(eq(items.id, itemId));
+    } else {
+      await db
+        .update(items)
+        .set({ coverImageUrl: null })
+        .where(eq(items.id, itemId));
+    }
   }
 
   // Replace links: delete old, insert new

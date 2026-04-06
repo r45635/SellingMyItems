@@ -84,6 +84,7 @@ export function ItemForm({
       }
     });
     // Append image URLs
+    formData.set("imagesSubmitted", "true");
     imageUrls.forEach((url) => formData.append("imageUrl", url));
 
     // Auto-add pending link input before submitting
