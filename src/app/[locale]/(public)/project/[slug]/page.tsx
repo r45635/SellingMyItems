@@ -47,7 +47,7 @@ export default async function ProjectPage({
     <div className="container px-4 md:px-6 py-6">
       <Link
         href="/"
-        className="mb-6 inline-flex h-7 items-center gap-1 rounded-lg px-2.5 text-base sm:text-sm text-muted-foreground transition-all hover:bg-muted hover:text-foreground"
+        className="mb-6 inline-flex h-7 items-center gap-1 rounded-lg px-2.5 text-sm text-muted-foreground transition-all hover:bg-muted hover:text-foreground"
       >
         <ArrowLeft className="h-4 w-4" />
         Back

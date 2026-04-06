@@ -171,7 +171,7 @@ export default async function WishlistPage() {
                           <div className="flex-1 min-w-0">
                             <Link
                               href={`/project/${row.projectSlug}/item/${row.itemId}`}
-                              className="font-medium hover:underline line-clamp-1 text-base sm:text-sm"
+                              className="font-medium hover:underline line-clamp-1 text-sm"
                             >
                               {row.itemTitle}
                             </Link>
@@ -183,7 +183,7 @@ export default async function WishlistPage() {
                           {/* Prices */}
                           <div className="shrink-0 text-right">
                             {row.itemPrice != null && (
-                              <p className="font-bold text-primary text-base sm:text-sm">
+                              <p className="font-bold text-primary text-sm">
                                 {formatCurrency(row.itemPrice, row.itemCurrency)}
                               </p>
                             )}

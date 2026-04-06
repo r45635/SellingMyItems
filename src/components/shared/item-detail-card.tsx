@@ -103,31 +103,31 @@ export function ItemDetailCard({
       <CardContent className="space-y-3">
         {categoryName && (
           <div>
-            <span className="text-base sm:text-sm text-muted-foreground">{t("category")}: </span>
+            <span className="text-sm text-muted-foreground">{t("category")}: </span>
             <Badge variant="outline">{categoryName}</Badge>
           </div>
         )}
         {brand && (
           <div>
-            <span className="text-base sm:text-sm text-muted-foreground">{t("brand")}: </span>
-            <span className="text-base sm:text-sm">{brand}</span>
+            <span className="text-sm text-muted-foreground">{t("brand")}: </span>
+            <span className="text-sm">{brand}</span>
           </div>
         )}
         {condition && (
           <div>
-            <span className="text-base sm:text-sm text-muted-foreground">{t("condition")}: </span>
-            <span className="text-base sm:text-sm">{conditionLabel}</span>
+            <span className="text-sm text-muted-foreground">{t("condition")}: </span>
+            <span className="text-sm">{conditionLabel}</span>
           </div>
         )}
         {approximateAge && (
           <div>
-            <span className="text-base sm:text-sm text-muted-foreground">{t("age")}: </span>
-            <span className="text-base sm:text-sm">{approximateAge}</span>
+            <span className="text-sm text-muted-foreground">{t("age")}: </span>
+            <span className="text-sm">{approximateAge}</span>
           </div>
         )}
-        {description && <p className="text-base sm:text-sm">{description}</p>}
+        {description && <p className="text-sm">{description}</p>}
         {notes && (
-          <p className="text-base sm:text-sm text-muted-foreground italic">{notes}</p>
+          <p className="text-sm text-muted-foreground italic">{notes}</p>
         )}
         {formattedDate && (
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground pt-1">
@@ -144,7 +144,7 @@ export function ItemDetailCard({
                 href={link.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1.5 text-base sm:text-sm text-primary hover:underline"
+                className="flex items-center gap-1.5 text-sm text-primary hover:underline"
               >
                 <ExternalLink className="h-3.5 w-3.5 shrink-0" />
                 {link.label || link.url}
