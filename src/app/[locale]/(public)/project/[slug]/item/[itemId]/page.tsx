@@ -2,7 +2,7 @@ import { getUser } from "@/lib/auth";
 import { ItemTeaserCard } from "@/components/shared/item-teaser-card";
 import { ItemDetailCard } from "@/components/shared/item-detail-card";
 import { Link } from "@/i18n/navigation";
-import { ArrowLeft, Lock } from "lucide-react";
+import { ArrowLeft, Lock, ShoppingCart } from "lucide-react";
 import { db } from "@/db";
 import {
   buyerWishlistItems,
@@ -136,6 +136,24 @@ export default async function ItemPage({
               {isWishlisted ? "❤️ Retirer de ma sélection" : "🤍 Ajouter à ma sélection"}
             </button>
           </form>
+
+          {isWishlisted && (
+            <div className="rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950/30 p-4 flex items-start gap-3">
+              <ShoppingCart className="h-5 w-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+              <div className="text-sm">
+                <p className="font-medium text-blue-900 dark:text-blue-200">
+                  Cet article est dans votre sélection
+                </p>
+                <p className="text-blue-700 dark:text-blue-300 mt-1">
+                  Rendez-vous sur votre{" "}
+                  <Link href="/wishlist" className="underline font-medium hover:text-blue-900 dark:hover:text-blue-100">
+                    page sélection
+                  </Link>
+                  {" "}pour finaliser votre intention d&apos;achat.
+                </p>
+              </div>
+            </div>
+          )}
         </div>
       ) : (
         /* Guest: show teaser + sign-in prompt */

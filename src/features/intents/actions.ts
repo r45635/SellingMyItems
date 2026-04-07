@@ -6,6 +6,8 @@ import {
   buyerIntents,
   buyerWishlistItems,
   buyerWishlists,
+  conversationMessages,
+  conversationThreads,
   items,
   projects,
   sellerAccounts,
@@ -23,7 +25,7 @@ export async function submitIntentAction(formData: FormData) {
 
   const rawData = {
     phone: formData.get("phone") || undefined,
-    contactMethod: formData.get("contactMethod") || "email",
+    contactMethod: formData.get("contactMethod") || "app_message",
     pickupNotes: formData.get("pickupNotes") || undefined,
     itemIds,
   };
@@ -35,7 +37,7 @@ export async function submitIntentAction(formData: FormData) {
 
   // Verify all items exist and belong to the same project
   const selectedItems = await db
-    .select({ id: items.id, projectId: items.projectId })
+    .select({ id: items.id, projectId: items.projectId, title: items.title })
     .from(items)
     .where(
       and(inArray(items.id, validated.data.itemIds), isNull(items.deletedAt))
@@ -72,8 +74,47 @@ export async function submitIntentAction(formData: FormData) {
     }))
   );
 
+  // Auto-create in-app message to notify seller
+  const itemList = selectedItems.map((i) => `• ${i.title}`).join("\n");
+  let messageBody = `📋 Nouvelle intention d'achat\n\nArticles demandés :\n${itemList}`;
+  if (validated.data.phone) {
+    messageBody += `\n\n📞 Téléphone : ${validated.data.phone}`;
+  }
+  if (validated.data.pickupNotes) {
+    messageBody += `\n\n📝 Notes : ${validated.data.pickupNotes}`;
+  }
+
+  // Find or create conversation thread for this buyer + project
+  let thread = await db.query.conversationThreads.findFirst({
+    where: and(
+      eq(conversationThreads.projectId, projectId),
+      eq(conversationThreads.buyerId, profileId)
+    ),
+  });
+
+  if (!thread) {
+    const [created] = await db
+      .insert(conversationThreads)
+      .values({ projectId, buyerId: profileId })
+      .returning();
+    thread = created;
+  }
+
+  await db.insert(conversationMessages).values({
+    threadId: thread.id,
+    senderId: profileId,
+    body: messageBody,
+  });
+
+  await db
+    .update(conversationThreads)
+    .set({ updatedAt: new Date() })
+    .where(eq(conversationThreads.id, thread.id));
+
   revalidatePath("/wishlist");
   revalidatePath("/seller/intents");
+  revalidatePath("/messages");
+  revalidatePath("/seller/messages");
 }
 
 export async function updateIntentStatusAction(
