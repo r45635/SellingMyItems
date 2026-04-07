@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Link } from "@/i18n/navigation";
 import { SmiLogo } from "@/components/shared/smi-logo";
 import { signUpAction } from "@/lib/auth/actions";
@@ -13,6 +14,8 @@ import { ShoppingBag } from "lucide-react";
 
 export default function SignupPage() {
   const t = useTranslations("auth");
+  const searchParams = useSearchParams();
+  const returnTo = searchParams.get("returnTo");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -43,7 +46,8 @@ export default function SignupPage() {
     }
 
     // Full page reload so UserNav picks up the session cookie
-    window.location.href = "/";
+    const dest = returnTo && returnTo.startsWith("/") ? returnTo : "/";
+    window.location.href = dest;
   }
 
   return (
@@ -114,7 +118,7 @@ export default function SignupPage() {
 
           <p className="text-center text-sm text-muted-foreground">
             {t("alreadyHaveAccount")}{" "}
-            <Link href="/login" className="text-primary hover:underline">
+            <Link href={returnTo ? `/login?returnTo=${encodeURIComponent(returnTo)}` : "/login"} className="text-primary hover:underline">
               {t("signIn")}
             </Link>
           </p>

@@ -6,12 +6,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Link } from "@/i18n/navigation";
 import { SmiLogo } from "@/components/shared/smi-logo";
 import { signInAction } from "@/lib/auth/actions";
 
 export default function LoginPage() {
   const t = useTranslations("auth");
+  const searchParams = useSearchParams();
+  const returnTo = searchParams.get("returnTo");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -37,7 +40,8 @@ export default function LoginPage() {
     }
 
     // Full page reload so UserNav picks up the session cookie
-    window.location.href = result.role === "seller" ? "/seller" : "/";
+    const dest = returnTo && returnTo.startsWith("/") ? returnTo : "/";
+    window.location.href = dest;
   }
 
   return (
@@ -84,7 +88,7 @@ export default function LoginPage() {
             <p className="text-center text-sm text-muted-foreground">
               {t("noAccount")}{" "}
               <Link
-                href="/signup"
+                href={returnTo ? `/signup?returnTo=${encodeURIComponent(returnTo)}` : "/signup"}
                 className="text-primary hover:underline"
               >
                 {t("signUp")}

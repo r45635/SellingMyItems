@@ -1,6 +1,6 @@
 import { ItemTeaserCard } from "@/components/shared/item-teaser-card";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, ArrowLeft, Package, User, Mail } from "lucide-react";
+import { MapPin, ArrowLeft, Package, User, Mail, Lock } from "lucide-react";
 import { db } from "@/db";
 import { buyerWishlistItems, buyerWishlists, items, profiles, projectCategories, projects, sellerAccounts } from "@/db/schema";
 import { and, asc, eq, inArray, isNull, ne } from "drizzle-orm";
@@ -138,30 +138,70 @@ export default async function ProjectPage({
       )}
 
       {/* Items Grid */}
-      {projectItems.length > 0 ? (
-        <>
-          <div className="flex items-center gap-2 mb-4">
-            <Package className="h-5 w-5 text-orange-500" />
-            <h2 className="text-lg font-semibold">{projectItems.length} item{projectItems.length !== 1 ? "s" : ""}</h2>
+      {user ? (
+        /* Authenticated: full items grid */
+        projectItems.length > 0 ? (
+          <>
+            <div className="flex items-center gap-2 mb-4">
+              <Package className="h-5 w-5 text-orange-500" />
+              <h2 className="text-lg font-semibold">{projectItems.length} item{projectItems.length !== 1 ? "s" : ""}</h2>
+            </div>
+            <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
+              {projectItems.map((item) => (
+                <ItemTeaserCard
+                  key={item.id}
+                  title={item.title}
+                  coverImageUrl={item.coverImageUrl}
+                  status={item.status}
+                  updatedAt={item.updatedAt}
+                  href={`/project/${slug}/item/${item.id}`}
+                  isWishlisted={wishlistedItemIds.has(item.id)}
+                />
+              ))}
+            </div>
+          </>
+        ) : (
+          <div className="text-center py-16 text-muted-foreground">
+            <Package className="h-10 w-10 mx-auto mb-3 text-muted-foreground/30" />
+            <p>No items yet</p>
           </div>
-          <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
-            {projectItems.map((item) => (
-              <ItemTeaserCard
-                key={item.id}
-                title={item.title}
-                coverImageUrl={item.coverImageUrl}
-                status={item.status}
-                updatedAt={item.updatedAt}
-                href={`/project/${slug}/item/${item.id}`}
-                isWishlisted={wishlistedItemIds.has(item.id)}
-              />
-            ))}
-          </div>
-        </>
+        )
       ) : (
-        <div className="text-center py-16 text-muted-foreground">
-          <Package className="h-10 w-10 mx-auto mb-3 text-muted-foreground/30" />
-          <p>No items yet</p>
+        /* Guest: blurred preview + sign-in CTA */
+        <div className="relative">
+          {projectItems.length > 0 && (
+            <div className="flex items-center gap-2 mb-4">
+              <Package className="h-5 w-5 text-orange-500" />
+              <h2 className="text-lg font-semibold">{projectItems.length} item{projectItems.length !== 1 ? "s" : ""}</h2>
+            </div>
+          )}
+          <div className="relative overflow-hidden rounded-lg">
+            {/* Blurred item previews */}
+            <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 blur-sm pointer-events-none select-none" aria-hidden="true">
+              {projectItems.slice(0, 4).map((item) => (
+                <ItemTeaserCard
+                  key={item.id}
+                  title={item.title}
+                  coverImageUrl={item.coverImageUrl}
+                  status={item.status}
+                  updatedAt={item.updatedAt}
+                />
+              ))}
+            </div>
+            {/* Overlay with CTA */}
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/60 backdrop-blur-[2px] rounded-lg">
+              <Lock className="h-10 w-10 text-muted-foreground/50 mb-4" />
+              <p className="text-sm text-muted-foreground mb-4 text-center px-4">
+                Connectez-vous pour voir les articles, photos et prix.
+              </p>
+              <Link
+                href={`/login?returnTo=/project/${slug}`}
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-foreground px-6 text-sm font-semibold text-background shadow-lg transition-all hover:bg-foreground/90"
+              >
+                Se connecter
+              </Link>
+            </div>
+          </div>
         </div>
       )}
     </div>

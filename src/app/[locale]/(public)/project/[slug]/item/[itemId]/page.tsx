@@ -200,13 +200,13 @@ export default async function ItemPage({
           <div className="rounded-xl border bg-muted/30 p-8 text-center space-y-4">
             <Lock className="h-10 w-10 mx-auto text-muted-foreground/50" />
             <p className="text-sm text-muted-foreground">
-              Sign in to see full details, price, and more.
+              Connectez-vous pour voir tous les détails, photos et prix.
             </p>
             <Link
-              href="/login"
+              href={`/login?returnTo=/project/${slug}/item/${itemId}`}
               className="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-foreground px-6 text-sm font-semibold text-background shadow-lg transition-all hover:bg-foreground/90"
             >
-              Sign in
+              Se connecter
             </Link>
           </div>
         </div>
