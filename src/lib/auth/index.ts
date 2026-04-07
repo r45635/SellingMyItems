@@ -4,7 +4,7 @@ import { db } from "@/db";
 import { profiles, sessions } from "@/db/schema";
 import { eq, and, gt } from "drizzle-orm";
 
-export type UserRole = "purchaser" | "seller";
+export type UserRole = "purchaser" | "seller" | "admin";
 
 export type AppUser = {
   id: string;
@@ -47,10 +47,17 @@ export async function requireUser() {
   return user;
 }
 
-// TODO: Extend with role checks when co-seller/admin is implemented
 export async function requireSeller() {
   const user = await requireUser();
   if (user.role !== "seller") {
+    redirect("/");
+  }
+  return user;
+}
+
+export async function requireAdmin() {
+  const user = await requireUser();
+  if (user.role !== "admin") {
     redirect("/");
   }
   return user;

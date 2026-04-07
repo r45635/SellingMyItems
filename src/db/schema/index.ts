@@ -33,7 +33,7 @@ export const intentStatusEnum = pgEnum("intent_status", [
   "declined",
 ]);
 
-export const userRoleEnum = pgEnum("user_role", ["purchaser", "seller"]);
+export const userRoleEnum = pgEnum("user_role", ["purchaser", "seller", "admin"]);
 
 // ─── Users / Profiles ───────────────────────────────────────────────────────
 

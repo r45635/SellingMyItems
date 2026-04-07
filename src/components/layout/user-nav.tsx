@@ -17,7 +17,7 @@ import { signOutAction } from "@/lib/auth/actions";
 
 type NavUser = {
   email: string;
-  role: "purchaser" | "seller";
+  role: "purchaser" | "seller" | "admin";
 };
 
 export function UserNav() {
