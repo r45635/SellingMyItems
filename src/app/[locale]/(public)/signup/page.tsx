@@ -9,14 +9,14 @@ import { useState } from "react";
 import { Link } from "@/i18n/navigation";
 import { SmiLogo } from "@/components/shared/smi-logo";
 import { signUpAction } from "@/lib/auth/actions";
-import { ShoppingBag, Store } from "lucide-react";
+import { ShoppingBag } from "lucide-react";
 
 export default function SignupPage() {
   const t = useTranslations("auth");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [role, setRole] = useState<"purchaser" | "seller">("purchaser");
+  const role = "purchaser" as const;
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -43,7 +43,7 @@ export default function SignupPage() {
     }
 
     // Full page reload so UserNav picks up the session cookie
-    window.location.href = result.role === "seller" ? "/seller" : "/";
+    window.location.href = "/";
   }
 
   return (
@@ -98,50 +98,11 @@ export default function SignupPage() {
               />
             </div>
 
-            <div className="space-y-2">
-              <Label>{t("selectRole")}</Label>
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={() => setRole("purchaser")}
-                  className={`flex flex-col items-center gap-2 rounded-xl border-2 p-4 transition-colors ${
-                    role === "purchaser"
-                      ? "border-primary bg-primary/5"
-                      : "border-muted hover:border-muted-foreground/30"
-                  }`}
-                >
-                  <ShoppingBag
-                    className={`h-6 w-6 ${
-                      role === "purchaser"
-                        ? "text-primary"
-                        : "text-muted-foreground"
-                    }`}
-                  />
-                  <span className="text-sm font-medium">
-                    {t("rolePurchaser")}
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setRole("seller")}
-                  className={`flex flex-col items-center gap-2 rounded-xl border-2 p-4 transition-colors ${
-                    role === "seller"
-                      ? "border-primary bg-primary/5"
-                      : "border-muted hover:border-muted-foreground/30"
-                  }`}
-                >
-                  <Store
-                    className={`h-6 w-6 ${
-                      role === "seller"
-                        ? "text-primary"
-                        : "text-muted-foreground"
-                    }`}
-                  />
-                  <span className="text-sm font-medium">
-                    {t("roleSeller")}
-                  </span>
-                </button>
-              </div>
+            {/* Role selection hidden — only purchaser registration for now */}
+            <input type="hidden" name="role" value="purchaser" />
+            <div className="flex items-center gap-2 rounded-xl border-2 border-primary bg-primary/5 p-4">
+              <ShoppingBag className="h-6 w-6 text-primary" />
+              <span className="text-sm font-medium">{t("rolePurchaser")}</span>
             </div>
 
             {error ? <p className="text-sm text-destructive">{error}</p> : null}

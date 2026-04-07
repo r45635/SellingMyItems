@@ -1,6 +1,6 @@
 import { ItemTeaserCard } from "@/components/shared/item-teaser-card";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, ArrowLeft, Package } from "lucide-react";
+import { MapPin, ArrowLeft, Package, User, Mail } from "lucide-react";
 import { db } from "@/db";
 import { buyerWishlistItems, buyerWishlists, items, profiles, projectCategories, projects, sellerAccounts } from "@/db/schema";
 import { and, asc, eq, inArray, isNull, ne } from "drizzle-orm";
@@ -26,17 +26,23 @@ export default async function ProjectPage({
     notFound();
   }
 
-  // Check that the seller's profile is active
-  const seller = await db
-    .select({ isActive: profiles.isActive })
+  // Check that the seller's profile is active and get contact info
+  const sellerRows = await db
+    .select({
+      isActive: profiles.isActive,
+      displayName: profiles.displayName,
+      email: profiles.email,
+    })
     .from(sellerAccounts)
     .innerJoin(profiles, eq(sellerAccounts.userId, profiles.id))
     .where(and(eq(sellerAccounts.id, project.sellerId), eq(profiles.isActive, true)))
     .limit(1);
 
-  if (seller.length === 0) {
+  if (sellerRows.length === 0) {
     notFound();
   }
+
+  const sellerInfo = sellerRows[0];
 
   const categories = await db
     .select({ id: projectCategories.id, name: projectCategories.name })
@@ -111,6 +117,25 @@ export default async function ProjectPage({
           </div>
         )}
       </div>
+
+      {/* Seller contact — visible to authenticated users */}
+      {user && (
+        <div className="mb-6 rounded-lg border bg-muted/30 p-4 flex items-center gap-4">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+            <User className="h-5 w-5 text-primary" />
+          </div>
+          <div className="text-sm">
+            <p className="font-medium">{sellerInfo.displayName ?? "Vendeur"}</p>
+            <a
+              href={`mailto:${sellerInfo.email}`}
+              className="inline-flex items-center gap-1 text-muted-foreground hover:text-primary transition-colors"
+            >
+              <Mail className="h-3.5 w-3.5" />
+              {sellerInfo.email}
+            </a>
+          </div>
+        </div>
+      )}
 
       {/* Items Grid */}
       {projectItems.length > 0 ? (

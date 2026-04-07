@@ -2,14 +2,16 @@ import { getUser } from "@/lib/auth";
 import { ItemTeaserCard } from "@/components/shared/item-teaser-card";
 import { ItemDetailCard } from "@/components/shared/item-detail-card";
 import { Link } from "@/i18n/navigation";
-import { ArrowLeft, Lock, ShoppingCart } from "lucide-react";
+import { ArrowLeft, Lock, ShoppingCart, User, Mail } from "lucide-react";
 import { db } from "@/db";
 import {
   buyerWishlistItems,
   buyerWishlists,
   items,
+  profiles,
   projectCategories,
   projects,
+  sellerAccounts,
 } from "@/db/schema";
 import { and, eq, isNull } from "drizzle-orm";
 import { notFound } from "next/navigation";
@@ -87,6 +89,18 @@ export default async function ItemPage({
       })
     : null;
 
+  // Fetch seller contact info
+  const sellerRows = await db
+    .select({
+      displayName: profiles.displayName,
+      email: profiles.email,
+    })
+    .from(sellerAccounts)
+    .innerJoin(profiles, eq(sellerAccounts.userId, profiles.id))
+    .where(eq(sellerAccounts.id, project.sellerId))
+    .limit(1);
+  const sellerInfo = sellerRows[0] ?? null;
+
   return (
     <div className="container px-4 md:px-6 py-8 max-w-3xl">
       <Link
@@ -117,6 +131,25 @@ export default async function ItemPage({
             categoryName={category?.name}
             updatedAt={item.updatedAt}
           />
+
+          {/* Seller contact */}
+          {sellerInfo && (
+            <div className="rounded-lg border bg-muted/30 p-4 flex items-center gap-4">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+                <User className="h-5 w-5 text-primary" />
+              </div>
+              <div className="text-sm">
+                <p className="font-medium">{sellerInfo.displayName ?? "Vendeur"}</p>
+                <a
+                  href={`mailto:${sellerInfo.email}`}
+                  className="inline-flex items-center gap-1 text-muted-foreground hover:text-primary transition-colors"
+                >
+                  <Mail className="h-3.5 w-3.5" />
+                  {sellerInfo.email}
+                </a>
+              </div>
+            </div>
+          )}
 
           <form action={isWishlisted ? removeWishlistItemAction : addWishlistItemAction}>
             <input type="hidden" name="itemId" value={item.id} />

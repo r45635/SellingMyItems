@@ -19,7 +19,8 @@ export async function signUpAction(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const password = String(formData.get("password") ?? "");
   const confirmPassword = String(formData.get("confirmPassword") ?? "");
-  const role = String(formData.get("role") ?? "purchaser") as UserRole;
+  // Seller registration is disabled for now — force purchaser role
+  const role: UserRole = "purchaser";
 
   // Validate
   if (!email || !password) {
@@ -30,9 +31,6 @@ export async function signUpAction(formData: FormData) {
   }
   if (password !== confirmPassword) {
     return { error: "passwordMismatch" };
-  }
-  if (role !== "purchaser" && role !== "seller") {
-    return { error: "Invalid role" };
   }
 
   // Check existing
@@ -56,13 +54,7 @@ export async function signUpAction(formData: FormData) {
     })
     .returning({ id: profiles.id });
 
-  // Auto-create seller account for seller role
-  if (role === "seller") {
-    await db.insert(sellerAccounts).values({
-      userId: newProfile.id,
-      isActive: true,
-    });
-  }
+  // Seller registration is disabled — no seller account auto-creation
 
   // Create session
   const token = generateToken();
