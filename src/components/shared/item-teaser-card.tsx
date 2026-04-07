@@ -1,7 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import Image from "next/image";
-import { ImageOff } from "lucide-react";
+import { ImageOff, Heart } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 interface ItemTeaserCardProps {
@@ -11,6 +11,7 @@ interface ItemTeaserCardProps {
   statusLabel?: string;
   href?: string;
   updatedAt?: Date | string | null;
+  isWishlisted?: boolean;
 }
 
 export function ItemTeaserCard({
@@ -20,6 +21,7 @@ export function ItemTeaserCard({
   statusLabel,
   href,
   updatedAt,
+  isWishlisted,
 }: ItemTeaserCardProps) {
   const t = useTranslations("item");
 
@@ -54,6 +56,11 @@ export function ItemTeaserCard({
           >
             {label}
           </Badge>
+        )}
+        {isWishlisted && (
+          <div className="absolute top-2 left-2">
+            <Heart className="h-5 w-5 fill-red-500 text-red-500 drop-shadow" />
+          </div>
         )}
       </div>
       <CardContent className="p-2.5">

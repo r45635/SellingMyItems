@@ -2,10 +2,11 @@ import { ItemTeaserCard } from "@/components/shared/item-teaser-card";
 import { Badge } from "@/components/ui/badge";
 import { MapPin, ArrowLeft, Package } from "lucide-react";
 import { db } from "@/db";
-import { items, profiles, projectCategories, projects, sellerAccounts } from "@/db/schema";
-import { and, asc, eq, isNull, ne } from "drizzle-orm";
+import { buyerWishlistItems, buyerWishlists, items, profiles, projectCategories, projects, sellerAccounts } from "@/db/schema";
+import { and, asc, eq, inArray, isNull, ne } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { Link } from "@/i18n/navigation";
+import { getUser } from "@/lib/auth";
 
 export default async function ProjectPage({
   params,
@@ -54,6 +55,27 @@ export default async function ProjectPage({
     .from(items)
     .where(and(eq(items.projectId, project.id), isNull(items.deletedAt), ne(items.status, "hidden")))
     .orderBy(asc(items.sortOrder), asc(items.createdAt));
+
+  // Fetch wishlisted item IDs for the logged-in user
+  const user = await getUser();
+  const wishlistedItemIds = new Set<string>();
+  if (user) {
+    const wishlist = await db.query.buyerWishlists.findFirst({
+      where: and(
+        eq(buyerWishlists.userId, user.id),
+        eq(buyerWishlists.projectId, project.id)
+      ),
+    });
+    if (wishlist) {
+      const wishlistItems = await db
+        .select({ itemId: buyerWishlistItems.itemId })
+        .from(buyerWishlistItems)
+        .where(eq(buyerWishlistItems.wishlistId, wishlist.id));
+      for (const wi of wishlistItems) {
+        wishlistedItemIds.add(wi.itemId);
+      }
+    }
+  }
 
   return (
     <div className="container px-4 md:px-6 py-6">
@@ -106,6 +128,7 @@ export default async function ProjectPage({
                 status={item.status}
                 updatedAt={item.updatedAt}
                 href={`/project/${slug}/item/${item.id}`}
+                isWishlisted={wishlistedItemIds.has(item.id)}
               />
             ))}
           </div>

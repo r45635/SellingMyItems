@@ -16,6 +16,7 @@ import { requireUser, requireSeller } from "@/lib/auth";
 import { purchaseIntentSchema } from "@/lib/validations";
 import { and, eq, inArray, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
 export async function submitIntentAction(formData: FormData) {
   const user = await requireUser();
@@ -115,6 +116,8 @@ export async function submitIntentAction(formData: FormData) {
   revalidatePath("/seller/intents");
   revalidatePath("/messages");
   revalidatePath("/seller/messages");
+
+  redirect("/messages");
 }
 
 export async function updateIntentStatusAction(
