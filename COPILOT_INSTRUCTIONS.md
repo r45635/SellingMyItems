@@ -1,352 +1,139 @@
 You are my lead software architect and senior full-stack engineer.
 
-Build the foundation of a production-ready project called **SellingMyItems**.
+Maintain and extend the production application **SellingMyItems**.
 
 ## Product mission
-SellingMyItems is a responsive cross-device application optimized for:
-- web
-- smartphone
-- tablet
-- desktop
+SellingMyItems is a responsive cross-device marketplace optimized for web, smartphone, tablet, and desktop.
 
-The application is for a **single seller use case in v1**, but the architecture must be designed to support later:
-- multiple sellers
-- co-sellers/admins
-- multi-project platform mode
-- optional public SEO/indexing
-- future broader marketplace capabilities
+The application supports:
+- **Purchasers**: browse projects, view items (after login), wishlist, purchase intents, messaging
+- **Sellers**: full CRUD on projects/items, manage intents and messages
+- **Admins**: platform-wide dashboard with stats, account management, project management
 
-This is NOT an online payment platform.
-Transactions happen offline/in person.
-The app is for:
-- publishing items for sale
-- allowing signed-in buyers to unlock details
-- building a wishlist/cart-like selection
-- sending purchase intent
-- enabling buyer/seller messaging at project level
-- letting the seller manage projects and items
+This is NOT an online payment platform. Transactions happen offline/in person.
 
-## Required stack
-Use this stack unless there is a strong technical reason not to:
-- Next.js latest stable with App Router
-- TypeScript
-- Tailwind CSS
-- shadcn/ui
-- Supabase:
-  - Auth
-  - Postgres database
-  - Storage
-- Drizzle ORM
-- next-intl for i18n
-- Zod for validation
-- React Hook Form where forms are needed
+## Current stack
+- **Next.js 16.2.2** (App Router, Turbopack, `output: "standalone"`)
+- **TypeScript** (strict)
+- **Tailwind CSS** + **shadcn/ui**
+- **PostgreSQL 16 Alpine** (Docker, self-hosted)
+- **Drizzle ORM** (`postgres-js` driver)
+- **Auth**: Self-hosted bcryptjs + PostgreSQL sessions (no Supabase)
+- **Storage**: Local filesystem (`/app/public/uploads`) + sharp for image processing
+- **i18n**: next-intl (English + French)
+- **Zod** for validation, **React Hook Form** for forms
+- **Deploy**: Docker multi-stage build + Caddy 2 Alpine reverse proxy on VPS
 
 ## Core product rules
 
-### Access model
-- V1 is single seller oriented.
-- One primary seller account owns one or more projects.
-- Architecture must anticipate future co-sellers/admin roles but do not implement full co-seller UI yet.
+### Roles and access model
+
+| Role | Description |
+|---|---|
+| `purchaser` | Default on signup. Browse, wishlist, intent, message. |
+| `seller` | Created manually. Full CRUD on owned projects/items. Signup disabled. |
+| `admin` | Created manually via SQL. Platform stats + toggle accounts/projects. Secret `/admin` URL. |
+
+### Route groups and guards
+
+| Group | Guard | Purpose |
+|---|---|---|
+| `(public)` | None | Homepage, login, signup, project/item pages |
+| `(authenticated)` | `requireUser()` | Account, wishlist, messages |
+| `(seller)` | `requireSeller()` | Seller dashboard |
+| `(admin)` | `requireAdmin()` | Admin dashboard (no nav link) |
 
 ### Authentication
-Support:
-- Google sign-in
-- Apple sign-in
-- magic link fallback
+- Email + password (bcryptjs hashing)
+- PostgreSQL-based sessions with token cookies
+- `returnTo` query param support on login/signup for post-auth redirect
+- No Supabase, no OAuth, no magic links (removed)
 
-### Anonymous vs authenticated behavior
+### Guest vs authenticated behavior
 Guest users can:
-- browse project landing page
-- see item list/grid
-- see only:
-  - cover photo
-  - title
+- browse homepage (see project listings)
+- see project header (name, city, description, categories)
 
-Guest users cannot see:
-- price
-- description
-- condition/state
-- age
-- brand
-- extra notes
-- attached files
-- wishlist/cart
-- messaging
-- purchase intent
+Guest users see:
+- blurred items grid with lock overlay + "Se connecter" CTA on project detail page
+
+Guest users cannot:
+- see item details, prices, descriptions
+- use wishlist, messaging, or purchase intent
 
 Authenticated users can:
-- see full item details
-- see price
-- add/remove items to a wishlist/cart-like selection
-- send a purchase intent for selected items
-- message seller inside a project-level thread
+- see full item details and prices
+- add/remove items to wishlist (heart icons)
+- send purchase intent for selected items
+- message seller in project-level thread
 
 ### Project model
 Each project:
-- belongs to one primary seller
-- has a project name
-- has a city area
-- has a unique public slug URL such as `/project/[slug]`
+- belongs to one seller account
+- has a name, city area, unique slug (`/project/[slug]`)
 - has custom categories defined by the seller
-- is not SEO-indexed in v1
-- should allow future option to become indexable later
+- has `isPublic` toggle (admin can also toggle)
+- supports soft delete (`deletedAt`)
 
 ### Item model
-Each item belongs to a project and may include:
-- category (custom per project)
-- name/title
-- brand
-- description
-- condition/state
-- approximate age
-- multiple pictures
-- fixed price only for now
-- additional notes
-- attached files
-- links to external references/manuals/videos/etc.
-
-Each item has status support for:
-- available
-- pending
-- sold
-
-However, when a buyer expresses interest, the item remains **available** by default.
-Seller manually changes status later.
+Each item belongs to a project and includes:
+- category, title, brand, description, condition, approximate age
+- multiple images, fixed price, currency, notes
+- attached files, external reference links
+- status: `available`, `pending`, `reserved`, `sold`, `hidden`
+- soft delete support
 
 ### Buyer purchase flow
 Authenticated buyer can:
-- add multiple items into a wishlist/cart-like selection
-- review selected items
-- submit purchase intent
-- provide:
-  - profile info
-  - phone number
-  - preferred contact method
-  - optional pickup notes / availability
-
-This creates a buyer intent record linked to:
-- buyer
-- project
-- selected items
+- add items to wishlist
+- submit purchase intent (profile info, phone, contact method, pickup notes)
+- message seller in project-level thread
 
 ### Messaging
-Messaging is:
-- a simple thread per buyer/project
-- not per item
-- not live chat dependent
-- asynchronous stored messaging inside the app
+- Simple thread per buyer/project (not per item)
+- Asynchronous stored messaging
 
-### Seller dashboard v1
-Initial seller dashboard sections:
-- Projects
-- Items
+### Admin dashboard
+- Secret access at `/admin` (no navigation link)
+- Overview: platform stats (accounts, projects, items, values, engagement)
+- Accounts: list all profiles, toggle active/inactive (admin accounts excluded)
+- Projects: list all projects, toggle public/private
 
-Design data model and routing so that these can be added later without refactor:
-- Buyer Intents
-- Messages
-- Profile / Settings
-- Team members / co-sellers
-- Analytics
-- Export tools
+## Architecture guidelines
 
-## Product architecture goals
-I want a clean architecture that is:
-- scalable
-- secure
-- mobile-first
-- accessible
-- easy to maintain
-- easy to extend later
+### Folder structure
+```
+src/app/            → Next.js App Router (route groups)
+src/components/     → UI primitives + layout + shared components
+src/features/       → Domain features (projects, items, wishlist, intents, messages, seller-dashboard, admin-dashboard)
+src/db/             → Drizzle schema + SQL migrations
+src/lib/            → Auth, validations, utilities
+src/i18n/           → Internationalization config + messages
+src/types/          → Shared TypeScript types
+src/config/         → App configuration
+```
 
-The codebase must be organized for long-term growth, not just MVP hacking.
+### Code patterns
+- Server Components by default, Client Components only when needed
+- Server Actions for mutations (`"use server"`)
+- `requireUser()` / `requireSeller()` / `requireAdmin()` guards in layouts
+- `revalidatePath()` after mutations
+- `useTransition` for client-side action triggers
+- Drizzle `select().from().where()` for queries
 
-## Build requirements
+### Deployment
+- Docker Compose: `app` + `db` services on `shared-proxy` network
+- Caddy reverse proxy at `/opt/trystbrief/`
+- VPS: `root@45.32.220.152`, domain `sellingmyitems.toprecipes.best:5055`
+- Deploy: push to `main` → GitHub Actions SSH deploy → build → restart
+- Migrations: run manually on VPS after deploy
 
-### 1. Project setup
-Create the project skeleton with:
-- clear folder structure
-- environment variable strategy
-- linting
-- formatting
-- type safety
-- reusable UI primitives
-- server/client boundary discipline
-- modular domain organization
-
-### 2. Suggested folder structure
-Prefer a structure like:
-- `src/app`
-- `src/components`
-- `src/features`
-- `src/lib`
-- `src/db`
-- `src/i18n`
-- `src/types`
-- `src/config`
-
-Organize by domain where helpful:
-- auth
-- projects
-- items
-- wishlist
-- intents
-- messages
-- seller-dashboard
-
-### 3. Routing
-Design route structure including:
-Public:
-- `/`
-- `/login`
-- `/project/[slug]`
-- `/project/[slug]/item/[itemId]`
-
-Authenticated buyer:
-- `/account`
-- `/wishlist`
-- `/messages`
-
-Seller:
-- `/seller`
-- `/seller/projects`
-- `/seller/projects/new`
-- `/seller/projects/[projectId]`
-- `/seller/projects/[projectId]/edit`
-- `/seller/projects/[projectId]/items`
-- `/seller/projects/[projectId]/items/new`
-- `/seller/projects/[projectId]/items/[itemId]/edit`
-
-Reserve room for future:
-- `/seller/intents`
-- `/seller/messages`
-- `/seller/settings`
-
-### 4. Internationalization
-Support English and French from day one.
-Requirements:
-- locale-aware routing or locale handling strategy
-- translation dictionaries
-- no hard-coded UI text
-- all form labels/messages translatable
-- easy addition of more languages later
-
-### 5. Database design
-Design normalized schema using Supabase Postgres + Drizzle.
-
-Include at minimum these entities:
-- users
-- profiles
-- seller_accounts
-- projects
-- project_categories
-- items
-- item_images
-- item_files
-- item_links
-- buyer_wishlists or saved selections
-- buyer_intents
-- buyer_intent_items
-- conversation_threads
-- conversation_messages
-
-Include relevant fields for:
-- created_at
-- updated_at
-- ownership
-- visibility
-- status
-- soft-delete where useful
-
-Design for future extensibility:
-- co-sellers/admins
-- project membership
-- item audit trail
-- project privacy modes
-- SEO visibility flags
-
-### 6. Permissions and security
-Implement secure role-aware access logic.
-
-Minimum rules:
-- guest: public teaser only
-- authenticated buyer: full project item details + own wishlist + own project thread
-- seller: full CRUD only on owned projects/items and related data
-
-Use:
-- server-side authorization checks
-- Supabase auth integration
-- Row Level Security mindset
-- secure file access strategy
-- private vs public storage policy
-
-Be explicit about which assets can be public:
-- item cover images for teaser browsing may be public if needed
-- detailed attachments/files should require authentication or signed URLs
-
-### 7. UX requirements
-Design must be:
-- mobile first
-- responsive
-- touch friendly
-- clean and simple
-- fast to scan
-- seller-friendly for data entry
-
-Public project page:
-- project header
-- city area
-- item cards/grid/list
-- each item card shows only cover image + title for guest
-- signed-in user sees more detail once entering item page or expanded card
-
-Authenticated buyer experience:
-- unlock item details
-- add/remove selection
-- review selected items
-- submit purchase intent
-- send/read messages in project thread
-
-Seller experience:
-- manage projects
-- create/edit/delete items
-- upload multiple images/files
-- add external links
-- assign custom categories
-- mark item available/pending/sold manually
-
-### 8. Forms and validation
-All forms must use:
-- shared Zod schemas
-- strong typing end to end
-- client + server validation
-- clear error messages
-- localized validation messages if possible
-
-### 9. Storage
-Use Supabase Storage for:
-- item photos
-- attachments
-- optional documents/manuals
-
-Support many file types.
-Design storage buckets and naming conventions carefully.
-Use safe upload handling, metadata, and cleanup on deletion.
-
-### 10. MVP implementation scope
-Build the MVP foundation first.
-
-Phase 1:
-- auth
-- public homepage
-- project public page
-- item teaser cards
-- seller dashboard shell
-- project CRUD
-- item CRUD
-- image/file upload
-- category management
-- item status
-- EN/FR setup
+### Security
+- Server-side authorization on every protected route/action
+- Role checks in server actions (not just layouts)
+- `returnTo` validates path starts with `/` (no open redirect)
+- Admin toggle skips admin profiles (can't deactivate yourself)
+- File uploads: local filesystem with safe naming
 
 Phase 2:
 - buyer full item details after login
