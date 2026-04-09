@@ -21,7 +21,8 @@
     "wishlist": "Ma sélection",
     "messages": "Messages",
     "account": "Compte",
-    "sellerDashboard": "Tableau de bord vendeur"
+    "sellerDashboard": "Tableau de bord vendeur",
+    "adminDashboard": "Administration"
   },
   "home": {
     "hero": "Trouvez des articles uniques près de chez vous",

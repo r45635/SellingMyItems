@@ -49,7 +49,7 @@ export async function requireUser() {
 
 export async function requireSeller() {
   const user = await requireUser();
-  if (user.role !== "seller") {
+  if (user.role !== "seller" && user.role !== "admin") {
     redirect("/");
   }
   return user;

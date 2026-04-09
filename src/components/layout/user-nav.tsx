@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { User, LogOut, LayoutDashboard, Heart, MessageSquare } from "lucide-react";
+import { User, LogOut, LayoutDashboard, Heart, MessageSquare, Shield } from "lucide-react";
 import { useEffect, useState } from "react";
 import { signOutAction } from "@/lib/auth/actions";
 import { Badge } from "@/components/ui/badge";
@@ -74,7 +74,7 @@ export function UserNav() {
     window.location.href = "/";
   }
 
-  const messagesHref = user.role === "seller" ? "/seller/messages" : "/messages";
+  const messagesHref = user.role === "seller" || user.role === "admin" ? "/seller/messages" : "/messages";
   const hasUnread = unreadCount > 0;
 
   return (
@@ -108,11 +108,19 @@ export function UserNav() {
           </Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        {user.role === "seller" ? (
+        {user.role === "seller" || user.role === "admin" ? (
           <DropdownMenuItem>
             <Link href="/seller" className="flex items-center cursor-pointer w-full">
               <LayoutDashboard className="mr-2 h-4 w-4" />
               {t("nav.sellerDashboard")}
+            </Link>
+          </DropdownMenuItem>
+        ) : null}
+        {user.role === "admin" ? (
+          <DropdownMenuItem>
+            <Link href="/admin" className="flex items-center cursor-pointer w-full">
+              <Shield className="mr-2 h-4 w-4" />
+              {t("nav.adminDashboard")}
             </Link>
           </DropdownMenuItem>
         ) : null}

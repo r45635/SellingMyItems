@@ -21,7 +21,8 @@
     "wishlist": "Wishlist",
     "messages": "Messages",
     "account": "Account",
-    "sellerDashboard": "Seller Dashboard"
+    "sellerDashboard": "Seller Dashboard",
+    "adminDashboard": "Administration"
   },
   "home": {
     "hero": "Find unique items near you",
