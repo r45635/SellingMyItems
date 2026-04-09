@@ -1,13 +1,15 @@
 "use server";
 
 import { db } from "@/db";
-import { profiles, sessions, sellerAccounts } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { profiles, sessions, sellerAccounts, passwordResetTokens } from "@/db/schema";
+import { eq, and, gt, isNull } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { cookies, headers } from "next/headers";
 import type { UserRole } from "@/lib/auth";
 import { consumeRateLimit } from "@/lib/security/rate-limit";
+import { sendPasswordResetEmail } from "@/lib/email";
+import { siteConfig } from "@/config";
 
 const SESSION_COOKIE = "session_token";
 const SESSION_MAX_AGE = 60 * 60 * 24 * 30; // 30 days
@@ -188,6 +190,115 @@ export async function signOutAction() {
     path: "/",
     maxAge: 0,
   });
+
+  return { ok: true };
+}
+
+const RESET_TOKEN_MAX_AGE = 60 * 60 * 1000; // 1 hour
+
+export async function forgotPasswordAction(formData: FormData) {
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+
+  if (!email) {
+    return { error: "Email is required" };
+  }
+
+  const clientIp = await getClientIp();
+  const ipCheck = consumeRateLimit(`auth:forgot:ip:${clientIp}`, {
+    windowMs: 15 * 60 * 1000,
+    max: 5,
+  });
+  if (!ipCheck.ok) {
+    return { error: "tooManyRequests" };
+  }
+
+  const emailCheck = consumeRateLimit(`auth:forgot:email:${email}`, {
+    windowMs: 15 * 60 * 1000,
+    max: 3,
+  });
+  if (!emailCheck.ok) {
+    return { error: "tooManyRequests" };
+  }
+
+  // Always return success to prevent email enumeration
+  const profile = await db.query.profiles.findFirst({
+    where: and(eq(profiles.email, email), eq(profiles.isActive, true)),
+    columns: { id: true, email: true },
+  });
+
+  if (profile) {
+    const token = generateToken();
+    const expiresAt = new Date(Date.now() + RESET_TOKEN_MAX_AGE);
+
+    await db.insert(passwordResetTokens).values({
+      userId: profile.id,
+      token,
+      expiresAt,
+    });
+
+    const locale = formData.get("locale")?.toString() ?? "en";
+    const resetUrl = `${siteConfig.url}/${locale}/reset-password?token=${token}`;
+
+    try {
+      await sendPasswordResetEmail(profile.email, resetUrl, locale);
+    } catch {
+      console.error("Failed to send password reset email to", email);
+    }
+  }
+
+  return { ok: true };
+}
+
+export async function resetPasswordAction(formData: FormData) {
+  const token = String(formData.get("token") ?? "");
+  const password = String(formData.get("password") ?? "");
+  const confirmPassword = String(formData.get("confirmPassword") ?? "");
+
+  if (!token) {
+    return { error: "invalidToken" };
+  }
+
+  if (!password || password.length < 6) {
+    return { error: "passwordTooShort" };
+  }
+
+  if (password !== confirmPassword) {
+    return { error: "passwordMismatch" };
+  }
+
+  const clientIp = await getClientIp();
+  const ipCheck = consumeRateLimit(`auth:reset:ip:${clientIp}`, {
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+  });
+  if (!ipCheck.ok) {
+    return { error: "tooManyRequests" };
+  }
+
+  const resetToken = await db.query.passwordResetTokens.findFirst({
+    where: and(
+      eq(passwordResetTokens.token, token),
+      gt(passwordResetTokens.expiresAt, new Date()),
+      isNull(passwordResetTokens.usedAt)
+    ),
+  });
+
+  if (!resetToken) {
+    return { error: "invalidToken" };
+  }
+
+  const passwordHash = await bcrypt.hash(password, 12);
+
+  await db
+    .update(profiles)
+    .set({ passwordHash, updatedAt: new Date() })
+    .where(eq(profiles.id, resetToken.userId));
+
+  // Mark token as used
+  await db
+    .update(passwordResetTokens)
+    .set({ usedAt: new Date() })
+    .where(eq(passwordResetTokens.id, resetToken.id));
 
   return { ok: true };
 }

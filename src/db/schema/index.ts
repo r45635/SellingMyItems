@@ -292,6 +292,21 @@ export const conversationMessages = pgTable("conversation_messages", {
     .notNull(),
 });
 
+// ─── Password Reset Tokens ──────────────────────────────────────────────────
+
+export const passwordResetTokens = pgTable("password_reset_tokens", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => profiles.id, { onDelete: "cascade" }),
+  token: text("token").notNull().unique(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  usedAt: timestamp("used_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
 // ─── Relations ──────────────────────────────────────────────────────────────
 
 export const profilesRelations = relations(profiles, ({ many }) => ({

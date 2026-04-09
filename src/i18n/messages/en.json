@@ -55,7 +55,18 @@
     "checkEmail": "Check your email",
     "confirmationSent": "We sent you a confirmation link. Click it to activate your account.",
     "backToLogin": "Back to login",
-    "authNotConfigured": "Authentication is not configured"
+    "authNotConfigured": "Authentication is not configured",
+    "forgotPassword": "Forgot password?",
+    "forgotPasswordDescription": "Enter your email and we'll send you a link to reset your password.",
+    "sendResetLink": "Send reset link",
+    "resetEmailSent": "If an account exists with this email, you will receive a password reset link shortly.",
+    "resetPassword": "Reset password",
+    "newPassword": "New password",
+    "passwordChanged": "Password changed",
+    "passwordChangedDescription": "Your password has been successfully updated. You can now sign in with your new password.",
+    "invalidToken": "This reset link is invalid or has expired.",
+    "requestNewLink": "Request a new link",
+    "tooManyRequests": "Too many requests. Please try again later."
   },
   "project": {
     "title": "Project",

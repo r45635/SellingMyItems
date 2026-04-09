@@ -55,7 +55,18 @@
     "checkEmail": "Vérifiez votre email",
     "confirmationSent": "Nous vous avons envoyé un lien de confirmation. Cliquez dessus pour activer votre compte.",
     "backToLogin": "Retour à la connexion",
-    "authNotConfigured": "L'authentification n'est pas configurée"
+    "authNotConfigured": "L'authentification n'est pas configurée",
+    "forgotPassword": "Mot de passe oublié ?",
+    "forgotPasswordDescription": "Entrez votre email et nous vous enverrons un lien pour réinitialiser votre mot de passe.",
+    "sendResetLink": "Envoyer le lien",
+    "resetEmailSent": "Si un compte existe avec cet email, vous recevrez un lien de réinitialisation sous peu.",
+    "resetPassword": "Réinitialiser le mot de passe",
+    "newPassword": "Nouveau mot de passe",
+    "passwordChanged": "Mot de passe modifié",
+    "passwordChangedDescription": "Votre mot de passe a été mis à jour avec succès. Vous pouvez maintenant vous connecter avec votre nouveau mot de passe.",
+    "invalidToken": "Ce lien de réinitialisation est invalide ou a expiré.",
+    "requestNewLink": "Demander un nouveau lien",
+    "tooManyRequests": "Trop de requêtes. Veuillez réessayer plus tard."
   },
   "project": {
     "title": "Projet",
