@@ -17,10 +17,19 @@ import { purchaseIntentSchema } from "@/lib/validations";
 import { and, eq, inArray, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { consumeRateLimit } from "@/lib/security/rate-limit";
 
 export async function submitIntentAction(formData: FormData) {
   const user = await requireUser();
   const profileId = user.id;
+
+  const rateCheck = consumeRateLimit(`intents:submit:user:${profileId}`, {
+    windowMs: 10 * 60 * 1000,
+    max: 8,
+  });
+  if (!rateCheck.ok) {
+    return;
+  }
 
   const itemIds = formData.getAll("itemId").map(String).filter(Boolean);
 

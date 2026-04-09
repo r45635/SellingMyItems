@@ -5,14 +5,27 @@ import { profiles, sessions, sellerAccounts } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import type { UserRole } from "@/lib/auth";
+import { consumeRateLimit } from "@/lib/security/rate-limit";
 
 const SESSION_COOKIE = "session_token";
 const SESSION_MAX_AGE = 60 * 60 * 24 * 30; // 30 days
 
 function generateToken(): string {
   return crypto.randomBytes(32).toString("hex");
+}
+
+async function getClientIp() {
+  const headerStore = await headers();
+  const forwardedFor = headerStore.get("x-forwarded-for");
+  const realIp = headerStore.get("x-real-ip");
+
+  if (forwardedFor) {
+    return forwardedFor.split(",")[0]?.trim() || "unknown";
+  }
+
+  return realIp || "unknown";
 }
 
 export async function signUpAction(formData: FormData) {
@@ -31,6 +44,23 @@ export async function signUpAction(formData: FormData) {
   }
   if (password !== confirmPassword) {
     return { error: "passwordMismatch" };
+  }
+
+  const clientIp = await getClientIp();
+  const ipCheck = consumeRateLimit(`auth:signup:ip:${clientIp}`, {
+    windowMs: 10 * 60 * 1000,
+    max: 10,
+  });
+  if (!ipCheck.ok) {
+    return { error: "tooManyRequests" };
+  }
+
+  const emailCheck = consumeRateLimit(`auth:signup:email:${email}`, {
+    windowMs: 10 * 60 * 1000,
+    max: 5,
+  });
+  if (!emailCheck.ok) {
+    return { error: "tooManyRequests" };
   }
 
   // Check existing
@@ -84,6 +114,23 @@ export async function signInAction(formData: FormData) {
 
   if (!email || !password) {
     return { error: "Email and password are required" };
+  }
+
+  const clientIp = await getClientIp();
+  const ipCheck = consumeRateLimit(`auth:signin:ip:${clientIp}`, {
+    windowMs: 10 * 60 * 1000,
+    max: 20,
+  });
+  if (!ipCheck.ok) {
+    return { error: "tooManyRequests" };
+  }
+
+  const emailCheck = consumeRateLimit(`auth:signin:email:${email}`, {
+    windowMs: 10 * 60 * 1000,
+    max: 8,
+  });
+  if (!emailCheck.ok) {
+    return { error: "tooManyRequests" };
   }
 
   const profile = await db.query.profiles.findFirst({

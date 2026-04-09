@@ -4,6 +4,7 @@ import path from "path";
 import { randomUUID } from "crypto";
 import sharp from "sharp";
 import { getUser } from "@/lib/auth";
+import { consumeRateLimit } from "@/lib/security/rate-limit";
 
 const ALLOWED_TYPES = [
   "image/jpeg",
@@ -14,6 +15,7 @@ const ALLOWED_TYPES = [
 ];
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 MB (raw from phone camera)
+const MAX_FILES_PER_REQUEST = 8;
 const MAX_DIMENSION = 1920; // Max width or height after resize
 const JPEG_QUALITY = 80;
 
@@ -23,12 +25,32 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
+  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
+  const rateKey = `upload:post:user:${user.id}:${ip ?? "unknown"}`;
+  const rateCheck = consumeRateLimit(rateKey, {
+    windowMs: 5 * 60 * 1000,
+    max: 20,
+  });
+  if (!rateCheck.ok) {
+    return NextResponse.json(
+      { error: "Trop de tentatives, réessayez dans quelques minutes" },
+      { status: 429 }
+    );
+  }
+
   const formData = await request.formData();
   const files = formData.getAll("files") as File[];
 
   if (!files.length) {
     return NextResponse.json(
       { error: "Aucun fichier fourni" },
+      { status: 400 }
+    );
+  }
+
+  if (files.length > MAX_FILES_PER_REQUEST) {
+    return NextResponse.json(
+      { error: `Trop de fichiers (max ${MAX_FILES_PER_REQUEST} par requête)` },
       { status: 400 }
     );
   }

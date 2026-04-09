@@ -11,10 +11,19 @@ import { requireUser } from "@/lib/auth";
 import { messageSchema } from "@/lib/validations";
 import { and, eq, isNull, desc } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { consumeRateLimit } from "@/lib/security/rate-limit";
 
 export async function sendMessageAction(formData: FormData) {
   const user = await requireUser();
   const profileId = user.id;
+
+  const rateCheck = consumeRateLimit(`messages:send:user:${profileId}`, {
+    windowMs: 60 * 1000,
+    max: 20,
+  });
+  if (!rateCheck.ok) {
+    return;
+  }
 
   const projectId = String(formData.get("projectId") ?? "");
   const body = String(formData.get("body") ?? "");
