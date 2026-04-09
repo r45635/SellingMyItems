@@ -13,7 +13,7 @@ import {
   projects,
   sellerAccounts,
 } from "@/db/schema";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import {
   addWishlistItemAction,
@@ -60,6 +60,17 @@ export default async function ItemPage({
   if (item.status === "hidden") {
     notFound();
   }
+
+  // Count every item detail page open as a view.
+  const [updatedItem] = await db
+    .update(items)
+    .set({
+      viewCount: sql`${items.viewCount} + 1`,
+    })
+    .where(eq(items.id, item.id))
+    .returning({ viewCount: items.viewCount });
+
+  const currentViewCount = updatedItem?.viewCount ?? item.viewCount;
 
   const profileId = user ? user.id : null;
 
@@ -130,6 +141,7 @@ export default async function ItemPage({
             status={item.status}
             categoryName={category?.name}
             updatedAt={item.updatedAt}
+            viewCount={currentViewCount}
           />
 
           {/* Seller contact */}
@@ -196,6 +208,7 @@ export default async function ItemPage({
             coverImageUrl={item.coverImageUrl}
             status={item.status}
             updatedAt={item.updatedAt}
+            viewCount={currentViewCount}
           />
           <div className="rounded-xl border bg-muted/30 p-8 text-center space-y-4">
             <Lock className="h-10 w-10 mx-auto text-muted-foreground/50" />

@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ExternalLink, Clock } from "lucide-react";
+import { ExternalLink, Clock, Eye } from "lucide-react";
 import { ImageCarousel } from "./image-carousel";
 import { useTranslations } from "next-intl";
 import { ITEM_CONDITIONS } from "@/lib/validations";
@@ -21,6 +21,7 @@ interface ItemDetailCardProps {
   status?: "available" | "pending" | "reserved" | "sold" | "hidden";
   categoryName?: string | null;
   updatedAt?: Date | string | null;
+  viewCount?: number;
 }
 
 export function ItemDetailCard({
@@ -39,6 +40,7 @@ export function ItemDetailCard({
   status = "available",
   categoryName,
   updatedAt,
+  viewCount,
 }: ItemDetailCardProps) {
   const t = useTranslations("item");
 
@@ -129,10 +131,20 @@ export function ItemDetailCard({
         {notes && (
           <p className="text-sm text-muted-foreground italic">{notes}</p>
         )}
-        {formattedDate && (
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground pt-1">
-            <Clock className="h-3.5 w-3.5" />
-            <span>{t("lastUpdated")}: {formattedDate}</span>
+        {(formattedDate || viewCount != null) && (
+          <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground pt-1">
+            {formattedDate && (
+              <div className="flex items-center gap-1.5">
+                <Clock className="h-3.5 w-3.5" />
+                <span>{t("lastUpdated")}: {formattedDate}</span>
+              </div>
+            )}
+            {viewCount != null && (
+              <div className="flex items-center gap-1.5">
+                <Eye className="h-3.5 w-3.5" />
+                <span>{viewCount} {t("views")}</span>
+              </div>
+            )}
           </div>
         )}
         {links.length > 0 && (

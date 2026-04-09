@@ -88,6 +88,7 @@
     "files": "Attached files",
     "links": "Reference links",
     "lastUpdated": "Last updated",
+    "views": "views",
     "conditions": {
       "new": "New",
       "like_new": "Like New",

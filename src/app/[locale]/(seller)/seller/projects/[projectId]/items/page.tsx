@@ -1,6 +1,6 @@
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
-import { Plus, ArrowLeft, ImageOff } from "lucide-react";
+import { Plus, ArrowLeft, ImageOff, Eye } from "lucide-react";
 import { requireSeller } from "@/lib/auth";
 import { db } from "@/db";
 import { items, projects, sellerAccounts } from "@/db/schema";
@@ -45,6 +45,7 @@ export default async function ProjectItemsPage({
           price: items.price,
           currency: items.currency,
           coverImageUrl: items.coverImageUrl,
+          viewCount: items.viewCount,
           updatedAt: items.updatedAt,
         })
         .from(items)
@@ -133,7 +134,13 @@ export default async function ProjectItemsPage({
                         </div>
                       )}
                     </div>
-                    <p className="font-medium">{item.title}</p>
+                    <div>
+                      <p className="font-medium">{item.title}</p>
+                      <p className="mt-0.5 inline-flex items-center gap-1 text-xs text-muted-foreground">
+                        <Eye className="h-3.5 w-3.5" />
+                        {item.viewCount} views
+                      </p>
+                    </div>
                   </div>
 
                   <div className="flex items-center gap-2">
@@ -141,13 +148,13 @@ export default async function ProjectItemsPage({
                       href={`/project/${project.slug}/item/${item.id}`}
                       className="inline-flex h-8 items-center justify-center rounded-lg border border-border px-2.5 text-sm hover:bg-muted"
                     >
-                      Voir
+                      View
                     </Link>
                     <Link
                       href={`/seller/projects/${projectId}/items/${item.id}/edit`}
                       className="inline-flex h-8 items-center justify-center rounded-lg bg-primary px-2.5 text-sm text-primary-foreground hover:bg-primary/80"
                     >
-                      Modifier
+                      Edit
                     </Link>
                   </div>
                 </div>

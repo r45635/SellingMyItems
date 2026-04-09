@@ -140,6 +140,7 @@ export const items = pgTable("items", {
   status: itemStatusEnum("status").default("available").notNull(),
   coverImageUrl: text("cover_image_url"),
   sortOrder: integer("sort_order").default(0).notNull(),
+  viewCount: integer("view_count").default(0).notNull(),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),

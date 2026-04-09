@@ -57,6 +57,7 @@ export default async function ProjectPage({
       coverImageUrl: items.coverImageUrl,
       status: items.status,
       updatedAt: items.updatedAt,
+      viewCount: items.viewCount,
     })
     .from(items)
     .where(and(eq(items.projectId, project.id), isNull(items.deletedAt), ne(items.status, "hidden")))
@@ -154,6 +155,7 @@ export default async function ProjectPage({
                   coverImageUrl={item.coverImageUrl}
                   status={item.status}
                   updatedAt={item.updatedAt}
+                  viewCount={item.viewCount}
                   href={`/project/${slug}/item/${item.id}`}
                   isWishlisted={wishlistedItemIds.has(item.id)}
                 />
@@ -185,6 +187,7 @@ export default async function ProjectPage({
                   coverImageUrl={item.coverImageUrl}
                   status={item.status}
                   updatedAt={item.updatedAt}
+                  viewCount={item.viewCount}
                 />
               ))}
             </div>

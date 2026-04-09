@@ -8,8 +8,8 @@ import {
   projects,
   sellerAccounts,
 } from "@/db/schema";
-import { and, eq, isNull, desc, inArray } from "drizzle-orm";
-import { sendMessageAction } from "@/features/messages/actions";
+import { and, desc, eq, inArray, isNull } from "drizzle-orm";
+import { Link } from "@/i18n/navigation";
 
 export default async function SellerMessagesPage() {
   const t = await getTranslations("messages");
@@ -55,96 +55,157 @@ export default async function SellerMessagesPage() {
     );
   }
 
-  // Fetch all threads for seller's projects
-  const allThreads = [];
-  for (const pid of projectIds) {
-    const threads = await db.query.conversationThreads.findMany({
-      where: eq(conversationThreads.projectId, pid),
-      orderBy: [desc(conversationThreads.updatedAt)],
-    });
-    allThreads.push(...threads);
+  const threads = await db.query.conversationThreads.findMany({
+    where: inArray(conversationThreads.projectId, projectIds),
+    orderBy: [desc(conversationThreads.updatedAt)],
+  });
+
+  const buyerIds = [...new Set(threads.map((thread) => thread.buyerId))];
+
+  const buyers =
+    buyerIds.length > 0
+      ? await db
+          .select({
+            id: profiles.id,
+            displayName: profiles.displayName,
+            email: profiles.email,
+          })
+          .from(profiles)
+          .where(inArray(profiles.id, buyerIds))
+      : [];
+
+  const buyerMap = new Map(
+    buyers.map((buyer) => [
+      buyer.id,
+      {
+        displayName: buyer.displayName ?? "Unknown",
+        email: buyer.email,
+      },
+    ])
+  );
+
+  const threadIds = threads.map((thread) => thread.id);
+  const allMessages =
+    threadIds.length > 0
+      ? await db
+          .select({
+            threadId: conversationMessages.threadId,
+            body: conversationMessages.body,
+            createdAt: conversationMessages.createdAt,
+          })
+          .from(conversationMessages)
+          .where(inArray(conversationMessages.threadId, threadIds))
+          .orderBy(desc(conversationMessages.createdAt))
+      : [];
+
+  const threadStats = new Map<
+    string,
+    { messageCount: number; lastMessageBody: string; lastMessageDate: Date | null }
+  >();
+
+  for (const message of allMessages) {
+    const existing = threadStats.get(message.threadId);
+    if (!existing) {
+      threadStats.set(message.threadId, {
+        messageCount: 1,
+        lastMessageBody: message.body,
+        lastMessageDate: message.createdAt,
+      });
+      continue;
+    }
+
+    existing.messageCount += 1;
   }
 
-  // Sort all threads by update date
-  allThreads.sort(
-    (a, b) =>
-      new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-  );
+  const groupedThreads = threads.reduce<
+    Array<{
+      projectId: string;
+      projectName: string;
+      threads: Array<{
+        id: string;
+        buyerName: string;
+        buyerEmail: string;
+        messageCount: number;
+        lastMessageBody: string;
+        lastMessageDate: Date | null;
+      }>;
+    }>
+  >((groups, thread) => {
+    const buyer = buyerMap.get(thread.buyerId);
+    const stats = threadStats.get(thread.id);
 
-  const enrichedThreads = await Promise.all(
-    allThreads.map(async (thread) => {
-      const buyer = await db.query.profiles.findFirst({
-        where: eq(profiles.id, thread.buyerId),
-      });
+    const threadData = {
+      id: thread.id,
+      buyerName: buyer?.displayName ?? "Unknown",
+      buyerEmail: buyer?.email ?? "",
+      messageCount: stats?.messageCount ?? 0,
+      lastMessageBody: stats?.lastMessageBody ?? "",
+      lastMessageDate: stats?.lastMessageDate ?? null,
+    };
 
-      const messages = await db.query.conversationMessages.findMany({
-        where: eq(conversationMessages.threadId, thread.id),
-        orderBy: [desc(conversationMessages.createdAt)],
-      });
+    const existingGroup = groups.find((group) => group.projectId === thread.projectId);
+    if (existingGroup) {
+      existingGroup.threads.push(threadData);
+      return groups;
+    }
 
-      const lastMessage = messages[0];
-
-      return {
-        ...thread,
-        projectName: projectMap.get(thread.projectId) ?? "Unknown",
-        buyerName: buyer?.displayName ?? "Unknown",
-        buyerEmail: buyer?.email ?? "",
-        messageCount: messages.length,
-        lastMessageBody: lastMessage?.body ?? "",
-        lastMessageDate: lastMessage?.createdAt,
-      };
-    })
-  );
+    groups.push({
+      projectId: thread.projectId,
+      projectName: projectMap.get(thread.projectId) ?? "Unknown project",
+      threads: [threadData],
+    });
+    return groups;
+  }, []);
 
   return (
     <div>
       <h1 className="text-2xl font-bold mb-6">{t("title")}</h1>
 
-      {enrichedThreads.length === 0 ? (
+      {groupedThreads.length === 0 ? (
         <div className="rounded-lg border p-6 text-center text-muted-foreground">
           {t("noThreads")}
         </div>
       ) : (
         <div className="space-y-4">
-          {enrichedThreads.map((thread) => (
-            <div key={thread.id} className="rounded-lg border p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium">
-                    {thread.buyerName} ({thread.buyerEmail})
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {thread.projectName} • {thread.messageCount} message(s)
-                    {thread.lastMessageDate &&
-                      ` • ${new Date(thread.lastMessageDate).toLocaleDateString()}`}
-                  </p>
-                </div>
+          {groupedThreads.map((group) => (
+            <section key={group.projectId} className="rounded-lg border p-4 space-y-3">
+              <div className="flex items-center justify-between border-b pb-2">
+                <h2 className="font-semibold">{group.projectName}</h2>
+                <span className="text-xs text-muted-foreground">
+                  {group.threads.length} thread(s)
+                </span>
               </div>
 
-              {thread.lastMessageBody && (
-                <p className="text-sm text-muted-foreground truncate">
-                  {thread.lastMessageBody}
-                </p>
-              )}
-
-              {/* Quick reply form */}
-              <form action={sendMessageAction} className="flex gap-2">
-                <input type="hidden" name="projectId" value={thread.projectId} />
-                <input
-                  name="body"
-                  type="text"
-                  placeholder={t("placeholder")}
-                  required
-                  className="flex-1 rounded-md border border-input px-3 py-2 text-sm"
-                />
-                <button
-                  type="submit"
-                  className="inline-flex h-9 items-center justify-center rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/80"
-                >
-                  {t("sendMessage")}
-                </button>
-              </form>
-            </div>
+              <div className="space-y-2">
+                {group.threads.map((thread) => (
+                  <Link
+                    key={thread.id}
+                    href={`/seller/messages/${thread.id}`}
+                    className="block rounded-md border p-3 transition-colors hover:bg-muted/50"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="font-medium truncate">
+                        {thread.buyerName}
+                        {thread.buyerEmail ? ` (${thread.buyerEmail})` : ""}
+                      </p>
+                      <span className="shrink-0 text-xs text-muted-foreground">
+                        {thread.messageCount} message(s)
+                      </span>
+                    </div>
+                    {thread.lastMessageBody && (
+                      <p className="mt-1 text-sm text-muted-foreground truncate">
+                        {thread.lastMessageBody}
+                      </p>
+                    )}
+                    {thread.lastMessageDate && (
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {new Date(thread.lastMessageDate).toLocaleDateString()}
+                      </p>
+                    )}
+                  </Link>
+                ))}
+              </div>
+            </section>
           ))}
         </div>
       )}

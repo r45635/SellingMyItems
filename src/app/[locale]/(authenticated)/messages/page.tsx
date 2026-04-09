@@ -81,7 +81,7 @@ export default async function MessagesPage() {
 
               {/* Quick reply form */}
               <form action={sendMessageAction} className="flex gap-2">
-                <input type="hidden" name="projectId" value={thread.projectId} />
+                <input type="hidden" name="threadId" value={thread.id} />
                 <input
                   name="body"
                   type="text"
