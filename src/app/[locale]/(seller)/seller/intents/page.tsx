@@ -118,7 +118,7 @@ export default async function SellerIntentsPage() {
 
       {enrichedIntents.length === 0 ? (
         <div className="rounded-lg border p-6 text-center text-muted-foreground">
-          Aucune intention d&apos;achat reçue
+          No purchase intents received yet
         </div>
       ) : (
         <div className="space-y-4">
@@ -155,7 +155,7 @@ export default async function SellerIntentsPage() {
               </div>
 
               <div className="text-sm">
-                <p className="font-medium mb-1">Articles :</p>
+                <p className="font-medium mb-1">Items:</p>
                 <ul className="list-disc list-inside space-y-0.5">
                   {intent.items.map((item) => (
                     <li key={item.itemId}>
@@ -180,7 +180,7 @@ export default async function SellerIntentsPage() {
                       type="submit"
                       className="inline-flex h-8 items-center justify-center rounded-lg bg-green-600 px-3 text-sm text-white hover:bg-green-700"
                     >
-                      Accepter
+                      Accept
                     </button>
                   </form>
                   <form
@@ -193,7 +193,7 @@ export default async function SellerIntentsPage() {
                       type="submit"
                       className="inline-flex h-8 items-center justify-center rounded-lg bg-red-600 px-3 text-sm text-white hover:bg-red-700"
                     >
-                      Refuser
+                      Decline
                     </button>
                   </form>
                 </div>

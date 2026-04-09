@@ -41,7 +41,7 @@ export async function createItemAction(formData: FormData) {
 
   const sellerAccountId = await getSellerAccountId(user);
   if (!sellerAccountId) {
-    return { error: { form: ["Compte vendeur introuvable"] } };
+    return { error: { form: ["Seller account not found"] } };
   }
 
   const ownedProject = await db.query.projects.findFirst({
@@ -53,7 +53,7 @@ export async function createItemAction(formData: FormData) {
   });
 
   if (!ownedProject) {
-    return { error: { form: ["Projet introuvable ou non autorisé"] } };
+    return { error: { form: ["Project not found or unauthorized"] } };
   }
 
   const [createdItem] = await db.insert(items).values({
@@ -136,7 +136,7 @@ export async function updateItemAction(formData: FormData) {
 
   const sellerAccountId = await getSellerAccountId(user);
   if (!sellerAccountId) {
-    return { error: { form: ["Compte vendeur introuvable"] } };
+    return { error: { form: ["Seller account not found"] } };
   }
 
   const ownedProject = await db.query.projects.findFirst({
@@ -148,7 +148,7 @@ export async function updateItemAction(formData: FormData) {
   });
 
   if (!ownedProject) {
-    return { error: { form: ["Projet introuvable ou non autorisé"] } };
+    return { error: { form: ["Project not found or unauthorized"] } };
   }
 
   await db
@@ -315,7 +315,7 @@ export async function updateItemStatusAction(formData: FormData) {
 
   const sellerAccountId = await getSellerAccountId(user);
   if (!sellerAccountId) {
-    return { error: "Compte vendeur introuvable" };
+    return { error: "Seller account not found" };
   }
 
   const ownedProject = await db.query.projects.findFirst({
@@ -327,7 +327,7 @@ export async function updateItemStatusAction(formData: FormData) {
   });
 
   if (!ownedProject) {
-    return { error: "Projet introuvable ou non autorisé" };
+    return { error: "Project not found or unauthorized" };
   }
 
   await db
@@ -350,7 +350,7 @@ export async function deleteItemAction(itemId: string, projectId: string) {
 
   const sellerAccountId = await getSellerAccountId(user);
   if (!sellerAccountId) {
-    return { error: { form: ["Compte vendeur introuvable"] } };
+    return { error: { form: ["Seller account not found"] } };
   }
 
   const ownedProject = await db.query.projects.findFirst({
@@ -362,7 +362,7 @@ export async function deleteItemAction(itemId: string, projectId: string) {
   });
 
   if (!ownedProject) {
-    return { error: { form: ["Projet introuvable ou non autorisé"] } };
+    return { error: { form: ["Project not found or unauthorized"] } };
   }
 
   await db

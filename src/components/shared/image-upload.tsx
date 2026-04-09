@@ -45,7 +45,7 @@ export function ImageUpload({
 
       try {
         // Compress images client-side before upload
-        setUploadStatus(`Compression de ${toUpload.length} image${toUpload.length > 1 ? "s" : ""}...`);
+        setUploadStatus(`Compressing ${toUpload.length} image${toUpload.length > 1 ? "s" : ""}...`);
         const compressed = await Promise.all(
           toUpload.map((f) =>
             imageCompression(f, {
@@ -57,7 +57,7 @@ export function ImageUpload({
           )
         );
 
-        setUploadStatus("Envoi en cours...");
+        setUploadStatus("Uploading...");
         const formData = new FormData();
         compressed.forEach((f) => formData.append("files", f));
 
@@ -69,13 +69,13 @@ export function ImageUpload({
         const data = await res.json();
 
         if (!res.ok) {
-          setError(data.error || "Erreur d'upload");
+          setError(data.error || "Upload failed");
           return;
         }
 
         onChange([...imagesRef.current, ...data.urls]);
       } catch {
-        setError("Erreur réseau lors de l'upload");
+        setError("Network error during upload");
       } finally {
         setIsUploading(false);
         setUploadStatus("");
@@ -211,7 +211,7 @@ export function ImageUpload({
               {/* Delete button with confirmation */}
               {confirmDeleteIndex === idx ? (
                 <div className="absolute inset-0 bg-destructive/80 flex flex-col items-center justify-center gap-1.5 animate-in fade-in duration-150">
-                  <p className="text-white text-xs font-medium">Supprimer ?</p>
+                  <p className="text-white text-xs font-medium">Delete?</p>
                   <div className="flex gap-2">
                     <Button
                       type="button"
@@ -220,7 +220,7 @@ export function ImageUpload({
                       className="h-7 px-2 text-xs"
                       onClick={() => setConfirmDeleteIndex(null)}
                     >
-                      Non
+                      No
                     </Button>
                     <Button
                       type="button"
@@ -229,7 +229,7 @@ export function ImageUpload({
                       className="h-7 px-2 text-xs bg-white text-destructive hover:bg-white/90"
                       onClick={() => removeImage(idx)}
                     >
-                      Oui
+                      Yes
                     </Button>
                   </div>
                 </div>
@@ -268,7 +268,7 @@ export function ImageUpload({
           {isUploading ? (
             <>
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-              <p className="text-sm text-muted-foreground">{uploadStatus || "Traitement..."}</p>
+              <p className="text-sm text-muted-foreground">{uploadStatus || "Processing..."}</p>
             </>
           ) : (
             <>
@@ -278,7 +278,7 @@ export function ImageUpload({
               </div>
               <div className="text-center">
                 <p className="text-sm font-medium">
-                  Glisser-déposer, coller ou cliquer
+                  Drag and drop, paste, or click
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
                   JPEG, PNG, WebP, GIF, AVIF • Compression auto •{" "}

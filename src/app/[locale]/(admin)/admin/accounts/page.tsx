@@ -19,10 +19,9 @@ export default async function AdminAccountsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Gestion des comptes</h1>
+        <h1 className="text-2xl font-bold">Accounts management</h1>
         <p className="text-muted-foreground mt-1">
-          {allProfiles.length} compte{allProfiles.length > 1 ? "s" : ""} au
-          total
+          {allProfiles.length} account{allProfiles.length > 1 ? "s" : ""} total
         </p>
       </div>
 
@@ -31,10 +30,10 @@ export default async function AdminAccountsPage() {
           <thead>
             <tr className="border-b bg-muted/50 text-left">
               <th className="px-4 py-3 font-medium">Email</th>
-              <th className="px-4 py-3 font-medium">Nom</th>
-              <th className="px-4 py-3 font-medium">Rôle</th>
-              <th className="px-4 py-3 font-medium">Statut</th>
-              <th className="px-4 py-3 font-medium">Créé le</th>
+              <th className="px-4 py-3 font-medium">Name</th>
+              <th className="px-4 py-3 font-medium">Role</th>
+              <th className="px-4 py-3 font-medium">Status</th>
+              <th className="px-4 py-3 font-medium">Created</th>
               <th className="px-4 py-3 font-medium">Action</th>
             </tr>
           </thead>
@@ -64,11 +63,11 @@ export default async function AdminAccountsPage() {
                         : "inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-700"
                     }
                   >
-                    {p.isActive ? "Actif" : "Inactif"}
+                    {p.isActive ? "Active" : "Inactive"}
                   </span>
                 </td>
                 <td className="px-4 py-3 text-muted-foreground text-xs">
-                  {new Date(p.createdAt).toLocaleDateString("fr-FR")}
+                  {new Date(p.createdAt).toLocaleDateString("en-US")}
                 </td>
                 <td className="px-4 py-3">
                   {p.role !== "admin" && (

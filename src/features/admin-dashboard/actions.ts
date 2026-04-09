@@ -15,7 +15,7 @@ export async function toggleProfileActiveAction(profileId: string) {
   });
 
   if (!profile || profile.role === "admin") {
-    return { error: "Profil introuvable ou non modifiable" };
+    return { error: "Profile not found or not editable" };
   }
 
   await db
@@ -36,7 +36,7 @@ export async function toggleProjectPublicAction(projectId: string) {
   });
 
   if (!project) {
-    return { error: "Projet introuvable" };
+    return { error: "Project not found" };
   }
 
   await db

@@ -125,7 +125,7 @@ export default async function ProjectPage({
             <User className="h-5 w-5 text-primary" />
           </div>
           <div className="text-sm">
-            <p className="font-medium">{sellerInfo.displayName ?? "Vendeur"}</p>
+            <p className="font-medium">{sellerInfo.displayName ?? "Seller"}</p>
             <a
               href={`mailto:${sellerInfo.email}`}
               className="inline-flex items-center gap-1 text-muted-foreground hover:text-primary transition-colors"
@@ -192,13 +192,13 @@ export default async function ProjectPage({
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/60 backdrop-blur-[2px] rounded-lg">
               <Lock className="h-10 w-10 text-muted-foreground/50 mb-4" />
               <p className="text-sm text-muted-foreground mb-4 text-center px-4">
-                Connectez-vous pour voir les articles, photos et prix.
+                Sign in to view items, photos, and prices.
               </p>
               <Link
                 href={`/login?returnTo=/project/${slug}`}
                 className="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-foreground px-6 text-sm font-semibold text-background shadow-lg transition-all hover:bg-foreground/90"
               >
-                Se connecter
+                Sign in
               </Link>
             </div>
           </div>

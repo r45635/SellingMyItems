@@ -56,7 +56,7 @@ export default async function SellerSettingsPage() {
 
         <div>
           <label htmlFor="displayName" className="block text-sm font-medium mb-1">
-            Nom d&apos;affichage
+            Display name
           </label>
           <input
             id="displayName"
@@ -69,7 +69,7 @@ export default async function SellerSettingsPage() {
 
         <div>
           <label htmlFor="phone" className="block text-sm font-medium mb-1">
-            Téléphone
+            Phone
           </label>
           <input
             id="phone"
@@ -81,16 +81,16 @@ export default async function SellerSettingsPage() {
         </div>
 
         <div className="text-sm text-muted-foreground">
-          Compte vendeur : {sellerAccount ? "Actif" : "Non créé"}
+          Seller account: {sellerAccount ? "Active" : "Not created"}
           {sellerAccount?.createdAt &&
-            ` • Depuis le ${new Date(sellerAccount.createdAt).toLocaleDateString()}`}
+            ` • Since ${new Date(sellerAccount.createdAt).toLocaleDateString()}`}
         </div>
 
         <button
           type="submit"
           className="inline-flex h-9 items-center justify-center rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/80"
         >
-          Enregistrer
+          Save
         </button>
       </form>
     </div>

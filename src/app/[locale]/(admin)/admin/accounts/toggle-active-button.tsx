@@ -29,8 +29,8 @@ export function ToggleActiveButton({
       {isPending
         ? "..."
         : isActive
-          ? "Désactiver"
-          : "Activer"}
+          ? "Disable"
+          : "Enable"}
     </button>
   );
 }

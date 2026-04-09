@@ -139,7 +139,7 @@ export default async function ItemPage({
                 <User className="h-5 w-5 text-primary" />
               </div>
               <div className="text-sm">
-                <p className="font-medium">{sellerInfo.displayName ?? "Vendeur"}</p>
+                <p className="font-medium">{sellerInfo.displayName ?? "Seller"}</p>
                 <a
                   href={`mailto:${sellerInfo.email}`}
                   className="inline-flex items-center gap-1 text-muted-foreground hover:text-primary transition-colors"
@@ -166,7 +166,7 @@ export default async function ItemPage({
                   : "border-border hover:bg-muted"
               }`}
             >
-              {isWishlisted ? "❤️ Retirer de ma sélection" : "🤍 Ajouter à ma sélection"}
+              {isWishlisted ? "❤️ Remove from selection" : "🤍 Add to selection"}
             </button>
           </form>
 
@@ -175,14 +175,14 @@ export default async function ItemPage({
               <ShoppingCart className="h-5 w-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
               <div className="text-sm">
                 <p className="font-medium text-blue-900 dark:text-blue-200">
-                  Cet article est dans votre sélection
+                  This item is in your selection
                 </p>
                 <p className="text-blue-700 dark:text-blue-300 mt-1">
-                  Rendez-vous sur votre{" "}
+                  Go to your{" "}
                   <Link href="/wishlist" className="underline font-medium hover:text-blue-900 dark:hover:text-blue-100">
-                    page sélection
+                    selection page
                   </Link>
-                  {" "}pour finaliser votre intention d&apos;achat.
+                  {" "}to finalize your purchase intent.
                 </p>
               </div>
             </div>
@@ -200,13 +200,13 @@ export default async function ItemPage({
           <div className="rounded-xl border bg-muted/30 p-8 text-center space-y-4">
             <Lock className="h-10 w-10 mx-auto text-muted-foreground/50" />
             <p className="text-sm text-muted-foreground">
-              Connectez-vous pour voir tous les détails, photos et prix.
+              Sign in to view full details, photos, and prices.
             </p>
             <Link
               href={`/login?returnTo=/project/${slug}/item/${itemId}`}
               className="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-foreground px-6 text-sm font-semibold text-background shadow-lg transition-all hover:bg-foreground/90"
             >
-              Se connecter
+              Sign in
             </Link>
           </div>
         </div>

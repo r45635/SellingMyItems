@@ -36,10 +36,9 @@ export default async function AdminProjectsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Gestion des projets</h1>
+        <h1 className="text-2xl font-bold">Projects management</h1>
         <p className="text-muted-foreground mt-1">
-          {allProjects.length} projet{allProjects.length > 1 ? "s" : ""} au
-          total
+          {allProjects.length} project{allProjects.length > 1 ? "s" : ""} total
         </p>
       </div>
 
@@ -47,11 +46,11 @@ export default async function AdminProjectsPage() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b bg-muted/50 text-left">
-              <th className="px-4 py-3 font-medium">Projet</th>
-              <th className="px-4 py-3 font-medium">Vendeur</th>
-              <th className="px-4 py-3 font-medium">Articles</th>
-              <th className="px-4 py-3 font-medium">Visibilité</th>
-              <th className="px-4 py-3 font-medium">Créé le</th>
+              <th className="px-4 py-3 font-medium">Project</th>
+              <th className="px-4 py-3 font-medium">Seller</th>
+              <th className="px-4 py-3 font-medium">Items</th>
+              <th className="px-4 py-3 font-medium">Visibility</th>
+              <th className="px-4 py-3 font-medium">Created</th>
               <th className="px-4 py-3 font-medium">Action</th>
             </tr>
           </thead>
@@ -73,7 +72,7 @@ export default async function AdminProjectsPage() {
                 <td className="px-4 py-3">
                   {p.deletedAt ? (
                     <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600">
-                      Supprimé
+                      Deleted
                     </span>
                   ) : p.isPublic ? (
                     <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-700">
@@ -81,12 +80,12 @@ export default async function AdminProjectsPage() {
                     </span>
                   ) : (
                     <span className="inline-flex items-center rounded-full bg-yellow-100 px-2.5 py-0.5 text-xs font-medium text-yellow-700">
-                      Brouillon
+                      Draft
                     </span>
                   )}
                 </td>
                 <td className="px-4 py-3 text-muted-foreground text-xs">
-                  {new Date(p.createdAt).toLocaleDateString("fr-FR")}
+                  {new Date(p.createdAt).toLocaleDateString("en-US")}
                 </td>
                 <td className="px-4 py-3">
                   {!p.deletedAt && (

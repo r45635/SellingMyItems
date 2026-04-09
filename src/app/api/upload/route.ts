@@ -22,7 +22,7 @@ const JPEG_QUALITY = 80;
 export async function POST(request: NextRequest) {
   const user = await getUser();
   if (!user) {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
   });
   if (!rateCheck.ok) {
     return NextResponse.json(
-      { error: "Trop de tentatives, réessayez dans quelques minutes" },
+      { error: "Too many attempts, please try again in a few minutes" },
       { status: 429 }
     );
   }
@@ -43,14 +43,14 @@ export async function POST(request: NextRequest) {
 
   if (!files.length) {
     return NextResponse.json(
-      { error: "Aucun fichier fourni" },
+      { error: "No files provided" },
       { status: 400 }
     );
   }
 
   if (files.length > MAX_FILES_PER_REQUEST) {
     return NextResponse.json(
-      { error: `Trop de fichiers (max ${MAX_FILES_PER_REQUEST} par requête)` },
+      { error: `Too many files (max ${MAX_FILES_PER_REQUEST} per request)` },
       { status: 400 }
     );
   }
@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
     if (!ALLOWED_TYPES.includes(file.type)) {
       return NextResponse.json(
         {
-          error: `Type non autorisé: ${file.type}. Formats acceptés: JPEG, PNG, WebP, GIF, AVIF`,
+          error: `Unsupported file type: ${file.type}. Allowed formats: JPEG, PNG, WebP, GIF, AVIF`,
         },
         { status: 400 }
       );
@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
 
     if (file.size > MAX_FILE_SIZE) {
       return NextResponse.json(
-        { error: `Fichier trop volumineux (max 20 Mo): ${file.name}` },
+        { error: `File too large (max 20 MB): ${file.name}` },
         { status: 400 }
       );
     }

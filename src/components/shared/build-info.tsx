@@ -17,11 +17,11 @@ export function BuildInfo() {
     <Dialog>
       <DialogTrigger className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors">
         <Info className="h-3 w-3" />
-        <span>À propos</span>
+        <span>About</span>
       </DialogTrigger>
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
-          <DialogTitle>À propos</DialogTitle>
+          <DialogTitle>About</DialogTitle>
         </DialogHeader>
         <div className="space-y-3 text-sm">
           <div className="flex justify-between">

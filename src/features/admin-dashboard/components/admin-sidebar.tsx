@@ -15,9 +15,9 @@ const sidebarItems: readonly {
   label: string;
   exact?: boolean;
 }[] = [
-  { href: "/admin", icon: BarChart3, label: "Vue d'ensemble", exact: true },
-  { href: "/admin/accounts", icon: Users, label: "Comptes" },
-  { href: "/admin/projects", icon: FolderOpen, label: "Projets" },
+  { href: "/admin", icon: BarChart3, label: "Overview", exact: true },
+  { href: "/admin/accounts", icon: Users, label: "Accounts" },
+  { href: "/admin/projects", icon: FolderOpen, label: "Projects" },
 ];
 
 export function AdminSidebar() {
@@ -28,9 +28,9 @@ export function AdminSidebar() {
       <div className="p-5 border-b">
         <Link href="/admin" className="flex items-center gap-2">
           <Shield className="h-5 w-5 text-red-500" />
-          <span className="font-bold text-sm">Administration</span>
+          <span className="font-bold text-sm">Admin</span>
         </Link>
-        <p className="text-xs text-muted-foreground mt-1.5 ml-7">Dashboard admin</p>
+        <p className="text-xs text-muted-foreground mt-1.5 ml-7">Admin dashboard</p>
       </div>
       <nav className="flex-1 px-3 py-3 space-y-1">
         {sidebarItems.map((item) => {

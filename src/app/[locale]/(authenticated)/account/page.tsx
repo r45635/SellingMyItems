@@ -52,7 +52,7 @@ export default async function AccountPage() {
 
         <div>
           <label htmlFor="displayName" className="block text-sm font-medium mb-1">
-            Nom d&apos;affichage
+            Display name
           </label>
           <input
             id="displayName"
@@ -65,7 +65,7 @@ export default async function AccountPage() {
 
         <div>
           <label htmlFor="phone" className="block text-sm font-medium mb-1">
-            Téléphone
+            Phone
           </label>
           <input
             id="phone"
@@ -77,14 +77,14 @@ export default async function AccountPage() {
         </div>
 
         <div className="text-sm text-muted-foreground">
-          Rôle : {user.role === "seller" ? "Vendeur / Seller" : "Acheteur / Buyer"}
+          Role: {user.role === "seller" ? "Seller" : "Buyer"}
         </div>
 
         <button
           type="submit"
           className="inline-flex h-9 items-center justify-center rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/80"
         >
-          Enregistrer
+          Save
         </button>
       </form>
     </div>

@@ -31,7 +31,7 @@ export async function createProjectAction(formData: FormData) {
 
   const sellerAccount = await getSellerAccount(user.id);
   if (!sellerAccount) {
-    return { error: { form: ["Compte vendeur introuvable"] } };
+    return { error: { form: ["Seller account not found"] } };
   }
 
   try {
@@ -43,7 +43,7 @@ export async function createProjectAction(formData: FormData) {
       description: validated.data.description,
     });
   } catch {
-    return { error: { form: ["Impossible de créer le projet (slug déjà utilisé ?)"] } };
+    return { error: { form: ["Unable to create project (slug already in use?)"] } };
   }
 
   redirect("/seller/projects");
@@ -67,7 +67,7 @@ export async function updateProjectAction(formData: FormData) {
 
   const sellerAccount = await getSellerAccount(user.id);
   if (!sellerAccount) {
-    return { error: { form: ["Compte vendeur introuvable"] } };
+    return { error: { form: ["Seller account not found"] } };
   }
 
   try {
@@ -88,7 +88,7 @@ export async function updateProjectAction(formData: FormData) {
         )
       );
   } catch {
-    return { error: { form: ["Impossible de mettre à jour le projet"] } };
+    return { error: { form: ["Unable to update project"] } };
   }
 
   redirect("/seller/projects");

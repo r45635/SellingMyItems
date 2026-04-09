@@ -29,8 +29,8 @@ export function TogglePublicButton({
       {isPending
         ? "..."
         : isPublic
-          ? "Masquer"
-          : "Publier"}
+          ? "Hide"
+          : "Publish"}
     </button>
   );
 }

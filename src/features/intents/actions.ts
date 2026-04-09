@@ -86,12 +86,12 @@ export async function submitIntentAction(formData: FormData) {
 
   // Auto-create in-app message to notify seller
   const itemList = selectedItems.map((i) => `• ${i.title}`).join("\n");
-  let messageBody = `📋 Nouvelle intention d'achat\n\nArticles demandés :\n${itemList}`;
+  let messageBody = `📋 New purchase intent\n\nRequested items:\n${itemList}`;
   if (validated.data.phone) {
-    messageBody += `\n\n📞 Téléphone : ${validated.data.phone}`;
+    messageBody += `\n\n📞 Phone: ${validated.data.phone}`;
   }
   if (validated.data.pickupNotes) {
-    messageBody += `\n\n📝 Notes : ${validated.data.pickupNotes}`;
+    messageBody += `\n\n📝 Notes: ${validated.data.pickupNotes}`;
   }
 
   // Find or create conversation thread for this buyer + project
@@ -141,7 +141,7 @@ export async function updateIntentStatusAction(
   });
 
   if (!sellerAccount) {
-    return { error: "Compte vendeur introuvable" };
+    return { error: "Seller account not found" };
   }
 
   const intent = await db.query.buyerIntents.findFirst({
@@ -149,7 +149,7 @@ export async function updateIntentStatusAction(
   });
 
   if (!intent) {
-    return { error: "Intention introuvable" };
+    return { error: "Intent not found" };
   }
 
   // Verify seller owns the project
@@ -162,7 +162,7 @@ export async function updateIntentStatusAction(
   });
 
   if (!project) {
-    return { error: "Non autorisé" };
+    return { error: "Unauthorized" };
   }
 
   await db
