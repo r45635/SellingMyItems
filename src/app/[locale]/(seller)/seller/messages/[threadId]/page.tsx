@@ -8,7 +8,7 @@ import {
   profiles,
   projects,
 } from "@/db/schema";
-import { and, asc, eq, inArray, isNull } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { sendMessageAction } from "@/features/messages/actions";
@@ -41,8 +41,7 @@ export default async function SellerMessageThreadPage({
   const project = await db.query.projects.findFirst({
     where: and(
       eq(projects.id, thread.projectId),
-      inArray(projects.sellerId, sellerAccountIds),
-      isNull(projects.deletedAt)
+      inArray(projects.sellerId, sellerAccountIds)
     ),
   });
 

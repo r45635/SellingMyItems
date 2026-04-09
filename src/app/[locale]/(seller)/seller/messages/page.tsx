@@ -7,7 +7,7 @@ import {
   profiles,
   projects,
 } from "@/db/schema";
-import { and, desc, eq, inArray, isNull } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import { Link } from "@/i18n/navigation";
 import { Badge } from "@/components/ui/badge";
 import { LocalizedDateTime } from "@/components/shared/localized-date-time";
@@ -34,12 +34,7 @@ export default async function SellerMessagesPage() {
   const sellerProjects = await db
     .select({ id: projects.id, name: projects.name })
     .from(projects)
-    .where(
-      and(
-        inArray(projects.sellerId, sellerAccountIds),
-        isNull(projects.deletedAt)
-      )
-    );
+    .where(inArray(projects.sellerId, sellerAccountIds));
 
   const projectIds = sellerProjects.map((p) => p.id);
   const projectMap = new Map(sellerProjects.map((p) => [p.id, p.name]));

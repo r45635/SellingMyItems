@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { conversationThreads, projects } from "@/db/schema";
 import { getUser } from "@/lib/auth";
-import { and, eq, inArray, isNull } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { getSellerAccountIdsForUser } from "@/lib/seller-accounts";
 
 export async function GET() {
@@ -22,12 +22,7 @@ export async function GET() {
     const sellerProjects = await db
       .select({ id: projects.id })
       .from(projects)
-      .where(
-        and(
-          inArray(projects.sellerId, sellerAccountIds),
-          isNull(projects.deletedAt)
-        )
-      );
+      .where(inArray(projects.sellerId, sellerAccountIds));
 
     const projectIds = sellerProjects.map((project) => project.id);
 
