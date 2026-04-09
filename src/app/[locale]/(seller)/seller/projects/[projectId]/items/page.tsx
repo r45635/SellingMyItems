@@ -8,6 +8,7 @@ import { and, desc, eq, isNull } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import { StatusSelect } from "@/features/items/components/status-select";
+import { BLUR_PLACEHOLDER } from "@/lib/image/placeholders";
 
 export default async function ProjectItemsPage({
   params,
@@ -127,6 +128,9 @@ export default async function ProjectItemsPage({
                           fill
                           className="object-cover"
                           sizes="48px"
+                          loading="lazy"
+                          placeholder="blur"
+                          blurDataURL={BLUR_PLACEHOLDER}
                         />
                       ) : (
                         <div className="flex items-center justify-center h-full">

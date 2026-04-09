@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import Image from "next/image";
 import { ImageOff, Heart, Eye } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { BLUR_PLACEHOLDER } from "@/lib/image/placeholders";
 
 interface ItemTeaserCardProps {
   title: string;
@@ -45,6 +46,9 @@ export function ItemTeaserCard({
             fill
             className="object-cover transition-transform duration-300 group-hover:scale-105"
             sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
+            loading="lazy"
+            placeholder="blur"
+            blurDataURL={BLUR_PLACEHOLDER}
           />
         ) : (
           <div className="flex items-center justify-center h-full">

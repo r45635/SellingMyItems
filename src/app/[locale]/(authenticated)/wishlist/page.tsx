@@ -8,6 +8,7 @@ import { removeWishlistItemAction } from "@/features/wishlist/actions";
 import { submitIntentAction } from "@/features/intents/actions";
 import Image from "next/image";
 import { ImageOff, Tag } from "lucide-react";
+import { BLUR_PLACEHOLDER } from "@/lib/image/placeholders";
 
 function formatCurrency(amount: number, currency: string) {
   return new Intl.NumberFormat(undefined, { style: "currency", currency }).format(amount);
@@ -151,6 +152,9 @@ export default async function WishlistPage() {
                                   fill
                                   className="object-cover"
                                   sizes="56px"
+                                  loading="lazy"
+                                  placeholder="blur"
+                                  blurDataURL={BLUR_PLACEHOLDER}
                                 />
                               ) : (
                                 <div className="flex items-center justify-center h-full">

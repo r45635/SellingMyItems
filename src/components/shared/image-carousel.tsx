@@ -4,6 +4,7 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import Image from "next/image";
 import { ChevronLeft, ChevronRight, ImageOff, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { BLUR_PLACEHOLDER } from "@/lib/image/placeholders";
 
 interface ImageCarouselProps {
   images: { url: string; alt?: string }[];
@@ -80,6 +81,9 @@ export function ImageCarousel({ images, title }: ImageCarouselProps) {
           className="object-contain"
           sizes="(max-width: 768px) 100vw, 50vw"
           priority={current === 0}
+          loading={current === 0 ? "eager" : "lazy"}
+          placeholder="blur"
+          blurDataURL={BLUR_PLACEHOLDER}
         />
 
         {/* Counter badge */}
@@ -153,6 +157,9 @@ export function ImageCarousel({ images, title }: ImageCarouselProps) {
                 fill
                 className="object-cover"
                 sizes="64px"
+                loading="lazy"
+                placeholder="blur"
+                blurDataURL={BLUR_PLACEHOLDER}
               />
             </button>
           ))}

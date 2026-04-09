@@ -17,7 +17,7 @@ const ALLOWED_TYPES = [
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 MB (raw from phone camera)
 const MAX_FILES_PER_REQUEST = 8;
 const MAX_DIMENSION = 1920; // Max width or height after resize
-const JPEG_QUALITY = 80;
+const WEBP_QUALITY = 75;
 
 export async function POST(request: NextRequest) {
   const user = await getUser();
@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
         fit: "inside",
         withoutEnlargement: true,
       })
-      .webp({ quality: JPEG_QUALITY })
+      .webp({ quality: WEBP_QUALITY, effort: 6 })
       .toBuffer();
 
     await writeFile(filePath, processed);
