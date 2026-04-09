@@ -78,7 +78,7 @@ export default async function SellerMessagesPage() {
     buyers.map((buyer) => [
       buyer.id,
       {
-        displayName: buyer.displayName ?? "Unknown",
+        displayName: buyer.displayName ?? t("unknownBuyer"),
         email: buyer.email,
       },
     ])
@@ -90,6 +90,7 @@ export default async function SellerMessagesPage() {
       ? await db
           .select({
             threadId: conversationMessages.threadId,
+            senderId: conversationMessages.senderId,
             body: conversationMessages.body,
             createdAt: conversationMessages.createdAt,
           })
@@ -100,7 +101,12 @@ export default async function SellerMessagesPage() {
 
   const threadStats = new Map<
     string,
-    { messageCount: number; lastMessageBody: string; lastMessageDate: Date | null }
+    {
+      messageCount: number;
+      lastMessageBody: string;
+      lastMessageDate: Date | null;
+      lastMessageSenderId: string | null;
+    }
   >();
 
   for (const message of allMessages) {
@@ -110,6 +116,7 @@ export default async function SellerMessagesPage() {
         messageCount: 1,
         lastMessageBody: message.body,
         lastMessageDate: message.createdAt,
+        lastMessageSenderId: message.senderId,
       });
       continue;
     }
@@ -128,6 +135,7 @@ export default async function SellerMessagesPage() {
         messageCount: number;
         lastMessageBody: string;
         lastMessageDate: Date | null;
+        lastMessageSenderId: string | null;
       }>;
     }>
   >((groups, thread) => {
@@ -141,6 +149,7 @@ export default async function SellerMessagesPage() {
       messageCount: stats?.messageCount ?? 0,
       lastMessageBody: stats?.lastMessageBody ?? "",
       lastMessageDate: stats?.lastMessageDate ?? null,
+      lastMessageSenderId: stats?.lastMessageSenderId ?? null,
     };
 
     const existingGroup = groups.find((group) => group.projectId === thread.projectId);
@@ -151,7 +160,7 @@ export default async function SellerMessagesPage() {
 
     groups.push({
       projectId: thread.projectId,
-      projectName: projectMap.get(thread.projectId) ?? "Unknown project",
+      projectName: projectMap.get(thread.projectId) ?? t("unknownProject"),
       threads: [threadData],
     });
     return groups;
@@ -172,7 +181,7 @@ export default async function SellerMessagesPage() {
               <div className="flex items-center justify-between border-b pb-2">
                 <h2 className="font-semibold">{group.projectName}</h2>
                 <span className="text-xs text-muted-foreground">
-                  {group.threads.length} thread(s)
+                  {group.threads.length} {t("threadsCount")}
                 </span>
               </div>
 
@@ -189,17 +198,22 @@ export default async function SellerMessagesPage() {
                         {thread.buyerEmail ? ` (${thread.buyerEmail})` : ""}
                       </p>
                       <span className="shrink-0 text-xs text-muted-foreground">
-                        {thread.messageCount} message(s)
+                        {thread.messageCount} {t("messagesCount")}
                       </span>
                     </div>
                     {thread.lastMessageBody && (
-                      <p className="mt-1 text-sm text-muted-foreground truncate">
-                        {thread.lastMessageBody}
-                      </p>
+                      <div className="mt-1 rounded-md bg-muted/40 p-2">
+                        <p className="text-xs text-muted-foreground mb-1">
+                          {t("lastMessage")}: {thread.lastMessageSenderId === profileId ? t("you") : t("buyer")}
+                        </p>
+                        <p className="text-sm text-muted-foreground truncate">
+                          {thread.lastMessageBody}
+                        </p>
+                      </div>
                     )}
                     {thread.lastMessageDate && (
                       <p className="mt-1 text-xs text-muted-foreground">
-                        {new Date(thread.lastMessageDate).toLocaleDateString()}
+                        {t("lastActivity")}: {new Date(thread.lastMessageDate).toLocaleString()}
                       </p>
                     )}
                   </Link>

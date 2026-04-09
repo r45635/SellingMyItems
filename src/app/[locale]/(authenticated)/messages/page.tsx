@@ -4,12 +4,10 @@ import { db } from "@/db";
 import {
   conversationMessages,
   conversationThreads,
-  profiles,
   projects,
 } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { Link } from "@/i18n/navigation";
-import { sendMessageAction } from "@/features/messages/actions";
 
 export default async function MessagesPage() {
   const t = await getTranslations("messages");
@@ -36,11 +34,12 @@ export default async function MessagesPage() {
 
       return {
         ...thread,
-        projectName: project?.name ?? "Unknown",
+        projectName: project?.name ?? t("unknownProject"),
         projectSlug: project?.slug ?? "",
         messageCount: messages.length,
         lastMessageBody: lastMessage?.body ?? "",
         lastMessageDate: lastMessage?.createdAt,
+        lastMessageSenderId: lastMessage?.senderId ?? null,
       };
     })
   );
@@ -57,7 +56,7 @@ export default async function MessagesPage() {
         <div className="space-y-4">
           {enrichedThreads.map((thread) => (
             <div key={thread.id} className="rounded-lg border p-4 space-y-3">
-              <div className="flex items-center justify-between">
+              <div className="flex items-start justify-between gap-3">
                 <div>
                   <Link
                     href={`/project/${thread.projectSlug}`}
@@ -66,36 +65,29 @@ export default async function MessagesPage() {
                     {thread.projectName}
                   </Link>
                   <p className="text-sm text-muted-foreground">
-                    {thread.messageCount} message(s)
+                    {thread.messageCount} {t("messagesCount")}
                     {thread.lastMessageDate &&
-                      ` • ${new Date(thread.lastMessageDate).toLocaleDateString()}`}
+                      ` • ${t("lastActivity")}: ${new Date(thread.lastMessageDate).toLocaleString()}`}
                   </p>
                 </div>
+                <Link
+                  href={`/messages/${thread.id}`}
+                  className="inline-flex h-8 items-center justify-center rounded-lg border border-border px-2.5 text-sm hover:bg-muted"
+                >
+                  {t("openThread")}
+                </Link>
               </div>
 
               {thread.lastMessageBody && (
-                <p className="text-sm text-muted-foreground truncate">
-                  {thread.lastMessageBody}
-                </p>
+                <div className="rounded-md bg-muted/40 p-2.5">
+                  <p className="text-xs text-muted-foreground mb-1">
+                    {t("lastMessage")}: {thread.lastMessageSenderId === profileId ? t("you") : t("seller")}
+                  </p>
+                  <p className="text-sm text-muted-foreground truncate">
+                    {thread.lastMessageBody}
+                  </p>
+                </div>
               )}
-
-              {/* Quick reply form */}
-              <form action={sendMessageAction} className="flex gap-2">
-                <input type="hidden" name="threadId" value={thread.id} />
-                <input
-                  name="body"
-                  type="text"
-                  placeholder={t("placeholder")}
-                  required
-                  className="flex-1 rounded-md border border-input px-3 py-2 text-sm"
-                />
-                <button
-                  type="submit"
-                  className="inline-flex h-9 items-center justify-center rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/80"
-                >
-                  {t("sendMessage")}
-                </button>
-              </form>
             </div>
           ))}
         </div>

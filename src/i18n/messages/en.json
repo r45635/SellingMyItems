@@ -124,7 +124,21 @@
     "title": "Messages",
     "noThreads": "No conversations yet",
     "sendMessage": "Send message",
-    "placeholder": "Type your message..."
+    "placeholder": "Type your message...",
+    "openThread": "Open thread",
+    "messagesCount": "message(s)",
+    "threadsCount": "thread(s)",
+    "lastMessage": "Last message",
+    "lastActivity": "Last activity",
+    "backToMessages": "Back to messages",
+    "noMessagesYet": "No messages yet",
+    "sentAt": "Sent at",
+    "you": "You",
+    "buyer": "Buyer",
+    "seller": "Seller",
+    "unknownProject": "Unknown project",
+    "unknownSeller": "Unknown seller",
+    "unknownBuyer": "Unknown buyer"
   },
   "seller": {
     "dashboard": "Seller Dashboard",

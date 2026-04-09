@@ -124,7 +124,21 @@
     "title": "Messages",
     "noThreads": "Aucune conversation pour le moment",
     "sendMessage": "Envoyer le message",
-    "placeholder": "Écrivez votre message..."
+    "placeholder": "Écrivez votre message...",
+    "openThread": "Ouvrir le fil",
+    "messagesCount": "message(s)",
+    "threadsCount": "fil(s)",
+    "lastMessage": "Dernier message",
+    "lastActivity": "Dernière activité",
+    "backToMessages": "Retour aux messages",
+    "noMessagesYet": "Aucun message pour le moment",
+    "sentAt": "Envoyé le",
+    "you": "Vous",
+    "buyer": "Acheteur",
+    "seller": "Vendeur",
+    "unknownProject": "Projet inconnu",
+    "unknownSeller": "Vendeur inconnu",
+    "unknownBuyer": "Acheteur inconnu"
   },
   "seller": {
     "dashboard": "Tableau de bord vendeur",
