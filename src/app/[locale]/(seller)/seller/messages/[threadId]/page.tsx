@@ -7,12 +7,13 @@ import {
   conversationThreads,
   profiles,
   projects,
-  sellerAccounts,
 } from "@/db/schema";
-import { and, asc, eq, isNull } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { sendMessageAction } from "@/features/messages/actions";
+import { LocalizedDateTime } from "@/components/shared/localized-date-time";
+import { getSellerAccountIdsForUser } from "@/lib/seller-accounts";
 
 export default async function SellerMessageThreadPage({
   params,
@@ -23,11 +24,9 @@ export default async function SellerMessageThreadPage({
   const t = await getTranslations("messages");
   const user = await requireSeller();
 
-  const sellerAccount = await db.query.sellerAccounts.findFirst({
-    where: eq(sellerAccounts.userId, user.id),
-  });
+  const sellerAccountIds = await getSellerAccountIdsForUser(user.id);
 
-  if (!sellerAccount) {
+  if (sellerAccountIds.length === 0) {
     notFound();
   }
 
@@ -42,7 +41,7 @@ export default async function SellerMessageThreadPage({
   const project = await db.query.projects.findFirst({
     where: and(
       eq(projects.id, thread.projectId),
-      eq(projects.sellerId, sellerAccount.id),
+      inArray(projects.sellerId, sellerAccountIds),
       isNull(projects.deletedAt)
     ),
   });
@@ -59,6 +58,13 @@ export default async function SellerMessageThreadPage({
     where: eq(conversationMessages.threadId, thread.id),
     orderBy: [asc(conversationMessages.createdAt)],
   });
+
+  if (!thread.sellerLastReadAt || thread.updatedAt > thread.sellerLastReadAt) {
+    await db
+      .update(conversationThreads)
+      .set({ sellerLastReadAt: new Date() })
+      .where(eq(conversationThreads.id, thread.id));
+  }
 
   return (
     <div className="space-y-4">
@@ -108,7 +114,7 @@ export default async function SellerMessageThreadPage({
                         : "text-muted-foreground"
                     }`}
                   >
-                    {t("sentAt")}: {new Date(message.createdAt).toLocaleString()}
+                    {t("sentAt")}: <LocalizedDateTime value={message.createdAt} />
                   </p>
                 </div>
               </div>

@@ -3,8 +3,9 @@ import { Link } from "@/i18n/navigation";
 import { Plus } from "lucide-react";
 import { requireSeller } from "@/lib/auth";
 import { db } from "@/db";
-import { projects, sellerAccounts } from "@/db/schema";
-import { and, desc, eq, isNull } from "drizzle-orm";
+import { projects } from "@/db/schema";
+import { and, desc, inArray, isNull } from "drizzle-orm";
+import { getSellerAccountIdsForUser } from "@/lib/seller-accounts";
 
 export default async function SellerProjectsPage() {
   const t = await getTranslations("seller");
@@ -12,11 +13,9 @@ export default async function SellerProjectsPage() {
 
   const profileId = user.id;
 
-  const sellerAccount = await db.query.sellerAccounts.findFirst({
-    where: eq(sellerAccounts.userId, profileId),
-  });
+  const sellerAccountIds = await getSellerAccountIdsForUser(profileId);
 
-  const sellerProjects = sellerAccount
+  const sellerProjects = sellerAccountIds.length > 0
     ? await db
         .select({
           id: projects.id,
@@ -28,7 +27,7 @@ export default async function SellerProjectsPage() {
         .from(projects)
         .where(
           and(
-            eq(projects.sellerId, sellerAccount.id),
+            inArray(projects.sellerId, sellerAccountIds),
             isNull(projects.deletedAt)
           )
         )

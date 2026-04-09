@@ -14,6 +14,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { User, LogOut, LayoutDashboard, Heart, MessageSquare } from "lucide-react";
 import { useEffect, useState } from "react";
 import { signOutAction } from "@/lib/auth/actions";
+import { Badge } from "@/components/ui/badge";
 
 type NavUser = {
   email: string;
@@ -23,6 +24,7 @@ type NavUser = {
 export function UserNav() {
   const t = useTranslations();
   const [user, setUser] = useState<NavUser | null>(null);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     fetch("/api/dev-session")
@@ -33,6 +35,21 @@ export function UserNav() {
         }
       });
   }, []);
+
+  useEffect(() => {
+    if (!user) {
+      return;
+    }
+
+    fetch("/api/messages/unread", { cache: "no-store" })
+      .then((response) => response.json())
+      .then((data) => {
+        setUnreadCount(Number(data?.unreadCount ?? 0));
+      })
+      .catch(() => {
+        setUnreadCount(0);
+      });
+  }, [user]);
 
   if (!user) {
     return (
@@ -57,9 +74,15 @@ export function UserNav() {
     window.location.href = "/";
   }
 
+  const messagesHref = user.role === "seller" ? "/seller/messages" : "/messages";
+  const hasUnread = unreadCount > 0;
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger className="relative h-8 w-8 rounded-full inline-flex items-center justify-center hover:bg-muted">
+        {hasUnread ? (
+          <span className="absolute left-0 top-0 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-background" />
+        ) : null}
         <Avatar className="h-8 w-8">
           <AvatarFallback>{initials}</AvatarFallback>
         </Avatar>
@@ -78,9 +101,10 @@ export function UserNav() {
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem>
-          <Link href="/messages" className="flex items-center cursor-pointer w-full">
+          <Link href={messagesHref} className="flex items-center justify-between cursor-pointer w-full gap-2">
             <MessageSquare className="mr-2 h-4 w-4" />
-            {t("nav.messages")}
+            <span className="flex-1">{t("nav.messages")}</span>
+            {hasUnread ? <Badge variant="destructive">{t("messages.new")}</Badge> : null}
           </Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />

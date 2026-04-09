@@ -7,10 +7,10 @@ import {
   items,
   profiles,
   projects,
-  sellerAccounts,
 } from "@/db/schema";
-import { and, eq, isNull, desc } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull } from "drizzle-orm";
 import { updateIntentStatusAction } from "@/features/intents/actions";
+import { getSellerAccountIdsForUser } from "@/lib/seller-accounts";
 
 export default async function SellerIntentsPage() {
   const t = await getTranslations("seller");
@@ -18,11 +18,9 @@ export default async function SellerIntentsPage() {
   const user = await requireSeller();
   const profileId = user.id;
 
-  const sellerAccount = await db.query.sellerAccounts.findFirst({
-    where: eq(sellerAccounts.userId, profileId),
-  });
+  const sellerAccountIds = await getSellerAccountIdsForUser(profileId);
 
-  if (!sellerAccount) {
+  if (sellerAccountIds.length === 0) {
     return (
       <div>
         <h1 className="text-2xl font-bold mb-6">{t("intents")}</h1>
@@ -38,7 +36,7 @@ export default async function SellerIntentsPage() {
     .from(projects)
     .where(
       and(
-        eq(projects.sellerId, sellerAccount.id),
+        inArray(projects.sellerId, sellerAccountIds),
         isNull(projects.deletedAt)
       )
     );
@@ -57,25 +55,13 @@ export default async function SellerIntentsPage() {
   }
 
   const intents = await db.query.buyerIntents.findMany({
-    where: and(
-      ...projectIds.length === 1
-        ? [eq(buyerIntents.projectId, projectIds[0])]
-        : [
-            // For multiple projects, check each
-            eq(buyerIntents.projectId, buyerIntents.projectId),
-          ]
-    ),
+    where: inArray(buyerIntents.projectId, projectIds),
     orderBy: [desc(buyerIntents.createdAt)],
   });
 
-  // Filter to only intents for seller's projects
-  const filteredIntents = intents.filter((intent) =>
-    projectIds.includes(intent.projectId)
-  );
-
   // Enrich intents with items and buyer info
   const enrichedIntents = await Promise.all(
-    filteredIntents.map(async (intent) => {
+    intents.map(async (intent) => {
       const intentItems = await db
         .select({
           itemId: items.id,

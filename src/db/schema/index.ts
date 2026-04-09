@@ -268,6 +268,8 @@ export const conversationThreads = pgTable("conversation_threads", {
   buyerId: uuid("buyer_id")
     .notNull()
     .references(() => profiles.id, { onDelete: "cascade" }),
+  buyerLastReadAt: timestamp("buyer_last_read_at", { withTimezone: true }),
+  sellerLastReadAt: timestamp("seller_last_read_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),

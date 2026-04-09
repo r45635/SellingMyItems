@@ -13,6 +13,7 @@ import { and, asc, eq, isNull } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { sendMessageAction } from "@/features/messages/actions";
+import { LocalizedDateTime } from "@/components/shared/localized-date-time";
 
 export default async function BuyerMessageThreadPage({
   params,
@@ -56,6 +57,13 @@ export default async function BuyerMessageThreadPage({
     where: eq(conversationMessages.threadId, thread.id),
     orderBy: [asc(conversationMessages.createdAt)],
   });
+
+  if (!thread.buyerLastReadAt || thread.updatedAt > thread.buyerLastReadAt) {
+    await db
+      .update(conversationThreads)
+      .set({ buyerLastReadAt: new Date() })
+      .where(eq(conversationThreads.id, thread.id));
+  }
 
   return (
     <div className="container px-4 md:px-6 py-8 max-w-3xl space-y-4">
@@ -105,7 +113,7 @@ export default async function BuyerMessageThreadPage({
                         : "text-muted-foreground"
                     }`}
                   >
-                    {t("sentAt")}: {new Date(message.createdAt).toLocaleString()}
+                    {t("sentAt")}: <LocalizedDateTime value={message.createdAt} />
                   </p>
                 </div>
               </div>

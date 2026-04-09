@@ -8,6 +8,8 @@ import {
 } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { Link } from "@/i18n/navigation";
+import { Badge } from "@/components/ui/badge";
+import { LocalizedDateTime } from "@/components/shared/localized-date-time";
 
 export default async function MessagesPage() {
   const t = await getTranslations("messages");
@@ -40,6 +42,8 @@ export default async function MessagesPage() {
         lastMessageBody: lastMessage?.body ?? "",
         lastMessageDate: lastMessage?.createdAt,
         lastMessageSenderId: lastMessage?.senderId ?? null,
+        isUnread:
+          !thread.buyerLastReadAt || thread.updatedAt > thread.buyerLastReadAt,
       };
     })
   );
@@ -55,7 +59,12 @@ export default async function MessagesPage() {
       ) : (
         <div className="space-y-4">
           {enrichedThreads.map((thread) => (
-            <div key={thread.id} className="rounded-lg border p-4 space-y-3">
+            <div
+              key={thread.id}
+              className={`rounded-lg border p-4 space-y-3 ${
+                thread.isUnread ? "border-primary/40 bg-primary/5" : ""
+              }`}
+            >
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <Link
@@ -66,16 +75,23 @@ export default async function MessagesPage() {
                   </Link>
                   <p className="text-sm text-muted-foreground">
                     {thread.messageCount} {t("messagesCount")}
-                    {thread.lastMessageDate &&
-                      ` • ${t("lastActivity")}: ${new Date(thread.lastMessageDate).toLocaleString()}`}
+                    {thread.lastMessageDate ? (
+                      <>
+                        {" • "}
+                        {t("lastActivity")}: <LocalizedDateTime value={thread.lastMessageDate} />
+                      </>
+                    ) : null}
                   </p>
                 </div>
-                <Link
-                  href={`/messages/${thread.id}`}
-                  className="inline-flex h-8 items-center justify-center rounded-lg border border-border px-2.5 text-sm hover:bg-muted"
-                >
-                  {t("openThread")}
-                </Link>
+                <div className="flex items-center gap-2">
+                  {thread.isUnread ? <Badge variant="destructive">{t("messages.new")}</Badge> : null}
+                  <Link
+                    href={`/messages/${thread.id}`}
+                    className="inline-flex h-8 items-center justify-center rounded-lg border border-border px-2.5 text-sm hover:bg-muted"
+                  >
+                    {t("openThread")}
+                  </Link>
+                </div>
               </div>
 
               {thread.lastMessageBody && (

@@ -12,6 +12,21 @@ import { messageSchema } from "@/lib/validations";
 import { and, eq, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { consumeRateLimit } from "@/lib/security/rate-limit";
+import { siteConfig } from "@/config";
+
+function revalidateMessagePaths(threadId: string) {
+  revalidatePath("/messages");
+  revalidatePath("/seller/messages");
+  revalidatePath(`/messages/${threadId}`);
+  revalidatePath(`/seller/messages/${threadId}`);
+
+  for (const locale of siteConfig.locales) {
+    revalidatePath(`/${locale}/messages`);
+    revalidatePath(`/${locale}/messages/${threadId}`);
+    revalidatePath(`/${locale}/seller/messages`);
+    revalidatePath(`/${locale}/seller/messages/${threadId}`);
+  }
+}
 
 export async function sendMessageAction(formData: FormData) {
   const user = await requireUser();
@@ -65,6 +80,8 @@ export async function sendMessageAction(formData: FormData) {
       return;
     }
 
+    const now = new Date();
+
     await db.insert(conversationMessages).values({
       threadId: thread.id,
       senderId: profileId,
@@ -73,12 +90,14 @@ export async function sendMessageAction(formData: FormData) {
 
     await db
       .update(conversationThreads)
-      .set({ updatedAt: new Date() })
+      .set({
+        updatedAt: now,
+        buyerLastReadAt: isBuyer ? now : thread.buyerLastReadAt,
+        sellerLastReadAt: isSeller ? now : thread.sellerLastReadAt,
+      })
       .where(eq(conversationThreads.id, thread.id));
 
-    revalidatePath("/messages");
-    revalidatePath("/seller/messages");
-    revalidatePath(`/seller/messages/${thread.id}`);
+    revalidateMessagePaths(thread.id);
     return;
   }
 
@@ -100,12 +119,19 @@ export async function sendMessageAction(formData: FormData) {
   });
 
   if (!thread) {
+    const now = new Date();
     const [created] = await db
       .insert(conversationThreads)
-      .values({ projectId, buyerId: profileId })
+      .values({
+        projectId,
+        buyerId: profileId,
+        buyerLastReadAt: now,
+      })
       .returning();
     thread = created;
   }
+
+  const now = new Date();
 
   await db.insert(conversationMessages).values({
     threadId: thread.id,
@@ -116,9 +142,11 @@ export async function sendMessageAction(formData: FormData) {
   // Update thread timestamp
   await db
     .update(conversationThreads)
-    .set({ updatedAt: new Date() })
+    .set({
+      updatedAt: now,
+      buyerLastReadAt: now,
+    })
     .where(eq(conversationThreads.id, thread.id));
 
-  revalidatePath("/messages");
-  revalidatePath("/seller/messages");
+  revalidateMessagePaths(thread.id);
 }

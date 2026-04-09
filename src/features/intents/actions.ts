@@ -18,6 +18,7 @@ import { and, eq, inArray, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { consumeRateLimit } from "@/lib/security/rate-limit";
+import { getSellerAccountIdsForUser } from "@/lib/seller-accounts";
 
 export async function submitIntentAction(formData: FormData) {
   const user = await requireUser();
@@ -136,11 +137,9 @@ export async function updateIntentStatusAction(
   const user = await requireSeller();
   const profileId = user.id;
 
-  const sellerAccount = await db.query.sellerAccounts.findFirst({
-    where: eq(sellerAccounts.userId, profileId),
-  });
+  const sellerAccountIds = await getSellerAccountIdsForUser(profileId);
 
-  if (!sellerAccount) {
+  if (sellerAccountIds.length === 0) {
     return { error: "Seller account not found" };
   }
 
@@ -156,7 +155,7 @@ export async function updateIntentStatusAction(
   const project = await db.query.projects.findFirst({
     where: and(
       eq(projects.id, intent.projectId),
-      eq(projects.sellerId, sellerAccount.id),
+      inArray(projects.sellerId, sellerAccountIds),
       isNull(projects.deletedAt)
     ),
   });

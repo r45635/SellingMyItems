@@ -6,21 +6,21 @@ import {
   conversationThreads,
   profiles,
   projects,
-  sellerAccounts,
 } from "@/db/schema";
 import { and, desc, eq, inArray, isNull } from "drizzle-orm";
 import { Link } from "@/i18n/navigation";
+import { Badge } from "@/components/ui/badge";
+import { LocalizedDateTime } from "@/components/shared/localized-date-time";
+import { getSellerAccountIdsForUser } from "@/lib/seller-accounts";
 
 export default async function SellerMessagesPage() {
   const t = await getTranslations("messages");
   const user = await requireSeller();
   const profileId = user.id;
 
-  const sellerAccount = await db.query.sellerAccounts.findFirst({
-    where: eq(sellerAccounts.userId, profileId),
-  });
+  const sellerAccountIds = await getSellerAccountIdsForUser(profileId);
 
-  if (!sellerAccount) {
+  if (sellerAccountIds.length === 0) {
     return (
       <div>
         <h1 className="text-2xl font-bold mb-6">{t("title")}</h1>
@@ -36,7 +36,7 @@ export default async function SellerMessagesPage() {
     .from(projects)
     .where(
       and(
-        eq(projects.sellerId, sellerAccount.id),
+        inArray(projects.sellerId, sellerAccountIds),
         isNull(projects.deletedAt)
       )
     );
@@ -136,6 +136,7 @@ export default async function SellerMessagesPage() {
         lastMessageBody: string;
         lastMessageDate: Date | null;
         lastMessageSenderId: string | null;
+        isUnread: boolean;
       }>;
     }>
   >((groups, thread) => {
@@ -150,6 +151,8 @@ export default async function SellerMessagesPage() {
       lastMessageBody: stats?.lastMessageBody ?? "",
       lastMessageDate: stats?.lastMessageDate ?? null,
       lastMessageSenderId: stats?.lastMessageSenderId ?? null,
+      isUnread:
+        !thread.sellerLastReadAt || thread.updatedAt > thread.sellerLastReadAt,
     };
 
     const existingGroup = groups.find((group) => group.projectId === thread.projectId);
@@ -190,16 +193,21 @@ export default async function SellerMessagesPage() {
                   <Link
                     key={thread.id}
                     href={`/seller/messages/${thread.id}`}
-                    className="block rounded-md border p-3 transition-colors hover:bg-muted/50"
+                    className={`block rounded-md border p-3 transition-colors hover:bg-muted/50 ${
+                      thread.isUnread ? "border-primary/40 bg-primary/5" : ""
+                    }`}
                   >
                     <div className="flex items-center justify-between gap-3">
                       <p className="font-medium truncate">
                         {thread.buyerName}
                         {thread.buyerEmail ? ` (${thread.buyerEmail})` : ""}
                       </p>
-                      <span className="shrink-0 text-xs text-muted-foreground">
-                        {thread.messageCount} {t("messagesCount")}
-                      </span>
+                      <div className="flex shrink-0 items-center gap-2">
+                        {thread.isUnread ? <Badge variant="destructive">{t("messages.new")}</Badge> : null}
+                        <span className="text-xs text-muted-foreground">
+                          {thread.messageCount} {t("messagesCount")}
+                        </span>
+                      </div>
                     </div>
                     {thread.lastMessageBody && (
                       <div className="mt-1 rounded-md bg-muted/40 p-2">
@@ -213,7 +221,7 @@ export default async function SellerMessagesPage() {
                     )}
                     {thread.lastMessageDate && (
                       <p className="mt-1 text-xs text-muted-foreground">
-                        {t("lastActivity")}: {new Date(thread.lastMessageDate).toLocaleString()}
+                        {t("lastActivity")}: <LocalizedDateTime value={thread.lastMessageDate} />
                       </p>
                     )}
                   </Link>
