@@ -561,6 +561,53 @@ ssh root@VPS_IP "curl -sf http://localhost:5050 && echo OK"
 docker exec sellingmyitems-db-1 pg_dump -U sellingmyitems sellingmyitems > backup.sql
 ```
 
+### Deploy On Another VPS / Another Account
+
+Use this checklist when transferring the project to a different VPS or GitHub account.
+
+1. Provision VPS prerequisites
+  - Install Docker and Docker Compose
+  - Create Docker network: `docker network create shared-proxy`
+  - Install Caddy (or equivalent reverse proxy) and route domain to `sellingmyitems-app:3000`
+
+2. Prepare repository access from the new account
+  - Add deploy SSH key on VPS (`~/.ssh/id_ed25519_github`)
+  - Add the public key as a deploy key on the new repository
+  - Confirm `git clone` works from VPS
+
+3. Configure GitHub Actions secrets on the new repository
+  - `VPS_HOST`
+  - `VPS_USER`
+  - `VPS_SSH_KEY`
+  - `VPS_PORT` (optional, default 22)
+  - `VPS_APP_DIR` (optional, default `$HOME/sellingmyitems`)
+
+4. Configure production `.env` on the new VPS
+  - `POSTGRES_USER`
+  - `POSTGRES_PASSWORD`
+  - `POSTGRES_DB`
+  - `APP_PORT`
+  - `NEXT_PUBLIC_APP_URL`
+  - `RESEND_API_KEY`
+  - `RESEND_FROM_EMAIL` (must use a verified Resend domain)
+
+5. Bootstrap and deploy
+  - Run: `bash scripts/vps-setup.sh`
+  - Push to `main` to trigger GitHub Actions deploy
+  - Verify health: `curl -sf http://localhost:5050`
+
+6. Admin handoff checks (in-app)
+  - Create or promote one admin user (`/admin` access)
+  - In `/admin/emails`, set/update:
+    - Resend API key
+    - Sender address (From)
+  - Confirm email logs show `sent` status in `/admin/emails`
+
+7. Optional data migration from old VPS
+  - Backup old DB: `pg_dump`
+  - Restore on new VPS DB container before go-live
+  - Copy uploads volume/files from old VPS to new VPS
+
 ---
 
 ## Scripts
