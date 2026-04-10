@@ -22,7 +22,9 @@
     "messages": "Messages",
     "account": "Compte",
     "sellerDashboard": "Tableau de bord vendeur",
-    "adminDashboard": "Administration"
+    "adminDashboard": "Administration",
+    "adminEmails": "Emails",
+    "adminEmailsDescription": "Surveiller les envois d'emails et gérer la configuration API Resend"
   },
   "home": {
     "hero": "Trouvez des articles uniques près de chez vous",

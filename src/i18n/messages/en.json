@@ -22,7 +22,9 @@
     "messages": "Messages",
     "account": "Account",
     "sellerDashboard": "Seller Dashboard",
-    "adminDashboard": "Administration"
+    "adminDashboard": "Administration",
+    "adminEmails": "Emails",
+    "adminEmailsDescription": "Monitor email sending and manage Resend API configuration"
   },
   "home": {
     "hero": "Find unique items near you",

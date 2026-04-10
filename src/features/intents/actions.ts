@@ -19,6 +19,9 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { consumeRateLimit } from "@/lib/security/rate-limit";
 import { getSellerAccountIdsForUser } from "@/lib/seller-accounts";
+import { sendIntentReceivedEmail, sendIntentStatusEmail } from "@/lib/email";
+import { siteConfig } from "@/config";
+import { profiles } from "@/db/schema";
 
 export async function submitIntentAction(formData: FormData) {
   const user = await requireUser();
@@ -122,6 +125,42 @@ export async function submitIntentAction(formData: FormData) {
     .set({ updatedAt: new Date() })
     .where(eq(conversationThreads.id, thread.id));
 
+  // Send email notification to seller (non-blocking)
+  try {
+    const projectForEmail = await db.query.projects.findFirst({
+      where: eq(projects.id, projectId),
+      columns: { sellerId: true, name: true },
+    });
+    if (projectForEmail) {
+      const sellerAccount = await db.query.sellerAccounts.findFirst({
+        where: eq(sellerAccounts.id, projectForEmail.sellerId),
+        columns: { userId: true },
+      });
+      if (sellerAccount) {
+        const sellerProfile = await db.query.profiles.findFirst({
+          where: eq(profiles.id, sellerAccount.userId),
+          columns: { email: true },
+        });
+        const buyerProfile = await db.query.profiles.findFirst({
+          where: eq(profiles.id, profileId),
+          columns: { displayName: true, email: true },
+        });
+        if (sellerProfile && buyerProfile) {
+          await sendIntentReceivedEmail(
+            sellerProfile.email,
+            buyerProfile.displayName ?? buyerProfile.email,
+            projectForEmail.name,
+            selectedItems.map((i) => i.title),
+            `${siteConfig.url}/fr/seller/intents`,
+            "fr"
+          );
+        }
+      }
+    }
+  } catch {
+    // Email failure should not block intent submission
+  }
+
   revalidatePath("/wishlist");
   revalidatePath("/seller/intents");
   revalidatePath("/messages");
@@ -168,6 +207,26 @@ export async function updateIntentStatusAction(
     .update(buyerIntents)
     .set({ status, updatedAt: new Date() })
     .where(eq(buyerIntents.id, intentId));
+
+  // Send email notification to buyer for accepted/declined (non-blocking)
+  if (status === "accepted" || status === "declined") {
+    try {
+      const buyerProfile = await db.query.profiles.findFirst({
+        where: eq(profiles.id, intent.userId),
+        columns: { email: true },
+      });
+      if (buyerProfile) {
+        await sendIntentStatusEmail(
+          buyerProfile.email,
+          status,
+          project.name,
+          "fr"
+        );
+      }
+    } catch {
+      // Email failure should not block status update
+    }
+  }
 
   revalidatePath("/seller/intents");
   return { success: true };

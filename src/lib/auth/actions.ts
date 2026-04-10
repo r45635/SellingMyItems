@@ -8,7 +8,7 @@ import crypto from "crypto";
 import { cookies, headers } from "next/headers";
 import type { UserRole } from "@/lib/auth";
 import { consumeRateLimit } from "@/lib/security/rate-limit";
-import { sendPasswordResetEmail } from "@/lib/email";
+import { sendPasswordResetEmail, sendWelcomeEmail } from "@/lib/email";
 import { siteConfig } from "@/config";
 
 const SESSION_COOKIE = "session_token";
@@ -87,6 +87,13 @@ export async function signUpAction(formData: FormData) {
     .returning({ id: profiles.id });
 
   // Seller registration is disabled — no seller account auto-creation
+
+  // Send welcome email (non-blocking)
+  try {
+    await sendWelcomeEmail(email, email.split("@")[0], "fr");
+  } catch {
+    // Email failure should not block signup
+  }
 
   // Create session
   const token = generateToken();

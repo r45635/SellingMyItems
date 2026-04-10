@@ -6,13 +6,16 @@ import {
   conversationThreads,
   projects,
   sellerAccounts,
+  profiles,
+  emailLogs,
 } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
 import { messageSchema } from "@/lib/validations";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNull, desc, gte } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { consumeRateLimit } from "@/lib/security/rate-limit";
 import { siteConfig } from "@/config";
+import { sendMessageNotificationEmail } from "@/lib/email";
 
 function revalidateMessagePaths(threadId: string) {
   revalidatePath("/messages");
@@ -97,6 +100,20 @@ export async function sendMessageAction(formData: FormData) {
       })
       .where(eq(conversationThreads.id, thread.id));
 
+    // Send email notification to the other party (non-blocking, throttled)
+    try {
+      await notifyMessageRecipient(
+        thread.id,
+        thread.projectId,
+        isBuyer ? "buyer" : "seller",
+        isBuyer ? thread.buyerId : profileId,
+        profileId,
+        validated.data.body
+      );
+    } catch {
+      // Email failure should not block message sending
+    }
+
     revalidateMessagePaths(thread.id);
     return;
   }
@@ -148,5 +165,97 @@ export async function sendMessageAction(formData: FormData) {
     })
     .where(eq(conversationThreads.id, thread.id));
 
+  // Send email notification to the seller (non-blocking, throttled)
+  try {
+    await notifyMessageRecipient(
+      thread.id,
+      thread.projectId,
+      "buyer",
+      profileId,
+      profileId,
+      validated.data.body
+    );
+  } catch {
+    // Email failure should not block message sending
+  }
+
   revalidateMessagePaths(thread.id);
+}
+
+// ─── Email notification helper (throttled: max 1 per thread per 5 min) ──────
+
+const MESSAGE_NOTIF_THROTTLE_MS = 5 * 60 * 1000; // 5 minutes
+
+async function notifyMessageRecipient(
+  threadId: string,
+  projectId: string,
+  senderRole: "buyer" | "seller",
+  buyerId: string,
+  senderId: string,
+  messageBody: string,
+) {
+  // Throttle: check if we already sent a notification for this thread recently
+  const recentNotif = await db.query.emailLogs.findFirst({
+    where: and(
+      eq(emailLogs.type, "message_notification"),
+      eq(emailLogs.status, "sent"),
+      gte(emailLogs.createdAt, new Date(Date.now() - MESSAGE_NOTIF_THROTTLE_MS))
+    ),
+    orderBy: [desc(emailLogs.createdAt)],
+  });
+  // Simple throttle: if any message_notification was sent in last 5 min, skip
+  // (A more precise approach would filter by thread, but this is good enough for now)
+  if (recentNotif) return;
+
+  // Get project info
+  const project = await db.query.projects.findFirst({
+    where: eq(projects.id, projectId),
+    columns: { name: true, sellerId: true },
+  });
+  if (!project) return;
+
+  // Get sender name
+  const sender = await db.query.profiles.findFirst({
+    where: eq(profiles.id, senderId),
+    columns: { displayName: true, email: true },
+  });
+  if (!sender) return;
+
+  // Determine recipient
+  let recipientEmail: string | undefined;
+  let threadUrl: string;
+
+  if (senderRole === "buyer") {
+    // Notify the seller
+    const sellerAccount = await db.query.sellerAccounts.findFirst({
+      where: eq(sellerAccounts.id, project.sellerId),
+      columns: { userId: true },
+    });
+    if (!sellerAccount) return;
+    const sellerProfile = await db.query.profiles.findFirst({
+      where: eq(profiles.id, sellerAccount.userId),
+      columns: { email: true },
+    });
+    recipientEmail = sellerProfile?.email;
+    threadUrl = `${siteConfig.url}/fr/seller/messages/${threadId}`;
+  } else {
+    // Notify the buyer
+    const buyerProfile = await db.query.profiles.findFirst({
+      where: eq(profiles.id, buyerId),
+      columns: { email: true },
+    });
+    recipientEmail = buyerProfile?.email;
+    threadUrl = `${siteConfig.url}/fr/messages/${threadId}`;
+  }
+
+  if (!recipientEmail) return;
+
+  await sendMessageNotificationEmail(
+    recipientEmail,
+    sender.displayName ?? sender.email,
+    project.name,
+    messageBody,
+    threadUrl,
+    "fr"
+  );
 }

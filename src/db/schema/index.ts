@@ -292,6 +292,46 @@ export const conversationMessages = pgTable("conversation_messages", {
     .notNull(),
 });
 
+// ─── Email Logs ─────────────────────────────────────────────────────────────
+
+export const emailTypeEnum = pgEnum("email_type", [
+  "welcome",
+  "message_notification",
+  "intent_received",
+  "intent_status",
+  "password_reset",
+]);
+
+export const emailStatusEnum = pgEnum("email_status", ["sent", "failed"]);
+
+export const emailLogs = pgTable("email_logs", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  toEmail: text("to_email").notNull(),
+  fromEmail: text("from_email").notNull(),
+  subject: text("subject").notNull(),
+  type: emailTypeEnum("type").notNull(),
+  status: emailStatusEnum("status").notNull(),
+  errorMessage: text("error_message"),
+  resendId: text("resend_id"),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
+// ─── App Settings ───────────────────────────────────────────────────────────
+
+export const appSettings = pgTable("app_settings", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  key: text("key").notNull().unique(),
+  value: text("value").notNull().default(""),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  updatedBy: uuid("updated_by").references(() => profiles.id, {
+    onDelete: "set null",
+  }),
+});
+
 // ─── Password Reset Tokens ──────────────────────────────────────────────────
 
 export const passwordResetTokens = pgTable("password_reset_tokens", {

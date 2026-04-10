@@ -7,6 +7,7 @@ import {
   Users,
   FolderOpen,
   Shield,
+  Mail,
 } from "lucide-react";
 
 const sidebarItems: readonly {
@@ -18,6 +19,7 @@ const sidebarItems: readonly {
   { href: "/admin", icon: BarChart3, label: "Overview", exact: true },
   { href: "/admin/accounts", icon: Users, label: "Accounts" },
   { href: "/admin/projects", icon: FolderOpen, label: "Projects" },
+  { href: "/admin/emails", icon: Mail, label: "Emails" },
 ];
 
 export function AdminSidebar() {
