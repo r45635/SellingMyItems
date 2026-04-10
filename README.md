@@ -1,50 +1,169 @@
 # SellingMyItems
 
-A responsive cross-device marketplace for publishing items for sale, connecting buyers and sellers through project-based listings. Transactions happen offline/in person — the app handles publishing, discovery, wishlists, purchase intents, and messaging.
+A responsive cross-device marketplace for publishing items for sale, connecting buyers and sellers through project-based listings. Transactions happen offline/in person — the app handles publishing, discovery, wishlists, purchase intents, reservations, and messaging.
 
-**Live**: https://sellingmyitems.toprecipes.best:5055
+**Live**: [https://sellingmyitems.toprecipes.best:5055](https://sellingmyitems.toprecipes.best:5055)
 
-## Stack
+> **Copyright © 2026 [Vincent Cruvellier (r45635)](https://github.com/r45635)** — Licensed under [MIT](LICENSE)
 
-| Layer | Technology |
-|---|---|
-| **Framework** | Next.js 16.2.2 (App Router, Turbopack, `output: "standalone"`) |
-| **Language** | TypeScript (strict) |
-| **Styling** | Tailwind CSS + shadcn/ui |
-| **Database** | PostgreSQL 16 Alpine (Docker) |
-| **ORM** | Drizzle ORM (`postgres-js` driver) |
-| **Auth** | Self-hosted bcryptjs + PostgreSQL sessions (no Supabase) |
-| **Storage** | Local filesystem (`/app/public/uploads`) via sharp |
-| **i18n** | next-intl (English + French) |
-| **Validation** | Zod + React Hook Form |
-| **Deploy** | Docker multi-stage build + Caddy 2 reverse proxy on VPS |
+---
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Tech Stack](#tech-stack)
+- [Features](#features)
+- [Architecture](#architecture)
+- [Getting Started](#getting-started)
+- [Project Structure](#project-structure)
+- [Route Map](#route-map)
+- [Database Schema](#database-schema)
+- [Authentication & Security](#authentication--security)
+- [Email System](#email-system)
+- [Internationalization](#internationalization)
+- [Deployment](#deployment)
+- [Scripts](#scripts)
+- [Key Design Decisions](#key-design-decisions)
+- [Further Documentation](#further-documentation)
+- [License](#license)
+
+---
+
+## Overview
+
+SellingMyItems is a marketplace platform where **sellers** publish items organized into **projects** (e.g. "Moving Sale — Harrison") and **buyers** can browse, wishlist, express purchase intents, and communicate with sellers. The actual transaction (payment, pickup) happens offline.
+
+Three user roles govern the platform:
+
+| Role | Access | How it's created |
+|---|---|---|
+| **Purchaser** (buyer) | Browse, wishlist, intents, messaging, reservations, purchases | Self-registration |
+| **Seller** | All buyer capabilities + full CRUD on projects/items, manage intents | Manual role assignment |
+| **Admin** | All capabilities + platform statistics, account management, email monitoring | Manual via SQL |
+
+---
+
+## Tech Stack
+
+| Layer | Technology | Version |
+|---|---|---|
+| **Framework** | Next.js (App Router, Turbopack, `output: "standalone"`) | 16.2.2 |
+| **Runtime** | Node.js | 22 |
+| **Language** | TypeScript (strict) | 5.x |
+| **UI** | React + Tailwind CSS + shadcn/ui | React 19.2.4 |
+| **Database** | PostgreSQL Alpine (Docker) | 16 |
+| **ORM** | Drizzle ORM (`postgres-js` driver) | 0.45.2 |
+| **Auth** | Self-hosted bcryptjs + PostgreSQL sessions | bcryptjs 3.0.3 |
+| **Image processing** | sharp (WebP conversion, resize, EXIF strip) | 0.34.5 |
+| **Storage** | Local filesystem (`/app/public/uploads`) | — |
+| **i18n** | next-intl (English + French) | 4.9.0 |
+| **Validation** | Zod + React Hook Form | Zod 4.3.6 |
+| **Email** | Resend (transactional, API key managed via admin UI) | 6.10.0 |
+| **Deploy** | Docker multi-stage build + Caddy 2 reverse proxy on VPS | — |
+| **CI/CD** | GitHub Actions (SSH-based auto-deploy on push to main) | — |
+
+---
+
+## Features
+
+### Buyer (Purchaser)
+
+- **Browse projects** — public homepage with project cards, item counts, location
+- **View items** — authenticated users see full item details, photos (carousel), prices, links
+- **Guest preview** — unauthenticated users see blurred item grids with sign-in CTA
+- **Wishlist** — save items across projects, view selection summary with pricing/savings, remove items
+- **Purchase intents** — submit a purchase intent for wishlisted items in a project (phone, contact method, pickup notes)
+- **Intent limits** — max 1 active intent per buyer per project
+- **Reservations** — view items reserved for you (auto-linked from accepted intents)
+- **Purchases** — view purchase history (items sold to you), grouped by project
+- **Messaging** — threaded conversations with sellers per project, unread indicator
+- **Account** — edit display name and phone number
+- **Password management** — forgot password + email-based reset flow
+
+### Seller
+
+- **Project management** — create/edit/soft-delete projects with name, slug, city/area, description
+- **Category management** — custom categories per project with sort order
+- **Item management** — full CRUD: title, brand, description, condition (6 levels), age, price, original price, currency (USD/EUR/CAD), notes, status, cover image
+- **Multi-image upload** — up to 10 images per item, drag-reorder, auto-convert to WebP
+- **External links** — reference URLs per item
+- **Status management** — inline status select: available → pending → reserved → sold → hidden
+- **Purchase intents** — view, accept/decline buyer intents with item-level detail
+- **Reserve from intents** — select specific items to reserve for a buyer from their intent
+- **Manual buyer linking** — search buyers by email to link reservation or mark item as sold with buyer traceability
+- **Sold with traceability** — when marking a reserved item as sold, the reserved buyer is auto-carried to sold-to
+- **Messaging** — reply to buyer threads, email notifications (throttled)
+- **View tracking** — see how many views each item has received
+
+### Admin
+
+- **Platform overview** — stats cards: total users, projects, items by status, total value by currency, intents, conversation threads
+- **Account management** — list all profiles, toggle active/inactive (admin accounts protected)
+- **Project management** — list all projects with item counts, toggle public/private visibility
+- **Email dashboard** — today's email stats by type, failure monitoring, 30-day daily breakdown chart, last 50 email logs, Resend API key management
+- **Secret access** — admin pages at `/admin` with no navigation link
+
+### Cross-cutting
+
+- **Responsive design** — optimized for phone, tablet, and desktop
+- **i18n** — full English and French translations
+- **Dark mode** — system-preference-based theming
+- **Image optimization** — auto-resize to 1920px max, WebP conversion, quality 75, EXIF stripping
+- **Rate limiting** — in-memory rate limiting on auth actions, uploads, messages, intents
+- **Email notifications** — welcome, message notification (throttled 1/5min), intent received, intent status change, message copy, password reset
+
+---
 
 ## Architecture
 
-### Roles
+### High-level
 
-| Role | Description |
-|---|---|
-| `purchaser` | Default role on signup. Can browse, wishlist, intent, message. |
-| `seller` | Created manually (signup disabled). Full CRUD on owned projects/items. |
-| `admin` | Created manually via SQL. Platform-wide stats + toggle accounts/projects. |
+```
+┌─────────────┐    HTTPS    ┌─────────────┐    HTTP     ┌──────────────────────┐
+│   Browser   │ ──────────► │  Caddy 2    │ ──────────► │  Next.js App (:3000) │
+│  (any device)│            │  (reverse   │             │  (Docker container)  │
+└─────────────┘             │   proxy)    │             └──────────┬───────────┘
+                            └─────────────┘                        │
+                                                                   │ postgres-js
+                                                                   ▼
+                                                          ┌────────────────────┐
+                                                          │  PostgreSQL 16     │
+                                                          │  (Docker container)│
+                                                          └────────────────────┘
+```
 
-### Route Groups
+All services run in Docker on a single VPS, connected via the `shared-proxy` Docker network.
 
-| Group | Guard | Description |
-|---|---|
-| `(public)` | None | Homepage, login, signup, project/item pages |
-| `(authenticated)` | `requireUser()` | Account, wishlist, messages |
-| `(seller)` | `requireSeller()` | Seller dashboard + project/item management |
-| `(admin)` | `requireAdmin()` | Admin dashboard (secret URL, no nav link) |
+### Route Groups & Guards
+
+| Group | Guard middleware | Purpose |
+|---|---|---|
+| `(public)` | None | Homepage, login, signup, project/item pages, password reset |
+| `(authenticated)` | `requireUser()` | Account, wishlist, messages, reservations, purchases |
+| `(seller)` | `requireSeller()` | Seller dashboard + project/item/intent management |
+| `(admin)` | `requireAdmin()` | Admin dashboard (secret — no nav link) |
+
+### Data Flow: Purchase Lifecycle
+
+```
+1. Buyer browses projects → views items (must be logged in)
+2. Buyer wishlists items → builds selection per project
+3. Buyer submits purchase intent (phone, pickup notes, contact method)
+4. Seller receives intent (in-app + email notification)
+5. Seller accepts → reserves items for buyer (auto or selective)
+6. Items show "Reserved for you" to the linked buyer
+7. Seller marks items as sold → buyer auto-linked, appears in purchase history
+8. Throughout: buyer ↔ seller can exchange messages per project
+```
+
+---
 
 ## Getting Started
 
 ### Prerequisites
 
-- Node.js 22+
-- npm
-- Docker & Docker Compose (for production)
+- **Node.js** 22+ and **npm**
+- **Docker** & **Docker Compose** (for database and production)
 
 ### 1. Clone and install
 
@@ -56,34 +175,37 @@ npm install
 
 ### 2. Configure environment
 
-Create `.env.local`:
+**For local development** — create `.env.local`:
 
 ```env
 DATABASE_URL=postgresql://sellingmyitems:yourpassword@localhost:5432/sellingmyitems
 ```
 
-For Docker production, create `.env`:
+**For Docker production** — create `.env`:
 
 ```env
 POSTGRES_USER=sellingmyitems
-POSTGRES_PASSWORD=yourpassword
+POSTGRES_PASSWORD=<strong-password>
 POSTGRES_DB=sellingmyitems
 APP_PORT=5050
+NEXT_PUBLIC_APP_URL=https://yourdomain.com
+RESEND_API_KEY=re_your_key_here    # Optional: for email sending
 ```
 
 ### 3. Database setup
 
-**Local development** — run PostgreSQL locally or via Docker:
+**Local development** — start PostgreSQL via Docker, then push schema:
 
 ```bash
 docker compose up db -d
 npx drizzle-kit push
 ```
 
-**Production** — migrations are in `src/db/migrations/` and must be run manually:
+**Production** — migrations in `src/db/migrations/` are applied manually:
 
 ```bash
-docker exec sellingmyitems-db-1 psql -U sellingmyitems -d sellingmyitems -f /path/to/migration.sql
+# Copy migration SQL into the running container and execute
+docker exec -i sellingmyitems-db-1 psql -U sellingmyitems -d sellingmyitems < src/db/migrations/0013_add-item-reservation-sold-tracking.sql
 ```
 
 ### 4. Run locally
@@ -94,122 +216,156 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
-### 5. Production deployment
+### 5. Create user roles
+
+```bash
+# After a user signs up as purchaser, promote to seller:
+docker exec sellingmyitems-db-1 psql -U sellingmyitems -d sellingmyitems \
+  -c "UPDATE profiles SET role = 'seller' WHERE email = 'seller@example.com';"
+
+# Also create a seller_account record:
+docker exec sellingmyitems-db-1 psql -U sellingmyitems -d sellingmyitems \
+  -c "INSERT INTO seller_accounts (id, user_id, is_active) SELECT gen_random_uuid(), id, true FROM profiles WHERE email = 'seller@example.com';"
+
+# Promote to admin:
+docker exec sellingmyitems-db-1 psql -U sellingmyitems -d sellingmyitems \
+  -c "UPDATE profiles SET role = 'admin' WHERE email = 'admin@example.com';"
+```
+
+### 6. Production deployment
 
 ```bash
 docker compose up -d --build
 ```
 
-The app runs on port 5050 behind Caddy reverse proxy with HTTPS.
+The app runs on port 5050 (configurable via `APP_PORT`). Use a reverse proxy (Caddy/Nginx) for HTTPS.
+
+---
 
 ## Project Structure
 
 ```
-src/
-├── app/                    # Next.js App Router
-│   ├── [locale]/           # Locale-based routing (en/fr)
-│   │   ├── (public)/       # Public pages (home, project, items, login, signup)
-│   │   ├── (authenticated)/ # Buyer pages (account, wishlist, messages)
-│   │   ├── (seller)/       # Seller dashboard
-│   │   └── (admin)/        # Admin dashboard (secret)
-│   └── api/                # API routes (session, upload, file serving)
-├── components/
-│   ├── ui/                 # shadcn/ui primitives
-│   ├── layout/             # Header, Footer, Nav, Language switcher
-│   └── shared/             # Reusable composites (item cards, logo)
-├── features/               # Domain features
-│   ├── projects/           # Project CRUD + forms
-│   ├── items/              # Item CRUD + forms
-│   ├── wishlist/           # Buyer wishlists
-│   ├── intents/            # Purchase intents
-│   ├── messages/           # Conversation threads
-│   ├── seller-dashboard/   # Seller sidebar + components
-│   └── admin-dashboard/    # Admin sidebar, actions, components
-├── db/
-│   ├── schema/             # Drizzle schema (all entities)
-│   └── migrations/         # SQL migrations (0000–0006)
-├── lib/
-│   ├── auth/               # Auth helpers (getUser, requireUser, requireSeller, requireAdmin)
-│   │   ├── index.ts        # Session management + role guards
-│   │   └── actions.ts      # Server actions (signUp, signIn, signOut)
-│   ├── validations.ts      # Shared Zod schemas
-│   └── utils.ts            # Tailwind merge utility
-├── i18n/
-│   ├── messages/           # en.json, fr.json
-│   ├── routing.ts          # Locale routing config
-│   ├── request.ts          # Server-side i18n config
-│   └── navigation.ts       # Typed navigation helpers
-├── types/                  # Shared TypeScript types
-└── config/                 # App configuration
+SellingMyItems/
+├── .github/workflows/
+│   └── deploy.yml              # GitHub Actions: auto-deploy on push to main
+├── public/uploads/             # User-uploaded images (Docker volume)
+├── scripts/
+│   └── vps-setup.sh            # Initial VPS provisioning script
+├── src/
+│   ├── app/                    # Next.js App Router Pages
+│   │   ├── globals.css         # Global styles
+│   │   ├── layout.tsx          # Root layout
+│   │   ├── [locale]/           # Locale-based routing (en/fr)
+│   │   │   ├── layout.tsx      # Locale layout with providers
+│   │   │   ├── (public)/       # Public: home, login, signup, project, item, password reset
+│   │   │   ├── (authenticated)/ # Buyer: account, wishlist, messages, reservations, purchases
+│   │   │   ├── (seller)/       # Seller: dashboard, projects, items, intents, messages, settings
+│   │   │   └── (admin)/        # Admin: overview, accounts, projects, emails
+│   │   └── api/                # API routes
+│   │       ├── upload/         # Image upload endpoint
+│   │       ├── uploads/        # File serving endpoint
+│   │       ├── messages/       # Unread count endpoint
+│   │       ├── auth/           # Auth callbacks
+│   │       ├── dev-session/    # Debug session endpoint
+│   │       └── dev-login/      # Debug login
+│   ├── components/
+│   │   ├── ui/                 # shadcn/ui primitives (button, card, dialog, etc.)
+│   │   ├── layout/             # Header, Footer, UserNav, LanguageSwitcher
+│   │   └── shared/             # Reusable: ItemTeaserCard, ItemDetailCard, ImageCarousel, etc.
+│   ├── features/               # Domain-driven feature modules
+│   │   ├── projects/           # Project CRUD (actions + components)
+│   │   ├── items/              # Item CRUD, status, buyer linking (actions + components)
+│   │   ├── wishlist/           # Wishlist add/remove (actions)
+│   │   ├── intents/            # Purchase intents, reserve from intent (actions + components)
+│   │   ├── messages/           # Messaging (actions)
+│   │   ├── seller-dashboard/   # Seller sidebar (components)
+│   │   └── admin-dashboard/    # Admin actions + sidebar (actions + components)
+│   ├── db/
+│   │   ├── index.ts            # Drizzle client initialization
+│   │   ├── schema/index.ts     # Complete Drizzle schema (17 tables, 6 enums)
+│   │   └── migrations/         # SQL migrations (0000–0013)
+│   ├── lib/
+│   │   ├── auth/               # Authentication
+│   │   │   ├── index.ts        # Session management, role guards
+│   │   │   └── actions.ts      # Sign up, sign in, sign out, password reset
+│   │   ├── email.ts            # Resend email service (6 email types, localized)
+│   │   ├── seller-accounts.ts  # Seller account helper
+│   │   ├── validations.ts      # Zod schemas for all forms
+│   │   ├── utils.ts            # Tailwind merge utility
+│   │   ├── image/              # Image placeholders
+│   │   └── security/
+│   │       └── rate-limit.ts   # In-memory rate limiter
+│   ├── i18n/
+│   │   ├── messages/           # en.json, fr.json (complete translations)
+│   │   ├── routing.ts          # Locale routing config
+│   │   ├── request.ts          # Server-side i18n config
+│   │   └── navigation.ts       # Typed navigation helpers
+│   ├── types/index.ts          # Shared TypeScript types
+│   └── config/index.ts         # Site configuration
+├── docker-compose.yml          # Docker services (app + db)
+├── Dockerfile                  # 3-stage build (deps → builder → runner)
+├── drizzle.config.ts           # Drizzle Kit configuration
+├── next.config.ts              # Next.js config (standalone, i18n, build info)
+├── package.json                # Dependencies and scripts
+├── tsconfig.json               # TypeScript configuration
+└── ROADMAP.md                  # Planned features
 ```
+
+---
 
 ## Route Map
 
-### Public
+### Public Routes
 
 | Route | Description |
 |---|---|
-| `/` | Homepage — public project listings |
-| `/login` | Sign in (email + password) with `returnTo` redirect support |
-| `/signup` | Sign up (purchaser role only) with `returnTo` redirect support |
-| `/project/[slug]` | Project page — guests see blurred items grid with login CTA |
-| `/project/[slug]/item/[itemId]` | Item detail — guests see login CTA with `returnTo` |
+| `/` | Homepage — public project listings with item counts |
+| `/login` | Sign in (email + password), supports `?returnTo=` redirect |
+| `/signup` | Sign up (purchaser role only), supports `?returnTo=` redirect |
+| `/forgot-password` | Request password reset email |
+| `/reset-password?token=...` | Reset password with valid token |
+| `/project/[slug]` | Project page — guests see blurred items with sign-in CTA; auth users see full grid |
+| `/project/[slug]/item/[itemId]` | Item detail — full gallery, prices, condition, status alerts |
 
-### Authenticated Buyer
-
-| Route | Description |
-|---|---|
-| `/account` | Profile settings |
-| `/wishlist` | Saved item selection (heart icons) |
-| `/messages` | Conversation threads |
-
-### Seller Dashboard
+### Authenticated (Buyer) Routes
 
 | Route | Description |
 |---|---|
-| `/seller` | Dashboard overview |
-| `/seller/projects` | List projects |
-| `/seller/projects/new` | Create project |
-| `/seller/projects/[id]` | Project detail |
-| `/seller/projects/[id]/edit` | Edit project |
-| `/seller/projects/[id]/items` | List items in project |
+| `/account` | Edit profile (display name, phone) |
+| `/wishlist` | Saved items grouped by project, with pricing summary and intent submission |
+| `/reservations` | Items reserved for you, grouped by project |
+| `/purchases` | Purchase history (items sold to you), grouped by project |
+| `/messages` | Message inbox — conversation threads |
+| `/messages/[threadId]` | Thread detail — read and reply |
+
+### Seller Routes
+
+| Route | Description |
+|---|---|
+| `/seller` | Seller dashboard overview |
+| `/seller/projects` | List owned projects |
+| `/seller/projects/new` | Create new project |
+| `/seller/projects/[id]/edit` | Edit project (name, slug, city, description) |
+| `/seller/projects/[id]/items` | List items in project, with inline status changes and buyer linking |
 | `/seller/projects/[id]/items/new` | Create item |
-| `/seller/projects/[id]/items/[itemId]/edit` | Edit item |
-| `/seller/intents` | Buyer purchase intents |
-| `/seller/messages` | Seller messages |
+| `/seller/projects/[id]/items/[itemId]/edit` | Edit item (all fields, images, links) |
+| `/seller/intents` | View and manage buyer purchase intents, reserve items from intents |
+| `/seller/messages` | Seller message inbox |
+| `/seller/messages/[threadId]` | Seller thread detail |
 | `/seller/settings` | Seller settings |
 
-### Admin Dashboard (Secret)
+### Admin Routes (Secret — no nav link)
 
 | Route | Description |
 |---|---|
-| `/admin` | Platform overview — stats cards (accounts, projects, items, value, engagement) |
-| `/admin/accounts` | All profiles — toggle active/inactive |
-| `/admin/projects` | All projects — toggle public/private |
+| `/admin` | Platform overview — user/project/item/value/engagement stats |
+| `/admin/accounts` | All user profiles — toggle active/inactive |
+| `/admin/projects` | All projects — toggle public/private, item counts |
+| `/admin/emails` | Email dashboard — stats, failures, 30-day breakdown, last 50 logs, API key management |
 
-> Admin is accessed by typing `/admin` directly. No link in the navigation.
+---
 
 ## Database Schema
-
-### Tables
-
-| Table | Description |
-|---|---|
-| `profiles` | Users (email, passwordHash, role, isActive, displayName) |
-| `sessions` | Auth sessions (token, expiresAt) |
-| `seller_accounts` | Seller profiles (userId, isActive) |
-| `projects` | Seller projects (name, slug, cityArea, isPublic, deletedAt) |
-| `project_categories` | Custom categories per project |
-| `items` | Items for sale (title, price, status, condition, brand, etc.) |
-| `item_images` | Additional item images |
-| `item_files` | Attached files (private) |
-| `item_links` | External reference links |
-| `buyer_wishlists` | Wishlist per user/project |
-| `buyer_wishlist_items` | Items in wishlists |
-| `buyer_intents` | Purchase intent submissions |
-| `buyer_intent_items` | Items in purchase intents |
-| `conversation_threads` | Message threads per buyer/project |
-| `conversation_messages` | Individual messages in threads |
 
 ### Enums
 
@@ -219,79 +375,231 @@ src/
 | `item_status` | `available`, `pending`, `reserved`, `sold`, `hidden` |
 | `contact_method` | `email`, `phone`, `app_message` |
 | `intent_status` | `submitted`, `reviewed`, `accepted`, `declined` |
+| `email_type` | `welcome`, `message_notification`, `message_copy`, `intent_received`, `intent_status`, `password_reset` |
+| `email_status` | `sent`, `failed` |
 
-### Migrations
+### Tables (17)
 
-| File | Description |
+| Table | Key Columns | Description |
+|---|---|---|
+| `profiles` | email (unique), passwordHash, role, isActive, displayName, phone | User accounts |
+| `sessions` | token (unique), userId, expiresAt | Auth sessions (30-day TTL) |
+| `password_reset_tokens` | token (unique), userId, expiresAt, usedAt | Password reset tokens (1h TTL) |
+| `seller_accounts` | userId, isActive | Seller profile records |
+| `projects` | sellerId, name, slug (unique), cityArea, description, isPublic, deletedAt | Seller projects |
+| `project_categories` | projectId, name, sortOrder | Custom categories per project |
+| `items` | projectId, title, price, status, coverImageUrl, reservedForUserId, soldToUserId, reservedAt, soldAt, viewCount, deletedAt | Items for sale |
+| `item_images` | itemId, url, altText, sortOrder | Additional item images |
+| `item_files` | itemId, url, fileName, mimeType, sizeBytes | Attached files |
+| `item_links` | itemId, url, label | External reference links |
+| `buyer_wishlists` | userId, projectId | Wishlist per user per project |
+| `buyer_wishlist_items` | wishlistId, itemId | Items in wishlists |
+| `buyer_intents` | userId, projectId, phone, contactMethod, pickupNotes, status | Purchase intent submissions |
+| `buyer_intent_items` | intentId, itemId | Items in purchase intents |
+| `conversation_threads` | projectId, buyerId, buyerLastReadAt, sellerLastReadAt | Message threads |
+| `conversation_messages` | threadId, senderId, body | Individual messages |
+| `email_logs` | toEmail, subject, type, status, errorMessage, resendId | Email sending logs |
+| `app_settings` | key (unique), value, updatedBy | Admin-managed settings (e.g. Resend API key) |
+
+### Migrations (14 files)
+
+| Migration | Description |
 |---|---|
-| `0000_light_goliath.sql` | Initial schema |
-| `0001_futuristic_blockbuster.sql` | Schema updates |
-| `0002_talented_vanisher.sql` | Schema updates |
-| `0003_add-user-role.sql` | Add user_role enum to profiles |
-| `0004_local-auth-sessions.sql` | Local auth + sessions table |
-| `0005_disable-demo-accounts.sql` | Disable demo accounts |
-| `0006_add-admin-role.sql` | Add `admin` to user_role enum |
+| `0000` – `0002` | Initial schema and early adjustments |
+| `0003` | Add `user_role` enum to profiles |
+| `0004` | Local auth with PostgreSQL sessions |
+| `0005` | Demo account disable support |
+| `0006` | Add `admin` to user role enum |
+| `0007` | Item view count tracking |
+| `0008` | Conversation read tracking timestamps |
+| `0009` | Password reset tokens table |
+| `0010` | Email logging table |
+| `0011` | App settings table |
+| `0012` | Add `message_copy` email type |
+| `0013` | Item reservation + sold tracking (reservedForUserId, soldToUserId, reservedAt, soldAt) |
+
+---
+
+## Authentication & Security
+
+### Auth Flow
+
+1. **Sign up**: Email + password (min 6 chars) + confirm password → bcrypt (12 rounds) → `purchaser` role forced
+2. **Sign in**: Email + password → bcrypt compare → create session (30-day, `crypto.randomBytes(32)` token)
+3. **Session**: `session_token` httpOnly cookie, sameSite: lax, secure in production
+4. **Sign out**: Delete session from DB + clear cookie
+5. **Password reset**: Forgot password → email with 1h token → validate + hash new password → mark token used
+
+### Role Guards
+
+| Guard | Behavior |
+|---|---|
+| `getUser()` | Returns `{id, email, role}` or `null` |
+| `requireUser()` | Redirects to `/login` if not authenticated |
+| `requireSeller()` | Requires `seller` or `admin` role, redirects to `/` |
+| `requireAdmin()` | Requires `admin` role, redirects to `/` |
+
+### Rate Limiting
+
+In-memory rate limiter (`Map`-based, single-node) applied to:
+
+| Action | Limit |
+|---|---|
+| Sign up | 10/10min per IP, 5/10min per email |
+| Sign in | 20/10min per IP, 8/10min per email |
+| Forgot password | 5/15min per IP, 3/15min per email |
+| Reset password | 10/15min per IP |
+| Image upload | 20/5min per user |
+| Send message | 20/min per user |
+| Submit intent | 8/10min per user |
+
+### Upload Security
+
+- File type validation (JPEG, PNG, WebP, GIF, AVIF only)
+- Max 20MB per file, max 8 files per request
+- Images auto-processed: resize to max 1920px, convert to WebP (quality 75), strip EXIF metadata
+- Path traversal protection on file serving
+- 1-year immutable cache headers on served uploads
+
+---
+
+## Email System
+
+Emails are sent via [Resend](https://resend.com). The API key can be configured:
+1. **Admin UI** (`/admin/emails`) — stored in `app_settings` table with 5-minute in-memory cache
+2. **Environment variable** fallback (`RESEND_API_KEY`)
+
+All emails are logged to the `email_logs` table with status (sent/failed), error message, and Resend ID.
+
+### Email Types
+
+| Email | Trigger | Content |
+|---|---|---|
+| **Welcome** | User registration | Branded welcome with login link |
+| **Message notification** | New message received | Sender, project, message excerpt (throttled: max 1/5min per recipient) |
+| **Message copy** | Sender opts in | Copy of own sent message |
+| **Intent received** | Buyer submits intent | Item list, buyer contact info → seller |
+| **Intent status** | Seller accepts/declines | Status update → buyer |
+| **Password reset** | Forgot password request | Reset link with 1h token |
+
+All emails support English and French based on detected locale.
+
+---
+
+## Internationalization
+
+- **Framework**: next-intl with locale-based routing (`/en/...`, `/fr/...`)
+- **Supported locales**: English (`en`), French (`fr`)
+- **Default locale**: English
+- **Translation files**: `src/i18n/messages/en.json`, `src/i18n/messages/fr.json`
+- **Coverage**: All UI labels, form fields, status labels, error messages, email templates
+- **Sections**: `common`, `nav`, `home`, `auth`, `project`, `item`, `wishlist`, `intent`, `messages`, `seller`, `reservations`, `purchases`, `validation`
+
+---
 
 ## Deployment
 
 ### Infrastructure
 
-- **VPS**: Vultr (45.32.220.152)
-- **Domain**: `sellingmyitems.toprecipes.best:5055`
-- **Proxy**: Caddy 2 Alpine at `/opt/trystbrief/` on `shared-proxy` Docker network
-- **App**: Docker Compose (`docker-compose.yml`) with `app` + `db` services
-- **Repo**: `/root/sellingmyitems` on VPS
+| Component | Detail |
+|---|---|
+| **VPS** | Vultr (45.32.220.152) |
+| **Domain** | `sellingmyitems.toprecipes.best:5055` |
+| **Reverse proxy** | Caddy 2 Alpine at `/opt/trystbrief/` |
+| **Docker network** | `shared-proxy` (external, cross-compose connectivity) |
+| **App container** | `sellingmyitems-app` on port 3000 (exposed as 5050) |
+| **DB container** | `sellingmyitems-db-1` (PostgreSQL 16) |
+| **Uploads** | Docker named volume `uploads` → `/app/public/uploads` |
 
-### Deploy workflow
+### CI/CD Pipeline
 
-1. Build and commit locally
-2. `git push origin main`
-3. GitHub Actions deploys via SSH (`appleboy/ssh-action@v1`):
-   - Prune images + builder cache
-   - `git fetch && git reset --hard origin/main`
-   - `docker compose build --no-cache`
-   - `docker compose up -d --force-recreate`
-   - Reconnect Caddy to app network
-   - Health check
-4. Run any new migrations manually on VPS
+```
+Developer pushes to main
+       │
+       ▼
+GitHub Actions (deploy.yml)
+       │
+       ├── SSH into VPS
+       ├── Pre-deploy: prune images + build cache
+       ├── Disk space check (abort if < 1GB free)
+       ├── Ensure shared-proxy network exists
+       ├── git pull origin main
+       ├── docker compose build --no-cache
+       ├── docker compose up -d --force-recreate --remove-orphans
+       ├── Health check (curl localhost:5050)
+       └── Post-deploy: prune unused images
+```
 
-### Manual VPS operations
+### Manual Operations
 
 ```bash
-# Run a migration
-docker exec sellingmyitems-db-1 psql -U sellingmyitems -d sellingmyitems \
-  -c "ALTER TYPE \"user_role\" ADD VALUE IF NOT EXISTS 'admin';"
+# Run a migration on VPS
+docker exec -i sellingmyitems-db-1 psql -U sellingmyitems -d sellingmyitems < migration.sql
 
-# Create admin account
+# Promote user to seller
 docker exec sellingmyitems-db-1 psql -U sellingmyitems -d sellingmyitems \
-  -c "UPDATE profiles SET role = 'admin' WHERE email = 'your-email@example.com';"
+  -c "UPDATE profiles SET role = 'seller' WHERE email = 'user@example.com';"
+docker exec sellingmyitems-db-1 psql -U sellingmyitems -d sellingmyitems \
+  -c "INSERT INTO seller_accounts (id, user_id, is_active) SELECT gen_random_uuid(), id, true FROM profiles WHERE email = 'user@example.com';"
+
+# Promote user to admin
+docker exec sellingmyitems-db-1 psql -U sellingmyitems -d sellingmyitems \
+  -c "UPDATE profiles SET role = 'admin' WHERE email = 'admin@example.com';"
 
 # Check app health
-curl -sf http://localhost:5050 -o /dev/null && echo 'OK' || echo 'DOWN'
+ssh root@VPS_IP "curl -sf http://localhost:5050 && echo OK"
 
-# Restore Caddy if destroyed
-cd /opt/trystbrief && docker compose up -d
+# Database backup
+docker exec sellingmyitems-db-1 pg_dump -U sellingmyitems sellingmyitems > backup.sql
 ```
+
+---
 
 ## Scripts
 
-```bash
-npm run dev       # Start dev server (Turbopack)
-npm run build     # Production build
-npm run start     # Start production server
-npm run lint      # ESLint
-```
+| Command | Description |
+|---|---|
+| `npm run dev` | Start development server (Turbopack) |
+| `npm run build` | Production build |
+| `npm run start` | Start production server |
+| `npm run lint` | ESLint |
+| `npx drizzle-kit push` | Push schema changes to database (dev) |
+| `npx drizzle-kit generate` | Generate SQL migration from schema diff |
+| `npx tsc --noEmit` | TypeScript type-check without emitting |
+
+---
 
 ## Key Design Decisions
 
-- **No Supabase**: Migrated to self-hosted PostgreSQL + bcryptjs auth for full control
-- **Seller signup disabled**: New accounts are always `purchaser`. Sellers are created manually.
-- **Auth gate on details**: Guests see project headers but items grid is blurred — must log in to see details
-- **`returnTo` flow**: Login/signup pages preserve the intended destination URL
-- **Secret admin**: No visible link — access by navigating to `/admin` directly
-- **Admin can't be deactivated**: Toggle active/inactive skips admin profiles
-- **Local file uploads**: Images stored on disk (`/app/public/uploads`) via volume mount, not cloud storage
+| Decision | Rationale |
+|---|---|
+| **No Supabase** | Migrated to self-hosted PostgreSQL + bcryptjs for full control and no vendor lock-in |
+| **Seller signup disabled** | New accounts always get `purchaser` role. Sellers created manually to control marketplace quality |
+| **Auth gate on item details** | Guests see project headers but items grid is blurred — must log in to see details and prices |
+| **`returnTo` flow** | Login/signup preserve the intended destination URL for seamless redirect after authentication |
+| **Secret admin** | No visible admin link in navigation — access only by typing `/admin` directly |
+| **Admin protected** | The toggle active/inactive action skips admin profiles to prevent self-lockout |
+| **Local file uploads** | Images stored on disk via Docker volume mount, not cloud storage — simple and self-hosted |
+| **Soft deletes** | Projects and items use `deletedAt` instead of hard deletes for data safety |
+| **1 intent per buyer/project** | Prevents spam — a buyer can have only 1 active (submitted/reviewed) intent per project |
+| **Reservation → sold traceability** | When marking a reserved item as sold, the reserved buyer automatically becomes the sold-to buyer |
+| **Email throttling** | Message notifications limited to 1 per 5 minutes globally to avoid flooding inboxes |
+
+---
+
+## Further Documentation
+
+| Document | Description |
+|---|---|
+| [USER_GUIDE.md](USER_GUIDE.md) | Complete guide for buyers, sellers, and admins |
+| [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md) | Architecture deep-dive, code conventions, extending the app |
+| [ROADMAP.md](ROADMAP.md) | Planned features and improvements |
+| [COPILOT_INSTRUCTIONS.md](COPILOT_INSTRUCTIONS.md) | AI assistant coding conventions for this project |
+
+---
 
 ## License
 
-See [LICENSE](LICENSE).
+MIT License — Copyright © 2026 [Vincent Cruvellier (r45635)](https://github.com/r45635)
+
+See [LICENSE](LICENSE) for full text.
