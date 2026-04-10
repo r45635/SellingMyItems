@@ -27,6 +27,7 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-sellingmyitems}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-sellingmyitems}
       NODE_ENV: production
       RESEND_API_KEY: ${RESEND_API_KEY:-}
+      RESEND_FROM_EMAIL: ${RESEND_FROM_EMAIL:-SellingMyItems <onboarding@resend.dev>}
       NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:5050}
     volumes:
       - uploads:/app/public/uploads
