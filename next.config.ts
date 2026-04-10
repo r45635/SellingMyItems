@@ -1,13 +1,16 @@
 import type { NextConfig } from "next";
 import createNextIntlPlugin from "next-intl/plugin";
-import { execSync } from "child_process";
+import { execFileSync } from "child_process";
 
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
 // Inject build info at build time
 const gitHash = (() => {
   try {
-    return execSync("git rev-parse --short HEAD").toString().trim();
+    return execFileSync("git", ["rev-parse", "--short", "HEAD"], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
   } catch {
     return "dev";
   }
