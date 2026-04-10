@@ -21,7 +21,7 @@ jobs:
           port: ${{ secrets.VPS_PORT || 22 }}
           command_timeout: 40m
           script: |
-            set -e
+            set -euo pipefail
             # Global deploy lock on VPS to avoid overlapping runs.
             exec 9>/tmp/sellingmyitems-deploy.lock
             if ! flock -n 9; then
@@ -29,23 +29,22 @@ jobs:
               exit 1
             fi
 
-            export GIT_SSH_COMMAND="ssh -i $HOME/.ssh/id_ed25519_github -o StrictHostKeyChecking=no"
+            export GIT_SSH_COMMAND="ssh -i $HOME/.ssh/id_ed25519_github -o StrictHostKeyChecking=accept-new"
             APP_DIR="${{ secrets.VPS_APP_DIR || '$HOME/sellingmyitems' }}"
 
             echo "==> Disk space BEFORE deploy:"
             df -h / | tail -1
 
-            # Pre-deploy cleanup: remove ALL unused images + build cache (preserves volumes & running containers)
-            echo "==> Pre-deploy prune (all unused images + build cache)..."
-            docker image prune -af 2>/dev/null || true
-            docker builder prune -af 2>/dev/null || true
-
-            echo "==> Disk space AFTER prune:"
-            df -h / | tail -1
-
             AVAIL=$(df / | tail -1 | awk '{print $4}')
+            # Keep Docker cache for faster builds unless space is critically low.
+            if [ "$AVAIL" -lt 3145728 ]; then
+              echo "==> Low disk space detected (${AVAIL} KB), pruning unused Docker images..."
+              docker image prune -af 2>/dev/null || true
+              AVAIL=$(df / | tail -1 | awk '{print $4}')
+            fi
+
             if [ "$AVAIL" -lt 1048576 ]; then
-              echo "❌ Less than 1GB free disk space ($AVAIL KB). Aborting deploy."
+              echo "❌ Less than 1GB free disk space after cleanup (${AVAIL} KB). Aborting deploy."
               exit 1
             fi
 
@@ -64,7 +63,8 @@ jobs:
               git pull origin main
             fi
 
-            docker compose build --no-cache
+            docker compose config -q
+            docker compose build --pull
             docker compose up -d --force-recreate --remove-orphans
             
             # Wait for app to be ready
@@ -73,12 +73,16 @@ jobs:
 
             # Verify connectivity
             echo "==> Verifying app is reachable..."
-            curl -sf http://localhost:5050 -o /dev/null && echo "✅ App healthy" || echo "⚠️  App not responding on :5050"
+            if curl -sf http://localhost:5050 -o /dev/null; then
+              echo "✅ App healthy"
+            else
+              echo "❌ App not responding on :5050"
+              exit 1
+            fi
 
-            # Post-deploy cleanup
-            echo "==> Post-deploy prune..."
-            docker image prune -af
-            docker builder prune -af 2>/dev/null || true
+            # Post-deploy cleanup: remove only dangling images to preserve cache.
+            echo "==> Post-deploy prune (dangling only)..."
+            docker image prune -f 2>/dev/null || true
 
             echo "==> Disk space AFTER deploy:"
             df -h / | tail -1
