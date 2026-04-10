@@ -297,6 +297,7 @@ export const conversationMessages = pgTable("conversation_messages", {
 export const emailTypeEnum = pgEnum("email_type", [
   "welcome",
   "message_notification",
+  "message_copy",
   "intent_received",
   "intent_status",
   "password_reset",

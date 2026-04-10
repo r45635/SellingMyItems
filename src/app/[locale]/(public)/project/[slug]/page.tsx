@@ -1,4 +1,5 @@
 import { ItemTeaserCard } from "@/components/shared/item-teaser-card";
+import { WishlistHeartButton } from "@/components/shared/wishlist-heart-button";
 import { Badge } from "@/components/ui/badge";
 import { MapPin, ArrowLeft, Package, User, Mail, Lock } from "lucide-react";
 import { db } from "@/db";
@@ -7,6 +8,7 @@ import { and, asc, eq, inArray, isNull, ne } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { Link } from "@/i18n/navigation";
 import { getUser } from "@/lib/auth";
+import { getTranslations } from "next-intl/server";
 
 export default async function ProjectPage({
   params,
@@ -84,6 +86,8 @@ export default async function ProjectPage({
     }
   }
 
+  const tWishlist = await getTranslations("wishlist");
+
   return (
     <div className="container px-4 md:px-6 py-6">
       <Link
@@ -158,6 +162,16 @@ export default async function ProjectPage({
                   viewCount={item.viewCount}
                   href={`/project/${slug}/item/${item.id}`}
                   isWishlisted={wishlistedItemIds.has(item.id)}
+                  wishlistButton={
+                    <WishlistHeartButton
+                      itemId={item.id}
+                      isWishlisted={wishlistedItemIds.has(item.id)}
+                      returnPath={`/project/${slug}`}
+                      addTitle={tWishlist("addToFavorites")}
+                      removeTitle={tWishlist("removeFromFavorites")}
+                      confirmRemoveMessage={tWishlist("confirmRemove")}
+                    />
+                  }
                 />
               ))}
             </div>

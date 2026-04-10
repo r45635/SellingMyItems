@@ -198,7 +198,7 @@ export default async function SellerMessagesPage() {
                         {thread.buyerEmail ? ` (${thread.buyerEmail})` : ""}
                       </p>
                       <div className="flex shrink-0 items-center gap-2">
-                        {thread.isUnread ? <Badge variant="destructive">{t("messages.new")}</Badge> : null}
+                        {thread.isUnread ? <Badge variant="destructive" className="font-bold">{t("new")}</Badge> : null}
                         <span className="text-xs text-muted-foreground">
                           {thread.messageCount} {t("messagesCount")}
                         </span>

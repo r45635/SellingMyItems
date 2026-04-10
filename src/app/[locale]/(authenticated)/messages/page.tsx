@@ -84,7 +84,7 @@ export default async function MessagesPage() {
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
-                  {thread.isUnread ? <Badge variant="destructive">{t("messages.new")}</Badge> : null}
+                  {thread.isUnread ? <Badge variant="destructive" className="font-bold">{t("new")}</Badge> : null}
                   <Link
                     href={`/messages/${thread.id}`}
                     className="inline-flex h-8 items-center justify-center rounded-lg border border-border px-2.5 text-sm hover:bg-muted"

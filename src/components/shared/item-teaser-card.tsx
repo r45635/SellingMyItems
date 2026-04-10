@@ -14,6 +14,7 @@ interface ItemTeaserCardProps {
   updatedAt?: Date | string | null;
   isWishlisted?: boolean;
   viewCount?: number;
+  wishlistButton?: React.ReactNode;
 }
 
 export function ItemTeaserCard({
@@ -25,6 +26,7 @@ export function ItemTeaserCard({
   updatedAt,
   isWishlisted,
   viewCount,
+  wishlistButton,
 }: ItemTeaserCardProps) {
   const t = useTranslations("item");
 
@@ -63,11 +65,13 @@ export function ItemTeaserCard({
             {label}
           </Badge>
         )}
-        {isWishlisted && (
+        {wishlistButton ? (
+          wishlistButton
+        ) : isWishlisted ? (
           <div className="absolute top-2 left-2">
             <Heart className="h-5 w-5 fill-red-500 text-red-500 drop-shadow" />
           </div>
-        )}
+        ) : null}
       </div>
       <CardContent className="p-2.5">
         <h3 className="font-medium text-sm line-clamp-2 group-hover:text-orange-600 transition-colors">{title}</h3>

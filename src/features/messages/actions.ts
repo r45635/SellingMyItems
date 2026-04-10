@@ -15,7 +15,7 @@ import { and, eq, isNull, desc, gte } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { consumeRateLimit } from "@/lib/security/rate-limit";
 import { siteConfig } from "@/config";
-import { sendMessageNotificationEmail } from "@/lib/email";
+import { sendMessageNotificationEmail, sendMessageCopyEmail } from "@/lib/email";
 
 function revalidateMessagePaths(threadId: string) {
   revalidatePath("/messages");
@@ -46,6 +46,7 @@ export async function sendMessageAction(formData: FormData) {
   const threadId = String(formData.get("threadId") ?? "");
   const projectId = String(formData.get("projectId") ?? "");
   const body = String(formData.get("body") ?? "");
+  const sendCopy = formData.get("sendCopy") === "on";
 
   const validated = messageSchema.safeParse({ body });
   if (!validated.success) {
@@ -114,6 +115,21 @@ export async function sendMessageAction(formData: FormData) {
       // Email failure should not block message sending
     }
 
+    // Send copy to the sender if requested
+    if (sendCopy) {
+      try {
+        await sendCopyToSender(
+          profileId,
+          thread.id,
+          thread.projectId,
+          isBuyer ? "buyer" : "seller",
+          validated.data.body
+        );
+      } catch {
+        // Email copy failure should not block
+      }
+    }
+
     revalidateMessagePaths(thread.id);
     return;
   }
@@ -177,6 +193,21 @@ export async function sendMessageAction(formData: FormData) {
     );
   } catch {
     // Email failure should not block message sending
+  }
+
+  // Send copy to the sender if requested
+  if (sendCopy) {
+    try {
+      await sendCopyToSender(
+        profileId,
+        thread.id,
+        thread.projectId,
+        "buyer",
+        validated.data.body
+      );
+    } catch {
+      // Email copy failure should not block
+    }
   }
 
   revalidateMessagePaths(thread.id);
@@ -253,6 +284,70 @@ async function notifyMessageRecipient(
   await sendMessageNotificationEmail(
     recipientEmail,
     sender.displayName ?? sender.email,
+    project.name,
+    messageBody,
+    threadUrl,
+    "fr"
+  );
+}
+
+// ─── Send copy of the message to the sender ─────────────────────────────────
+
+async function sendCopyToSender(
+  senderId: string,
+  threadId: string,
+  projectId: string,
+  senderRole: "buyer" | "seller",
+  messageBody: string,
+) {
+  const senderProfile = await db.query.profiles.findFirst({
+    where: eq(profiles.id, senderId),
+    columns: { email: true },
+  });
+  if (!senderProfile?.email) return;
+
+  const project = await db.query.projects.findFirst({
+    where: eq(projects.id, projectId),
+    columns: { name: true, sellerId: true },
+  });
+  if (!project) return;
+
+  // Get the recipient name to display in the copy email
+  let recipientName: string;
+  if (senderRole === "buyer") {
+    const sellerAccount = await db.query.sellerAccounts.findFirst({
+      where: eq(sellerAccounts.id, project.sellerId),
+      columns: { userId: true },
+    });
+    const sellerProfile = sellerAccount
+      ? await db.query.profiles.findFirst({
+          where: eq(profiles.id, sellerAccount.userId),
+          columns: { displayName: true, email: true },
+        })
+      : null;
+    recipientName = sellerProfile?.displayName ?? sellerProfile?.email ?? "Seller";
+  } else {
+    // sender is seller → get thread to find buyer
+    const thread = await db.query.conversationThreads.findFirst({
+      where: eq(conversationThreads.id, threadId),
+      columns: { buyerId: true },
+    });
+    const buyerProfile = thread
+      ? await db.query.profiles.findFirst({
+          where: eq(profiles.id, thread.buyerId),
+          columns: { displayName: true, email: true },
+        })
+      : null;
+    recipientName = buyerProfile?.displayName ?? buyerProfile?.email ?? "Buyer";
+  }
+
+  const threadUrl = senderRole === "buyer"
+    ? `${siteConfig.url}/fr/messages/${threadId}`
+    : `${siteConfig.url}/fr/seller/messages/${threadId}`;
+
+  await sendMessageCopyEmail(
+    senderProfile.email,
+    recipientName,
     project.name,
     messageBody,
     threadUrl,

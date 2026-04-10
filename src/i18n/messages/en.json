@@ -121,11 +121,15 @@
     "sellingPrice": "Selling price",
     "originalValue": "Original value",
     "savings": "You save",
-    "summaryTitle": "Selection summary"
+    "summaryTitle": "Selection summary",
+    "addToFavorites": "Click to add to favorites",
+    "removeFromFavorites": "Click to remove from favorites",
+    "confirmRemove": "Remove this item from your favorites?"
   },
   "intent": {
     "title": "Purchase Intent",
     "phone": "Phone number",
+    "optional": "optional",
     "contactMethod": "Preferred contact method",
     "pickupNotes": "Pickup notes / availability",
     "submit": "Submit intent",
@@ -148,6 +152,7 @@
     "noMessagesYet": "No messages yet",
     "sentAt": "Sent at",
     "new": "New",
+    "sendCopy": "Send me a copy by email",
     "you": "You",
     "buyer": "Buyer",
     "seller": "Seller",

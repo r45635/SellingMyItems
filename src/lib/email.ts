@@ -6,6 +6,7 @@ import { eq } from "drizzle-orm";
 type EmailType =
   | "welcome"
   | "message_notification"
+  | "message_copy"
   | "intent_received"
   | "intent_status"
   | "password_reset";
@@ -278,4 +279,36 @@ export async function sendIntentStatusEmail(
   );
 
   return sendEmail(to, subject, html, "intent_status");
+}
+
+// ─── Message Copy (sent to the sender as a copy) ────────────────────────────
+
+export async function sendMessageCopyEmail(
+  to: string,
+  recipientName: string,
+  projectName: string,
+  messageBody: string,
+  threadUrl: string,
+  locale: string = "fr"
+) {
+  const fr = locale === "fr";
+  const subject = fr
+    ? `Copie de votre message — ${projectName}`
+    : `Copy of your message — ${projectName}`;
+
+  const html = emailLayout(
+    fr
+      ? `<h2>Copie de votre message</h2>
+         <p>Vous avez envoyé un message à <strong>${recipientName}</strong> concernant <strong>${projectName}</strong> :</p>
+         <blockquote style="border-left: 3px solid #ddd; padding-left: 12px; color: #555; margin: 16px 0;">${messageBody}</blockquote>
+         <p>${emailButton(threadUrl, "Voir la conversation")}</p>
+         <p style="color: #666; font-size: 14px;">Ceci est une copie de votre message envoyé via SellingMyItems.</p>`
+      : `<h2>Copy of Your Message</h2>
+         <p>You sent a message to <strong>${recipientName}</strong> about <strong>${projectName}</strong>:</p>
+         <blockquote style="border-left: 3px solid #ddd; padding-left: 12px; color: #555; margin: 16px 0;">${messageBody}</blockquote>
+         <p>${emailButton(threadUrl, "View conversation")}</p>
+         <p style="color: #666; font-size: 14px;">This is a copy of your message sent via SellingMyItems.</p>`
+  );
+
+  return sendEmail(to, subject, html, "message_copy");
 }

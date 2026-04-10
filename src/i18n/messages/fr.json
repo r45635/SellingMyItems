@@ -121,11 +121,15 @@
     "sellingPrice": "Prix de vente",
     "originalValue": "Valeur d'origine",
     "savings": "Vous économisez",
-    "summaryTitle": "Résumé de la sélection"
+    "summaryTitle": "Résumé de la sélection",
+    "addToFavorites": "Cliquer pour ajouter aux favoris",
+    "removeFromFavorites": "Cliquer pour retirer des favoris",
+    "confirmRemove": "Retirer cet article de vos favoris ?"
   },
   "intent": {
     "title": "Intention d'achat",
     "phone": "Numéro de téléphone",
+    "optional": "optionnel",
     "contactMethod": "Mode de contact préféré",
     "pickupNotes": "Notes de retrait / disponibilité",
     "submit": "Envoyer l'intention",
@@ -148,6 +152,7 @@
     "noMessagesYet": "Aucun message pour le moment",
     "sentAt": "Envoyé le",
     "new": "Nouveau",
+    "sendCopy": "Recevoir une copie par email",
     "you": "Vous",
     "buyer": "Acheteur",
     "seller": "Vendeur",

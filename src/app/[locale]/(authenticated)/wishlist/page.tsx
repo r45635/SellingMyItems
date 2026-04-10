@@ -271,7 +271,8 @@ export default async function WishlistPage() {
                           htmlFor={`phone-${projectId}`}
                           className="block text-sm font-medium mb-1"
                         >
-                          {tIntent("phone")}
+                          {tIntent("phone")}{" "}
+                          <span className="text-muted-foreground font-normal">({tIntent("optional")})</span>
                         </label>
                         <input
                           id={`phone-${projectId}`}
@@ -279,26 +280,6 @@ export default async function WishlistPage() {
                           type="tel"
                           className="w-full rounded-md border border-input px-3 py-2 text-sm"
                         />
-                      </div>
-
-                      <div>
-                        <label
-                          htmlFor={`contact-${projectId}`}
-                          className="block text-sm font-medium mb-1"
-                        >
-                          {tIntent("contactMethod")}
-                        </label>
-                        <select
-                          id={`contact-${projectId}`}
-                          name="contactMethod"
-                          defaultValue="app_message"
-                          className="w-full rounded-md border border-input px-3 py-2 text-sm"
-                        >
-                          <option value="app_message">
-                            {tIntent("appMessage")}
-                          </option>
-                          <option value="phone">{tIntent("phoneOption")}</option>
-                        </select>
                       </div>
 
                       <div>
