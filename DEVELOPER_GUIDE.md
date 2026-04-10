@@ -77,6 +77,7 @@ The dev server uses **Turbopack** for fast rebuilds. Open [http://localhost:3000
 | `APP_PORT` | No | `5050` | Host port for the app container |
 | `NEXT_PUBLIC_APP_URL` | No | `http://localhost:3000` | Public URL (used in emails and metadata) |
 | `RESEND_API_KEY` | No | — | Resend.com API key for email sending |
+| `RESEND_FROM_EMAIL` | No | `SellingMyItems <onboarding@resend.dev>` | Sender email address — **must use a verified domain** on Resend to send to all recipients |
 | `NODE_ENV` | No | `development` | `production` in Docker |
 
 ---
@@ -456,6 +457,11 @@ volumes:
 ```typescript
 // src/lib/email.ts
 import { Resend } from 'resend';
+
+// FROM_EMAIL resolution:
+// Uses RESEND_FROM_EMAIL env var, falls back to "SellingMyItems <onboarding@resend.dev>"
+// IMPORTANT: The sandbox address only sends to the Resend account owner.
+// A verified domain (resend.com/domains) is required for production use.
 
 // API key resolution:
 // 1. Check app_settings table (cached 5 minutes in-memory)
@@ -868,7 +874,7 @@ Caddy runs in a separate Docker Compose at `/opt/trystbrief/` and shares the `sh
 | App can't connect to DB | Check `DATABASE_URL` env var. In Docker, use `db` as hostname. |
 | Uploads not persisting | Ensure Docker volume `uploads` is mounted at `/app/public/uploads` |
 | 502 after deploy | Check `shared-proxy` network exists and Caddy config references `sellingmyitems-app:3000` |
-| Emails not sending | Check Resend API key in admin dashboard or env var. Check `/admin/emails` for failures. |
+| Emails not sending | Check Resend API key in admin dashboard or env var. Check `/admin/emails` for failures. Verify `RESEND_FROM_EMAIL` uses a verified domain — the sandbox `onboarding@resend.dev` only delivers to the account owner. |
 | Rate limit errors | In-memory rate limiter resets on restart. Wait for the window to expire. |
 | Migrations fail | Check order-sensitive enum additions. Use `IF NOT EXISTS` for safety. |
 | Auth cookie not set | Check `secure` flag — only set in production. Use `http://localhost:3000` for dev. |

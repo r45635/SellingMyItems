@@ -189,7 +189,8 @@ POSTGRES_PASSWORD=<strong-password>
 POSTGRES_DB=sellingmyitems
 APP_PORT=5050
 NEXT_PUBLIC_APP_URL=https://yourdomain.com
-RESEND_API_KEY=re_your_key_here    # Optional: for email sending
+RESEND_API_KEY=re_your_key_here              # Required: for email sending
+RESEND_FROM_EMAIL=YourApp <noreply@yourdomain.com>  # Required: verified domain sender
 ```
 
 ### 3. Database setup
@@ -465,9 +466,16 @@ In-memory rate limiter (`Map`-based, single-node) applied to:
 
 ## Email System
 
-Emails are sent via [Resend](https://resend.com). The API key can be configured:
-1. **Admin UI** (`/admin/emails`) — stored in `app_settings` table with 5-minute in-memory cache
-2. **Environment variable** fallback (`RESEND_API_KEY`)
+Emails are sent via [Resend](https://resend.com) from a **verified domain** sender address.
+
+### Configuration
+
+| Variable | Description |
+|---|---|
+| `RESEND_API_KEY` | Resend API key — also configurable via Admin UI (`/admin/emails`), stored in `app_settings` with 5-min cache |
+| `RESEND_FROM_EMAIL` | Sender address — **must use a domain verified on [resend.com/domains](https://resend.com/domains)**. Without a verified domain, emails can only be sent to the Resend account owner's email. |
+
+> **Important**: The default sandbox address (`onboarding@resend.dev`) only works for the account owner. To send emails to all users, you **must** verify a domain on Resend and set `RESEND_FROM_EMAIL` accordingly (e.g. `YourApp <noreply@yourdomain.com>`).
 
 All emails are logged to the `email_logs` table with status (sent/failed), error message, and Resend ID.
 
