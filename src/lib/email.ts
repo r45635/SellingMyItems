@@ -2,6 +2,7 @@ import { Resend } from "resend";
 import { db } from "@/db";
 import { emailLogs, appSettings } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { siteConfig } from "@/config";
 
 type EmailType =
   | "welcome"
@@ -155,24 +156,65 @@ export async function sendPasswordResetEmail(
 
 // ─── Welcome Email ──────────────────────────────────────────────────────────
 
+function emailLogo(): string {
+  return `<div style="display: inline-block; width: 40px; height: 40px; background: #18181b; border-radius: 10px; text-align: center; line-height: 40px; vertical-align: middle;">
+    <span style="color: #fff; font-weight: 800; font-size: 16px; letter-spacing: -0.5px;">SMI</span>
+  </div>`;
+}
+
+function emailHeader(): string {
+  return `<div style="text-align: center; padding: 24px 0 16px;">
+    ${emailLogo()}
+    <span style="display: inline-block; vertical-align: middle; margin-left: 12px; font-size: 20px; font-weight: 700; color: #18181b;">SellingMyItems</span>
+  </div>
+  <hr style="border: none; border-top: 1px solid #e5e5e5; margin: 0 0 24px;" />`;
+}
+
 export async function sendWelcomeEmail(
   to: string,
   displayName: string,
   locale: string = "fr"
 ) {
   const fr = locale === "fr";
+  const appUrl = siteConfig.url;
   const subject = fr
-    ? "Bienvenue sur SellingMyItems !"
-    : "Welcome to SellingMyItems!";
+    ? "Bienvenue sur SellingMyItems ! \uD83C\uDF89"
+    : "Welcome to SellingMyItems! \uD83C\uDF89";
 
   const html = emailLayout(
-    fr
-      ? `<h2>Bienvenue, ${displayName} !</h2>
-         <p>Votre compte a été créé avec succès. Vous pouvez maintenant parcourir les articles en vente, ajouter des articles à votre liste de souhaits, et contacter les vendeurs.</p>
-         <p style="color: #666; font-size: 14px;">Si vous n'avez pas créé ce compte, contactez-nous.</p>`
-      : `<h2>Welcome, ${displayName}!</h2>
-         <p>Your account has been created successfully. You can now browse items for sale, add items to your wishlist, and contact sellers.</p>
-         <p style="color: #666; font-size: 14px;">If you didn't create this account, please contact us.</p>`
+    `${emailHeader()}
+    ${fr
+      ? `<h2 style="margin: 0 0 8px;">Bienvenue, ${displayName} ! \uD83D\uDC4B</h2>
+         <p style="color: #444; line-height: 1.6;">Votre compte a été créé avec succès. Vous êtes prêt(e) à explorer notre marketplace.</p>
+         <p style="color: #444; font-weight: 600; margin-bottom: 8px;">Voici ce que vous pouvez faire :</p>
+         <table style="color: #444; line-height: 1.8; margin-bottom: 20px;">
+           <tr><td style="padding-right: 10px;">\uD83D\uDECD\uFE0F</td><td>Parcourir les articles en vente</td></tr>
+           <tr><td style="padding-right: 10px;">\u2764\uFE0F</td><td>Sauvegarder vos favoris dans votre liste de souhaits</td></tr>
+           <tr><td style="padding-right: 10px;">\uD83D\uDCAC</td><td>Contacter les vendeurs directement</td></tr>
+           <tr><td style="padding-right: 10px;">\uD83D\uDCE7</td><td>Être notifié(e) des réponses des vendeurs</td></tr>
+         </table>
+         <p style="text-align: center; margin: 24px 0;">${emailButton(appUrl + "/fr", "Accéder à SellingMyItems →")}</p>
+         <hr style="border: none; border-top: 1px solid #e5e5e5; margin: 24px 0;" />
+         <p style="color: #888; font-size: 13px;">Votre identifiant : <strong>${to}</strong></p>
+         <p style="color: #888; font-size: 13px;">Lien : <a href="${appUrl}" style="color: #888;">${appUrl}</a></p>
+         <p style="color: #888; font-size: 13px;">Si vous n'avez pas créé ce compte, vous pouvez ignorer cet email.</p>
+         <p style="color: #888; font-size: 13px; margin-top: 16px;">— L'équipe SellingMyItems</p>`
+      : `<h2 style="margin: 0 0 8px;">Welcome, ${displayName}! \uD83D\uDC4B</h2>
+         <p style="color: #444; line-height: 1.6;">Your account has been created successfully. You're all set to explore our marketplace.</p>
+         <p style="color: #444; font-weight: 600; margin-bottom: 8px;">Here's what you can do:</p>
+         <table style="color: #444; line-height: 1.8; margin-bottom: 20px;">
+           <tr><td style="padding-right: 10px;">\uD83D\uDECD\uFE0F</td><td>Browse items for sale across projects</td></tr>
+           <tr><td style="padding-right: 10px;">\u2764\uFE0F</td><td>Save your favorites to your wishlist</td></tr>
+           <tr><td style="padding-right: 10px;">\uD83D\uDCAC</td><td>Message sellers directly</td></tr>
+           <tr><td style="padding-right: 10px;">\uD83D\uDCE7</td><td>Get notified when sellers respond</td></tr>
+         </table>
+         <p style="text-align: center; margin: 24px 0;">${emailButton(appUrl + "/en", "Access SellingMyItems →")}</p>
+         <hr style="border: none; border-top: 1px solid #e5e5e5; margin: 24px 0;" />
+         <p style="color: #888; font-size: 13px;">Your login: <strong>${to}</strong></p>
+         <p style="color: #888; font-size: 13px;">Link: <a href="${appUrl}" style="color: #888;">${appUrl}</a></p>
+         <p style="color: #888; font-size: 13px;">If you didn't create this account, you can safely ignore this email.</p>
+         <p style="color: #888; font-size: 13px; margin-top: 16px;">— The SellingMyItems Team</p>`
+    }`
   );
 
   return sendEmail(to, subject, html, "welcome");

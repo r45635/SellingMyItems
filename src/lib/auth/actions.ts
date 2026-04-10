@@ -88,9 +88,12 @@ export async function signUpAction(formData: FormData) {
 
   // Seller registration is disabled — no seller account auto-creation
 
-  // Send welcome email (non-blocking)
+  // Send welcome email (non-blocking) — detect locale from referer URL
   try {
-    await sendWelcomeEmail(email, email.split("@")[0], "fr");
+    const headerStore = await headers();
+    const referer = headerStore.get("referer") ?? "";
+    const locale = referer.includes("/fr") ? "fr" : "en";
+    await sendWelcomeEmail(email, email.split("@")[0], locale);
   } catch {
     // Email failure should not block signup
   }
