@@ -21,6 +21,11 @@ let cachedApiKey: { value: string | null; expiresAt: number } = {
   expiresAt: 0,
 };
 
+let cachedFromEmail: { value: string | null; expiresAt: number } = {
+  value: null,
+  expiresAt: 0,
+};
+
 async function getResendApiKey(): Promise<string> {
   // Check DB-stored key first (admin-managed), with 5-min cache
   if (cachedApiKey.expiresAt > Date.now() && cachedApiKey.value !== null) {
@@ -45,9 +50,40 @@ async function getResendApiKey(): Promise<string> {
   return envKey;
 }
 
+async function getResendFromEmail(): Promise<string> {
+  if (cachedFromEmail.expiresAt > Date.now() && cachedFromEmail.value !== null) {
+    return cachedFromEmail.value;
+  }
+
+  try {
+    const setting = await db.query.appSettings.findFirst({
+      where: eq(appSettings.key, "resend_from_email"),
+    });
+    if (setting && setting.value) {
+      cachedFromEmail = {
+        value: setting.value,
+        expiresAt: Date.now() + 5 * 60 * 1000,
+      };
+      return setting.value;
+    }
+  } catch {
+    // DB not ready or table doesn't exist yet — fall through to env var
+  }
+
+  cachedFromEmail = {
+    value: FROM_EMAIL,
+    expiresAt: Date.now() + 5 * 60 * 1000,
+  };
+  return FROM_EMAIL;
+}
+
 /** Reset cached API key (call after admin updates the key) */
 export function invalidateResendApiKeyCache() {
   cachedApiKey = { value: null, expiresAt: 0 };
+}
+
+export function invalidateResendFromEmailCache() {
+  cachedFromEmail = { value: null, expiresAt: 0 };
 }
 
 // ─── Core send function with logging ────────────────────────────────────────
@@ -59,10 +95,11 @@ async function sendEmail(
   type: EmailType
 ): Promise<{ ok: boolean; resendId?: string; error?: string }> {
   const apiKey = await getResendApiKey();
+  const fromEmail = await getResendFromEmail();
   if (!apiKey) {
     const errorMsg = "Resend API key not configured";
     console.error(errorMsg);
-    await logEmail(to, subject, type, "failed", errorMsg);
+    await logEmail(to, fromEmail, subject, type, "failed", errorMsg);
     return { ok: false, error: errorMsg };
   }
 
@@ -70,7 +107,7 @@ async function sendEmail(
 
   try {
     const { data, error } = await resend.emails.send({
-      from: FROM_EMAIL,
+      from: fromEmail,
       to,
       subject,
       html,
@@ -79,23 +116,24 @@ async function sendEmail(
     if (error) {
       const errorMsg = error.message || "Resend API error";
       console.error(`Failed to send ${type} email to ${to}:`, error);
-      await logEmail(to, subject, type, "failed", errorMsg);
+      await logEmail(to, fromEmail, subject, type, "failed", errorMsg);
       return { ok: false, error: errorMsg };
     }
 
     const resendId = data?.id ?? undefined;
-    await logEmail(to, subject, type, "sent", undefined, resendId);
+    await logEmail(to, fromEmail, subject, type, "sent", undefined, resendId);
     return { ok: true, resendId };
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : "Unknown error";
     console.error(`Failed to send ${type} email to ${to}:`, errorMsg);
-    await logEmail(to, subject, type, "failed", errorMsg);
+    await logEmail(to, fromEmail, subject, type, "failed", errorMsg);
     return { ok: false, error: errorMsg };
   }
 }
 
 async function logEmail(
   toEmail: string,
+  fromEmail: string,
   subject: string,
   type: EmailType,
   status: "sent" | "failed",
@@ -105,7 +143,7 @@ async function logEmail(
   try {
     await db.insert(emailLogs).values({
       toEmail,
-      fromEmail: FROM_EMAIL,
+      fromEmail,
       subject,
       type,
       status,

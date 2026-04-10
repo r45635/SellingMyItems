@@ -5,7 +5,7 @@ import { db } from "@/db";
 import { profiles, projects, appSettings } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { invalidateResendApiKeyCache } from "@/lib/email";
+import { invalidateResendApiKeyCache, invalidateResendFromEmailCache } from "@/lib/email";
 
 export async function toggleProfileActiveAction(profileId: string) {
   await requireAdmin();
@@ -82,6 +82,47 @@ export async function updateResendApiKeyAction(formData: FormData) {
   // Invalidate the cached key so it's picked up on next email send
   invalidateResendApiKeyCache();
 
+  revalidatePath("/admin/emails");
+  return { success: true };
+}
+
+export async function updateResendFromEmailAction(formData: FormData) {
+  const user = await requireAdmin();
+  const fromEmail = String(formData.get("fromEmail") ?? "").trim();
+
+  if (!fromEmail) {
+    return { error: "From email is required" };
+  }
+
+  const hasAt = fromEmail.includes("@");
+  const hasAngleBrackets =
+    (fromEmail.includes("<") && fromEmail.includes(">")) || !fromEmail.includes("<");
+
+  if (!hasAt || !hasAngleBrackets) {
+    return {
+      error:
+        "Invalid format. Use either email@domain.com or Display Name <email@domain.com>",
+    };
+  }
+
+  const existing = await db.query.appSettings.findFirst({
+    where: eq(appSettings.key, "resend_from_email"),
+  });
+
+  if (existing) {
+    await db
+      .update(appSettings)
+      .set({ value: fromEmail, updatedAt: new Date(), updatedBy: user.id })
+      .where(eq(appSettings.key, "resend_from_email"));
+  } else {
+    await db.insert(appSettings).values({
+      key: "resend_from_email",
+      value: fromEmail,
+      updatedBy: user.id,
+    });
+  }
+
+  invalidateResendFromEmailCache();
   revalidatePath("/admin/emails");
   return { success: true };
 }

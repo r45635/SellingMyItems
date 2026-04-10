@@ -473,7 +473,7 @@ Emails are sent via [Resend](https://resend.com) from a **verified domain** send
 | Variable | Description |
 |---|---|
 | `RESEND_API_KEY` | Resend API key — also configurable via Admin UI (`/admin/emails`), stored in `app_settings` with 5-min cache |
-| `RESEND_FROM_EMAIL` | Sender address — **must use a domain verified on [resend.com/domains](https://resend.com/domains)**. Without a verified domain, emails can only be sent to the Resend account owner's email. |
+| `RESEND_FROM_EMAIL` | Sender address — configurable via Admin UI (`/admin/emails`) or env var fallback. **Must use a domain verified on [resend.com/domains](https://resend.com/domains)**. Without a verified domain, emails can only be sent to the Resend account owner's email. |
 
 > **Important**: The default sandbox address (`onboarding@resend.dev`) only works for the account owner. To send emails to all users, you **must** verify a domain on Resend and set `RESEND_FROM_EMAIL` accordingly (e.g. `YourApp <noreply@yourdomain.com>`).
 

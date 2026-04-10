@@ -3,6 +3,7 @@ import { emailLogs, appSettings } from "@/db/schema";
 import { count, eq, sql, and, gte, desc } from "drizzle-orm";
 import { Mail, AlertTriangle, CheckCircle, Key } from "lucide-react";
 import { UpdateResendKeyForm } from "@/features/admin-dashboard/components/update-resend-key-form";
+import { UpdateResendFromEmailForm } from "@/features/admin-dashboard/components/update-resend-from-email-form";
 
 export default async function AdminEmailsPage() {
   const now = new Date();
@@ -17,6 +18,7 @@ export default async function AdminEmailsPage() {
     last30DaysDaily,
     recentLogs,
     resendKeySetting,
+    resendFromEmailSetting,
   ] = await Promise.all([
     // Today's emails by type
     db
@@ -75,6 +77,12 @@ export default async function AdminEmailsPage() {
       where: eq(appSettings.key, "resend_api_key"),
       columns: { value: true, updatedAt: true },
     }),
+
+    // Resend from email from app_settings
+    db.query.appSettings.findFirst({
+      where: eq(appSettings.key, "resend_from_email"),
+      columns: { value: true, updatedAt: true },
+    }),
   ]);
 
   const todayTotal = todayByType.reduce((sum, r) => sum + Number(r.count), 0);
@@ -83,6 +91,7 @@ export default async function AdminEmailsPage() {
   const typeLabels: Record<string, string> = {
     welcome: "Welcome",
     message_notification: "Message Notification",
+    message_copy: "Message Copy",
     intent_received: "Intent Received",
     intent_status: "Intent Status",
     password_reset: "Password Reset",
@@ -106,6 +115,11 @@ export default async function AdminEmailsPage() {
   const maskedKey = resendKeySetting?.value
     ? resendKeySetting.value.slice(0, 8) + "••••••••" + resendKeySetting.value.slice(-4)
     : "(using environment variable)";
+
+  const fromEmailValue =
+    resendFromEmailSetting?.value ??
+    process.env.RESEND_FROM_EMAIL ??
+    "SellingMyItems <onboarding@resend.dev>";
 
   return (
     <div className="space-y-8">
@@ -253,6 +267,21 @@ export default async function AdminEmailsPage() {
           Update the Resend API key used for sending emails. This takes effect immediately (cached for up to 5 minutes).
         </p>
         <UpdateResendKeyForm />
+      </div>
+
+      {/* Update Resend From Email */}
+      <div className="rounded-xl border bg-card p-5 shadow-sm">
+        <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+          <Mail className="h-4 w-4" />
+          Update Sender Address (From)
+        </h3>
+        <p className="text-xs text-muted-foreground mb-2">
+          Current sender: <span className="font-mono">{fromEmailValue}</span>
+        </p>
+        <p className="text-xs text-muted-foreground mb-4">
+          Use a verified domain sender (for example: SellingMyItems &lt;noreply@yourdomain.com&gt;).
+        </p>
+        <UpdateResendFromEmailForm />
       </div>
     </div>
   );

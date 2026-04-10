@@ -459,7 +459,9 @@ volumes:
 import { Resend } from 'resend';
 
 // FROM_EMAIL resolution:
-// Uses RESEND_FROM_EMAIL env var, falls back to "SellingMyItems <onboarding@resend.dev>"
+// 1. Check app_settings key "resend_from_email" (cached 5 minutes in-memory)
+// 2. Fall back to RESEND_FROM_EMAIL env var
+// 3. Fall back to "SellingMyItems <onboarding@resend.dev>"
 // IMPORTANT: The sandbox address only sends to the Resend account owner.
 // A verified domain (resend.com/domains) is required for production use.
 
