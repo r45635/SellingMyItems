@@ -11,6 +11,7 @@ import {
 import { and, desc, eq, inArray, isNull } from "drizzle-orm";
 import { updateIntentStatusAction } from "@/features/intents/actions";
 import { getSellerAccountIdsForUser } from "@/lib/seller-accounts";
+import { ReserveItemsForm } from "@/features/intents/components/reserve-items-form";
 
 export default async function SellerIntentsPage() {
   const t = await getTranslations("seller");
@@ -68,6 +69,7 @@ export default async function SellerIntentsPage() {
           itemTitle: items.title,
           itemPrice: items.price,
           itemCurrency: items.currency,
+          itemStatus: items.status,
         })
         .from(buyerIntentItems)
         .innerJoin(items, eq(buyerIntentItems.itemId, items.id))
@@ -144,44 +146,68 @@ export default async function SellerIntentsPage() {
                 <p className="font-medium mb-1">Items:</p>
                 <ul className="list-disc list-inside space-y-0.5">
                   {intent.items.map((item) => (
-                    <li key={item.itemId}>
-                      {item.itemTitle}
-                      {item.itemPrice != null
-                        ? ` — ${item.itemPrice} ${item.itemCurrency}`
-                        : ""}
+                    <li key={item.itemId} className="flex items-center gap-2">
+                      <span className="flex-1">
+                        {item.itemTitle}
+                        {item.itemPrice != null
+                          ? ` — ${item.itemPrice} ${item.itemCurrency}`
+                          : ""}
+                      </span>
+                      {item.itemStatus === "reserved" && (
+                        <span className="inline-flex items-center rounded-full bg-red-600 text-white px-2 py-0.5 text-[10px] font-bold">
+                          Reserved
+                        </span>
+                      )}
+                      {item.itemStatus === "sold" && (
+                        <span className="inline-flex items-center rounded-full bg-gray-900 text-white px-2 py-0.5 text-[10px] font-bold">
+                          Sold
+                        </span>
+                      )}
                     </li>
                   ))}
                 </ul>
               </div>
 
               {intent.status === "submitted" && (
-                <div className="flex gap-2">
-                  <form
-                    action={async () => {
-                      "use server";
-                      await updateIntentStatusAction(intent.id, "accepted");
-                    }}
-                  >
-                    <button
-                      type="submit"
-                      className="inline-flex h-8 items-center justify-center rounded-lg bg-green-600 px-3 text-sm text-white hover:bg-green-700"
+                <div className="flex flex-col gap-3">
+                  <div className="flex gap-2">
+                    <form
+                      action={async () => {
+                        "use server";
+                        await updateIntentStatusAction(intent.id, "accepted");
+                      }}
                     >
-                      Accept
-                    </button>
-                  </form>
-                  <form
-                    action={async () => {
-                      "use server";
-                      await updateIntentStatusAction(intent.id, "declined");
-                    }}
-                  >
-                    <button
-                      type="submit"
-                      className="inline-flex h-8 items-center justify-center rounded-lg bg-red-600 px-3 text-sm text-white hover:bg-red-700"
+                      <button
+                        type="submit"
+                        className="inline-flex h-8 items-center justify-center rounded-lg bg-green-600 px-3 text-sm text-white hover:bg-green-700"
+                      >
+                        Accept
+                      </button>
+                    </form>
+                    <form
+                      action={async () => {
+                        "use server";
+                        await updateIntentStatusAction(intent.id, "declined");
+                      }}
                     >
-                      Decline
-                    </button>
-                  </form>
+                      <button
+                        type="submit"
+                        className="inline-flex h-8 items-center justify-center rounded-lg bg-red-600 px-3 text-sm text-white hover:bg-red-700"
+                      >
+                        Decline
+                      </button>
+                    </form>
+                  </div>
+                  <ReserveItemsForm
+                    intentId={intent.id}
+                    items={intent.items}
+                    labels={{
+                      reserveSelected: "Reserve selected items",
+                      selectItems: "Select items to reserve for this buyer:",
+                      reserving: "Reserving...",
+                      itemUnavailable: "Unavailable",
+                    }}
+                  />
                 </div>
               )}
             </div>

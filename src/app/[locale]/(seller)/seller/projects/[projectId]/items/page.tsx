@@ -3,11 +3,12 @@ import { Link } from "@/i18n/navigation";
 import { Plus, ArrowLeft, ImageOff, Eye } from "lucide-react";
 import { requireSeller } from "@/lib/auth";
 import { db } from "@/db";
-import { items, projects, sellerAccounts } from "@/db/schema";
-import { and, desc, eq, isNull } from "drizzle-orm";
+import { items, profiles, projects, sellerAccounts } from "@/db/schema";
+import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import { StatusSelect } from "@/features/items/components/status-select";
+import { LinkBuyerForm } from "@/features/items/components/link-buyer-form";
 import { BLUR_PLACEHOLDER } from "@/lib/image/placeholders";
 
 export default async function ProjectItemsPage({
@@ -48,8 +49,20 @@ export default async function ProjectItemsPage({
           coverImageUrl: items.coverImageUrl,
           viewCount: items.viewCount,
           updatedAt: items.updatedAt,
+          reservedForUserId: items.reservedForUserId,
+          soldToUserId: items.soldToUserId,
+          reservedForEmail: sql<string | null>`rp.email`.as("reservedForEmail"),
+          soldToEmail: sql<string | null>`sp.email`.as("soldToEmail"),
         })
         .from(items)
+        .leftJoin(
+          sql`${profiles} as rp`,
+          sql`rp.id = ${items.reservedForUserId}`
+        )
+        .leftJoin(
+          sql`${profiles} as sp`,
+          sql`sp.id = ${items.soldToUserId}`
+        )
         .where(and(eq(items.projectId, project.id), isNull(items.deletedAt)))
         .orderBy(desc(items.updatedAt))
     : [];
@@ -162,6 +175,19 @@ export default async function ProjectItemsPage({
                     </Link>
                   </div>
                 </div>
+
+                {/* Buyer link info / actions */}
+                {(item.status === "reserved" || (item.status === "sold" && item.soldToEmail)) && (
+                  <div className="pl-15 mt-1">
+                    <LinkBuyerForm
+                      itemId={item.id}
+                      projectId={projectId}
+                      status={item.status}
+                      reservedForEmail={item.reservedForEmail}
+                      soldToEmail={item.soldToEmail}
+                    />
+                  </div>
+                )}
               </div>
             );
           })}

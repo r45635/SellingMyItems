@@ -24,7 +24,9 @@
     "sellerDashboard": "Seller Dashboard",
     "adminDashboard": "Administration",
     "adminEmails": "Emails",
-    "adminEmailsDescription": "Monitor email sending and manage Resend API configuration"
+    "adminEmailsDescription": "Monitor email sending and manage Resend API configuration",
+    "reservations": "My Reservations",
+    "purchases": "My Purchases"
   },
   "home": {
     "hero": "Find unique items near you",
@@ -93,6 +95,10 @@
     "reserved": "Reserved",
     "sold": "Sold",
     "hidden": "Suspended",
+    "reservedForYou": "Reserved for you",
+    "reservedForYouAlert": "This item is reserved for you. Contact the seller to arrange pickup.",
+    "reservedAlert": "This item is currently reserved.",
+    "soldAlert": "This item has been sold and is no longer available.",
     "addToWishlist": "Add to wishlist",
     "removeFromWishlist": "Remove from wishlist",
     "signInToSeeDetails": "Sign in to see full details",
@@ -124,7 +130,9 @@
     "summaryTitle": "Selection summary",
     "addToFavorites": "Click to add to favorites",
     "removeFromFavorites": "Click to remove from favorites",
-    "confirmRemove": "Remove this item from your favorites?"
+    "confirmRemove": "Remove this item from your favorites?",
+    "unavailableItemsWarning": "{count, plural, one {# item is} other {# items are}} no longer available and will not be included in your intent.",
+    "noAvailableItems": "All items in this project are reserved or sold. You cannot submit a purchase intent."
   },
   "intent": {
     "title": "Purchase Intent",
@@ -184,7 +192,31 @@
       "reserved": "Reserved",
       "sold": "Sold",
       "hidden": "Suspended"
-    }
+    },
+    "reservedFor": "Reserved for",
+    "soldTo": "Sold to",
+    "linkBuyer": "Link a buyer",
+    "markAsSold": "Mark as sold",
+    "markSoldDescription": "The reserved buyer will be carried over as the purchaser.",
+    "confirmSold": "Confirm sold",
+    "confirmLink": "Link buyer",
+    "cancelAction": "Cancel",
+    "searchBuyerPlaceholder": "Search buyer email..."
+  },
+  "reservations": {
+    "title": "My Reservations",
+    "empty": "No items are currently reserved for you.",
+    "description": "These items have been reserved for you. Contact the seller to arrange pickup and payment.",
+    "itemCount": "{count, plural, one {# item} other {# items}}",
+    "reservedForYou": "Reserved for you",
+    "projectTotal": "Project total"
+  },
+  "purchases": {
+    "title": "My Purchases",
+    "empty": "You haven't purchased any items yet.",
+    "itemCount": "{count, plural, one {# item} other {# items}}",
+    "purchased": "Purchased",
+    "projectTotal": "Project total"
   },
   "validation": {
     "required": "This field is required",

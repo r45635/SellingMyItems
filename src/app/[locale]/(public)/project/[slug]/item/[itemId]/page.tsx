@@ -142,6 +142,7 @@ export default async function ItemPage({
             categoryName={category?.name}
             updatedAt={item.updatedAt}
             viewCount={currentViewCount}
+            isReservedForCurrentUser={item.status === "reserved" && item.reservedForUserId === profileId}
           />
 
           {/* Seller contact */}
@@ -163,6 +164,7 @@ export default async function ItemPage({
             </div>
           )}
 
+          {item.status === "available" && (
           <form action={isWishlisted ? removeWishlistItemAction : addWishlistItemAction}>
             <input type="hidden" name="itemId" value={item.id} />
             <input
@@ -181,8 +183,9 @@ export default async function ItemPage({
               {isWishlisted ? "❤️ Remove from selection" : "🤍 Add to selection"}
             </button>
           </form>
+          )}
 
-          {isWishlisted && (
+          {isWishlisted && item.status === "available" && (
             <div className="rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950/30 p-4 flex items-start gap-3">
               <ShoppingCart className="h-5 w-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
               <div className="text-sm">

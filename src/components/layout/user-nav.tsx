@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { User, LogOut, LayoutDashboard, Heart, MessageSquare, Shield } from "lucide-react";
+import { User, LogOut, LayoutDashboard, Heart, MessageSquare, Shield, Package, ShoppingBag } from "lucide-react";
 import { useEffect, useState } from "react";
 import { signOutAction } from "@/lib/auth/actions";
 import { Badge } from "@/components/ui/badge";
@@ -98,6 +98,18 @@ export function UserNav() {
           <Link href="/wishlist" className="flex items-center cursor-pointer w-full">
             <Heart className="mr-2 h-4 w-4" />
             {t("nav.wishlist")}
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem>
+          <Link href="/reservations" className="flex items-center cursor-pointer w-full">
+            <Package className="mr-2 h-4 w-4" />
+            {t("nav.reservations")}
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem>
+          <Link href="/purchases" className="flex items-center cursor-pointer w-full">
+            <ShoppingBag className="mr-2 h-4 w-4" />
+            {t("nav.purchases")}
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem>

@@ -3,8 +3,8 @@
 import { requireSeller } from "@/lib/auth";
 import { itemFormSchema, ITEM_STATUSES } from "@/lib/validations";
 import { db } from "@/db";
-import { items, itemImages, itemLinks, projects, sellerAccounts } from "@/db/schema";
-import { and, eq, isNull, inArray, notInArray } from "drizzle-orm";
+import { items, itemImages, itemLinks, profiles, projects, sellerAccounts } from "@/db/schema";
+import { and, eq, isNull, inArray, notInArray, ilike } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
@@ -330,9 +330,42 @@ export async function updateItemStatusAction(formData: FormData) {
     return { error: "Project not found or unauthorized" };
   }
 
+  // Fetch existing item to carry over reservedForUserId when marking as sold
+  const existingItem = await db.query.items.findFirst({
+    where: and(
+      eq(items.id, itemId),
+      eq(items.projectId, projectId),
+      isNull(items.deletedAt)
+    ),
+  });
+
+  if (!existingItem) {
+    return { error: "Item not found" };
+  }
+
+  const now = new Date();
+  const updateData: Record<string, unknown> = { status, updatedAt: now };
+
+  // When marking as sold, carry over reservation buyer if exists
+  if (status === "sold" && existingItem.reservedForUserId) {
+    updateData.soldToUserId = existingItem.reservedForUserId;
+    updateData.soldAt = now;
+  }
+
+  // When marking as sold without reserved buyer, just set soldAt
+  if (status === "sold" && !existingItem.reservedForUserId) {
+    updateData.soldAt = now;
+  }
+
+  // When changing away from reserved, clear reservation fields
+  if (status !== "reserved" && status !== "sold") {
+    updateData.reservedForUserId = null;
+    updateData.reservedAt = null;
+  }
+
   await db
     .update(items)
-    .set({ status, updatedAt: new Date() })
+    .set(updateData)
     .where(
       and(
         eq(items.id, itemId),
@@ -377,4 +410,171 @@ export async function deleteItemAction(itemId: string, projectId: string) {
     );
 
   redirect(`/seller/projects/${projectId}/items`);
+}
+
+/**
+ * Manually link a reserved item to a buyer account.
+ * The item must already be in "reserved" status.
+ * buyerEmail is optional — pass null to clear the reservation link.
+ */
+export async function linkReservationToBuyerAction(formData: FormData) {
+  const user = await requireSeller();
+
+  const itemId = formData.get("itemId") as string;
+  const projectId = formData.get("projectId") as string;
+  const buyerEmail = (formData.get("buyerEmail") as string)?.trim() || null;
+
+  if (!itemId || !projectId) {
+    return { error: "Missing item or project" };
+  }
+
+  const sellerAccountId = await getSellerAccountId(user);
+  if (!sellerAccountId) {
+    return { error: "Seller account not found" };
+  }
+
+  const ownedProject = await db.query.projects.findFirst({
+    where: and(
+      eq(projects.id, projectId),
+      eq(projects.sellerId, sellerAccountId),
+      isNull(projects.deletedAt)
+    ),
+  });
+
+  if (!ownedProject) {
+    return { error: "Project not found or unauthorized" };
+  }
+
+  const item = await db.query.items.findFirst({
+    where: and(
+      eq(items.id, itemId),
+      eq(items.projectId, projectId),
+      eq(items.status, "reserved"),
+      isNull(items.deletedAt)
+    ),
+  });
+
+  if (!item) {
+    return { error: "Item not found or not in reserved status" };
+  }
+
+  let buyerUserId: string | null = null;
+
+  if (buyerEmail) {
+    const buyer = await db.query.profiles.findFirst({
+      where: ilike(profiles.email, buyerEmail),
+      columns: { id: true },
+    });
+    if (!buyer) {
+      return { error: "Buyer not found with this email" };
+    }
+    buyerUserId = buyer.id;
+  }
+
+  await db
+    .update(items)
+    .set({
+      reservedForUserId: buyerUserId,
+      reservedAt: buyerUserId ? new Date() : null,
+      updatedAt: new Date(),
+    })
+    .where(eq(items.id, itemId));
+
+  revalidatePath(`/seller/projects/${projectId}/items`);
+  return { success: true };
+}
+
+/**
+ * Mark an item as sold and optionally link the sale to a buyer.
+ * If the item was reserved for a buyer, that buyer is automatically carried over.
+ */
+export async function markItemSoldAction(formData: FormData) {
+  const user = await requireSeller();
+
+  const itemId = formData.get("itemId") as string;
+  const projectId = formData.get("projectId") as string;
+  const buyerEmail = (formData.get("buyerEmail") as string)?.trim() || null;
+
+  if (!itemId || !projectId) {
+    return { error: "Missing item or project" };
+  }
+
+  const sellerAccountId = await getSellerAccountId(user);
+  if (!sellerAccountId) {
+    return { error: "Seller account not found" };
+  }
+
+  const ownedProject = await db.query.projects.findFirst({
+    where: and(
+      eq(projects.id, projectId),
+      eq(projects.sellerId, sellerAccountId),
+      isNull(projects.deletedAt)
+    ),
+  });
+
+  if (!ownedProject) {
+    return { error: "Project not found or unauthorized" };
+  }
+
+  const item = await db.query.items.findFirst({
+    where: and(
+      eq(items.id, itemId),
+      eq(items.projectId, projectId),
+      isNull(items.deletedAt)
+    ),
+  });
+
+  if (!item) {
+    return { error: "Item not found" };
+  }
+
+  let soldToUserId: string | null = null;
+  const now = new Date();
+
+  if (buyerEmail) {
+    const buyer = await db.query.profiles.findFirst({
+      where: ilike(profiles.email, buyerEmail),
+      columns: { id: true },
+    });
+    if (!buyer) {
+      return { error: "Buyer not found with this email" };
+    }
+    soldToUserId = buyer.id;
+  } else if (item.reservedForUserId) {
+    soldToUserId = item.reservedForUserId;
+  }
+
+  await db
+    .update(items)
+    .set({
+      status: "sold",
+      soldToUserId,
+      soldAt: now,
+      updatedAt: now,
+    })
+    .where(eq(items.id, itemId));
+
+  revalidatePath(`/seller/projects/${projectId}/items`);
+  revalidatePath("/reservations");
+  revalidatePath("/purchases");
+  return { success: true };
+}
+
+/**
+ * Search for buyers by email (for seller to link reservations/sales).
+ */
+export async function searchBuyersAction(query: string) {
+  const user = await requireSeller();
+
+  if (!query || query.length < 2) {
+    return [];
+  }
+
+  const results = await db
+    .select({ id: profiles.id, email: profiles.email, displayName: profiles.displayName })
+    .from(profiles)
+    .where(ilike(profiles.email, `%${query}%`))
+    .limit(5);
+
+  return results;
 }

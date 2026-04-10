@@ -141,6 +141,14 @@ export const items = pgTable("items", {
   coverImageUrl: text("cover_image_url"),
   sortOrder: integer("sort_order").default(0).notNull(),
   viewCount: integer("view_count").default(0).notNull(),
+  reservedForUserId: uuid("reserved_for_user_id").references(() => profiles.id, {
+    onDelete: "set null",
+  }),
+  soldToUserId: uuid("sold_to_user_id").references(() => profiles.id, {
+    onDelete: "set null",
+  }),
+  reservedAt: timestamp("reserved_at", { withTimezone: true }),
+  soldAt: timestamp("sold_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),
@@ -356,6 +364,8 @@ export const profilesRelations = relations(profiles, ({ many }) => ({
   wishlists: many(buyerWishlists),
   intents: many(buyerIntents),
   threads: many(conversationThreads),
+  reservedItems: many(items, { relationName: "reservedItems" }),
+  purchasedItems: many(items, { relationName: "purchasedItems" }),
 }));
 
 export const sessionsRelations = relations(sessions, ({ one }) => ({
@@ -407,6 +417,16 @@ export const itemsRelations = relations(items, ({ one, many }) => ({
   category: one(projectCategories, {
     fields: [items.categoryId],
     references: [projectCategories.id],
+  }),
+  reservedForUser: one(profiles, {
+    fields: [items.reservedForUserId],
+    references: [profiles.id],
+    relationName: "reservedItems",
+  }),
+  soldToUser: one(profiles, {
+    fields: [items.soldToUserId],
+    references: [profiles.id],
+    relationName: "purchasedItems",
   }),
   images: many(itemImages),
   files: many(itemFiles),

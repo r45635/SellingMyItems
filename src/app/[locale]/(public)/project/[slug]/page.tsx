@@ -60,6 +60,7 @@ export default async function ProjectPage({
       status: items.status,
       updatedAt: items.updatedAt,
       viewCount: items.viewCount,
+      reservedForUserId: items.reservedForUserId,
     })
     .from(items)
     .where(and(eq(items.projectId, project.id), isNull(items.deletedAt), ne(items.status, "hidden")))
@@ -162,6 +163,7 @@ export default async function ProjectPage({
                   viewCount={item.viewCount}
                   href={`/project/${slug}/item/${item.id}`}
                   isWishlisted={wishlistedItemIds.has(item.id)}
+                  isReservedForCurrentUser={item.status === "reserved" && item.reservedForUserId === user?.id}
                   wishlistButton={
                     <WishlistHeartButton
                       itemId={item.id}

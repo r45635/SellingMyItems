@@ -7,8 +7,9 @@ import { Link } from "@/i18n/navigation";
 import { removeWishlistItemAction } from "@/features/wishlist/actions";
 import { submitIntentAction } from "@/features/intents/actions";
 import Image from "next/image";
-import { ImageOff, Tag } from "lucide-react";
+import { ImageOff, Tag, AlertTriangle, Ban } from "lucide-react";
 import { BLUR_PLACEHOLDER } from "@/lib/image/placeholders";
+import { Badge } from "@/components/ui/badge";
 
 function formatCurrency(amount: number, currency: string) {
   return new Intl.NumberFormat(undefined, { style: "currency", currency }).format(amount);
@@ -134,10 +135,18 @@ export default async function WishlistPage() {
                           )
                         : null;
 
+                      const isUnavailable = row.itemStatus === "reserved" || row.itemStatus === "sold";
+
                       return (
                         <div
                           key={row.itemId}
-                          className="rounded-lg border p-3 flex items-center gap-3"
+                          className={`rounded-lg border p-3 flex items-center gap-3 ${
+                            row.itemStatus === "sold"
+                              ? "opacity-60 border-gray-300 bg-gray-50 dark:bg-gray-900/30"
+                              : row.itemStatus === "reserved"
+                                ? "border-red-300 bg-red-50/50 dark:border-red-900 dark:bg-red-950/20"
+                                : ""
+                          }`}
                         >
                           {/* Thumbnail */}
                           <Link
@@ -172,9 +181,21 @@ export default async function WishlistPage() {
                             >
                               {row.itemTitle}
                             </Link>
-                            <p className="text-xs text-muted-foreground">
-                              {tItem(row.itemStatus)}
-                            </p>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              {row.itemStatus === "reserved" ? (
+                                <Badge className="bg-red-600 text-white border-red-600 hover:bg-red-600 font-bold text-[10px] px-2 py-0.5">
+                                  {tItem("reserved")}
+                                </Badge>
+                              ) : row.itemStatus === "sold" ? (
+                                <Badge className="bg-gray-900 text-white border-gray-900 hover:bg-gray-900 font-bold text-[10px] px-2 py-0.5">
+                                  {tItem("sold")}
+                                </Badge>
+                              ) : (
+                                <p className="text-xs text-muted-foreground">
+                                  {tItem(row.itemStatus)}
+                                </p>
+                              )}
+                            </div>
                           </div>
 
                           {/* Prices */}
@@ -252,12 +273,34 @@ export default async function WishlistPage() {
                   })}
 
                   {/* Intent submission form for this project */}
+                  {(() => {
+                    const availableItems = projectItems.filter((row) => row.itemStatus === "available");
+                    const unavailableItems = projectItems.filter((row) => row.itemStatus !== "available");
+                    const hasAvailable = availableItems.length > 0;
+
+                    return (
                   <details className="rounded-lg border p-4">
                     <summary className="cursor-pointer font-medium text-sm">
                       {t("sendIntent")}
                     </summary>
+                    {unavailableItems.length > 0 && (
+                      <div className="mt-3 rounded-lg border border-amber-300 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30 p-3 flex items-start gap-2">
+                        <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                        <p className="text-xs text-amber-800 dark:text-amber-200">
+                          {t("unavailableItemsWarning", { count: unavailableItems.length })}
+                        </p>
+                      </div>
+                    )}
+                    {!hasAvailable ? (
+                      <div className="mt-3 rounded-lg border border-red-300 bg-red-50 dark:border-red-900 dark:bg-red-950/30 p-3 flex items-start gap-2">
+                        <Ban className="h-4 w-4 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
+                        <p className="text-xs text-red-800 dark:text-red-200 font-medium">
+                          {t("noAvailableItems")}
+                        </p>
+                      </div>
+                    ) : (
                     <form action={submitIntentAction} className="mt-4 space-y-3">
-                      {projectItems.map((row) => (
+                      {availableItems.map((row) => (
                         <input
                           key={row.itemId}
                           type="hidden"
@@ -304,7 +347,10 @@ export default async function WishlistPage() {
                         {tIntent("submit")}
                       </button>
                     </form>
+                    )}
                   </details>
+                    );
+                  })()}
                 </div>
               );
             }

@@ -15,6 +15,7 @@ interface ItemTeaserCardProps {
   isWishlisted?: boolean;
   viewCount?: number;
   wishlistButton?: React.ReactNode;
+  isReservedForCurrentUser?: boolean;
 }
 
 export function ItemTeaserCard({
@@ -27,6 +28,7 @@ export function ItemTeaserCard({
   isWishlisted,
   viewCount,
   wishlistButton,
+  isReservedForCurrentUser,
 }: ItemTeaserCardProps) {
   const t = useTranslations("item");
 
@@ -60,9 +62,15 @@ export function ItemTeaserCard({
         {status !== "available" && (
           <Badge
             variant={status === "sold" ? "destructive" : status === "hidden" ? "outline" : "secondary"}
-            className="absolute top-2 right-2 shadow-sm"
+            className={`absolute top-2 right-2 shadow-sm ${
+              status === "reserved"
+                ? "bg-red-600 text-white border-red-600 hover:bg-red-600 font-bold text-xs px-2.5 py-1"
+                : status === "sold"
+                  ? "bg-gray-900 text-white border-gray-900 hover:bg-gray-900 font-bold text-xs px-2.5 py-1"
+                  : ""
+            }`}
           >
-            {label}
+            {isReservedForCurrentUser && status === "reserved" ? t("reservedForYou") : label}
           </Badge>
         )}
         {wishlistButton ? (

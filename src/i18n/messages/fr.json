@@ -24,7 +24,9 @@
     "sellerDashboard": "Tableau de bord vendeur",
     "adminDashboard": "Administration",
     "adminEmails": "Emails",
-    "adminEmailsDescription": "Surveiller les envois d'emails et gérer la configuration API Resend"
+    "adminEmailsDescription": "Surveiller les envois d'emails et gérer la configuration API Resend",
+    "reservations": "Mes Réservations",
+    "purchases": "Mes Achats"
   },
   "home": {
     "hero": "Trouvez des articles uniques près de chez vous",
@@ -93,6 +95,10 @@
     "reserved": "Réservé",
     "sold": "Vendu",
     "hidden": "Suspendu",
+    "reservedForYou": "Réservé pour vous",
+    "reservedForYouAlert": "Cet article vous est réservé. Contactez le vendeur pour organiser le retrait.",
+    "reservedAlert": "Cet article est actuellement réservé.",
+    "soldAlert": "Cet article a été vendu et n'est plus disponible.",
     "addToWishlist": "Ajouter à ma sélection",
     "removeFromWishlist": "Retirer de ma sélection",
     "signInToSeeDetails": "Connectez-vous pour voir les détails",
@@ -124,7 +130,9 @@
     "summaryTitle": "Résumé de la sélection",
     "addToFavorites": "Cliquer pour ajouter aux favoris",
     "removeFromFavorites": "Cliquer pour retirer des favoris",
-    "confirmRemove": "Retirer cet article de vos favoris ?"
+    "confirmRemove": "Retirer cet article de vos favoris ?",
+    "unavailableItemsWarning": "{count, plural, one {# article n'est} other {# articles ne sont}} plus disponible(s) et ne sera/seront pas inclus dans votre intention.",
+    "noAvailableItems": "Tous les articles de ce projet sont réservés ou vendus. Vous ne pouvez pas envoyer d'intention d'achat."
   },
   "intent": {
     "title": "Intention d'achat",
@@ -184,7 +192,31 @@
       "reserved": "Réservé",
       "sold": "Vendu",
       "hidden": "Suspendu"
-    }
+    },
+    "reservedFor": "Réservé pour",
+    "soldTo": "Vendu à",
+    "linkBuyer": "Lier un acheteur",
+    "markAsSold": "Marquer comme vendu",
+    "markSoldDescription": "L'acheteur réservé sera automatiquement enregistré comme acquéreur.",
+    "confirmSold": "Confirmer la vente",
+    "confirmLink": "Lier l'acheteur",
+    "cancelAction": "Annuler",
+    "searchBuyerPlaceholder": "Rechercher un email acheteur..."
+  },
+  "reservations": {
+    "title": "Mes Réservations",
+    "empty": "Aucun article ne vous est actuellement réservé.",
+    "description": "Ces articles vous sont réservés. Contactez le vendeur pour organiser le retrait et le paiement.",
+    "itemCount": "{count, plural, one {# article} other {# articles}}",
+    "reservedForYou": "Réservé pour vous",
+    "projectTotal": "Total du projet"
+  },
+  "purchases": {
+    "title": "Mes Achats",
+    "empty": "Vous n'avez encore acheté aucun article.",
+    "itemCount": "{count, plural, one {# article} other {# articles}}",
+    "purchased": "Acheté",
+    "projectTotal": "Total du projet"
   },
   "validation": {
     "required": "Ce champ est requis",

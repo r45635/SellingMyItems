@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ExternalLink, Clock, Eye } from "lucide-react";
+import { ExternalLink, Clock, Eye, AlertTriangle, Ban } from "lucide-react";
 import { ImageCarousel } from "./image-carousel";
 import { useTranslations } from "next-intl";
 import { ITEM_CONDITIONS } from "@/lib/validations";
@@ -22,6 +22,7 @@ interface ItemDetailCardProps {
   categoryName?: string | null;
   updatedAt?: Date | string | null;
   viewCount?: number;
+  isReservedForCurrentUser?: boolean;
 }
 
 export function ItemDetailCard({
@@ -41,6 +42,7 @@ export function ItemDetailCard({
   categoryName,
   updatedAt,
   viewCount,
+  isReservedForCurrentUser,
 }: ItemDetailCardProps) {
   const t = useTranslations("item");
 
@@ -84,11 +86,37 @@ export function ItemDetailCard({
     <Card className="overflow-hidden">
       <ImageCarousel images={allImages} title={title} />
 
+      {status === "reserved" && (
+        <div className="mx-4 mt-4 rounded-lg border border-red-300 bg-red-50 dark:border-red-900 dark:bg-red-950/30 p-3 flex items-center gap-3">
+          <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400 shrink-0" />
+          <p className="text-sm font-semibold text-red-800 dark:text-red-200">
+            {isReservedForCurrentUser ? t("reservedForYouAlert") : t("reservedAlert")}
+          </p>
+        </div>
+      )}
+      {status === "sold" && (
+        <div className="mx-4 mt-4 rounded-lg border border-gray-300 bg-gray-100 dark:border-gray-700 dark:bg-gray-800 p-3 flex items-center gap-3">
+          <Ban className="h-5 w-5 text-gray-600 dark:text-gray-400 shrink-0" />
+          <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+            {t("soldAlert")}
+          </p>
+        </div>
+      )}
+
       <CardHeader>
         <div className="flex items-start justify-between gap-2">
           <CardTitle className="text-xl">{title}</CardTitle>
-          <Badge variant={status === "sold" ? "destructive" : status === "pending" || status === "reserved" ? "secondary" : status === "hidden" ? "outline" : "default"}>
-            {statusLabel}
+          <Badge
+            variant={status === "sold" ? "destructive" : status === "pending" || status === "reserved" ? "secondary" : status === "hidden" ? "outline" : "default"}
+            className={`${
+              status === "reserved"
+                ? "bg-red-600 text-white border-red-600 hover:bg-red-600 font-bold px-3 py-1 text-sm"
+                : status === "sold"
+                  ? "bg-gray-900 text-white border-gray-900 hover:bg-gray-900 font-bold px-3 py-1 text-sm"
+                  : ""
+            }`}
+          >
+            {isReservedForCurrentUser && status === "reserved" ? t("reservedForYou") : statusLabel}
           </Badge>
         </div>
         {(formattedPrice || formattedOriginalPrice) && (
