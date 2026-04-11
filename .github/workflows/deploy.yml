@@ -24,8 +24,8 @@ jobs:
             set -euo pipefail
             # Global deploy lock on VPS to avoid overlapping runs.
             exec 9>/tmp/sellingmyitems-deploy.lock
-            if ! flock -n 9; then
-              echo "❌ Another deployment is already running."
+            if ! flock -w 1200 9; then
+              echo "❌ Could not acquire deploy lock within 20 minutes."
               exit 1
             fi
 
