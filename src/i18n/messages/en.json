@@ -78,7 +78,17 @@
     "items": "Items",
     "categories": "Categories",
     "noItems": "No items yet",
-    "viewItem": "View item"
+    "viewItem": "View item",
+    "itemCount": "{count, plural, one {item} other {items}}",
+    "filterAll": "All statuses",
+    "filterAvailable": "Available",
+    "filterReserved": "Reserved",
+    "filterSold": "Sold",
+    "sortDefault": "Default order",
+    "sortPriceAsc": "Price: low to high",
+    "sortPriceDesc": "Price: high to low",
+    "sortNewest": "Most recent",
+    "noMatchingItems": "No items match the current filter"
   },
   "item": {
     "title": "Title",
@@ -131,6 +141,8 @@
     "addToFavorites": "Click to add to favorites",
     "removeFromFavorites": "Click to remove from favorites",
     "confirmRemove": "Remove this item from your favorites?",
+    "addedToWishlist": "Added to wishlist",
+    "removedFromWishlist": "Removed from wishlist",
     "unavailableItemsWarning": "{count, plural, one {# item is} other {# items are}} no longer available and will not be included in your intent.",
     "noAvailableItems": "All items in this project are reserved or sold. You cannot submit a purchase intent."
   },
@@ -166,7 +178,8 @@
     "seller": "Seller",
     "unknownProject": "Unknown project",
     "unknownSeller": "Unknown seller",
-    "unknownBuyer": "Unknown buyer"
+    "unknownBuyer": "Unknown buyer",
+    "sent": "Message sent"
   },
   "seller": {
     "dashboard": "Seller Dashboard",

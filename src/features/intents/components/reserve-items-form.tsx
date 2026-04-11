@@ -2,6 +2,8 @@
 
 import { useTransition, useState } from "react";
 import { reserveItemsFromIntentAction } from "../actions";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 interface IntentItem {
   itemId: string;
@@ -19,6 +21,7 @@ interface ReserveItemsFormProps {
     selectItems: string;
     reserving: string;
     itemUnavailable: string;
+    reserved?: string;
   };
 }
 
@@ -48,6 +51,7 @@ export function ReserveItemsForm({ intentId, items, labels }: ReserveItemsFormPr
     if (selected.size === 0) return;
     startTransition(async () => {
       await reserveItemsFromIntentAction(intentId, Array.from(selected));
+      toast.success(labels.reserved ?? "Items reserved");
     });
   }
 
@@ -87,23 +91,25 @@ export function ReserveItemsForm({ intentId, items, labels }: ReserveItemsFormPr
         })}
       </div>
       {availableItems.length > 1 && (
-        <button
+        <Button
           type="button"
+          variant="link"
+          size="xs"
           onClick={selectAll}
-          className="text-xs text-primary hover:underline"
           disabled={isPending}
         >
           Select all available
-        </button>
+        </Button>
       )}
-      <button
+      <Button
         type="button"
         onClick={handleReserve}
         disabled={selected.size === 0 || isPending}
-        className="inline-flex h-8 items-center justify-center rounded-lg bg-orange-600 px-3 text-sm text-white hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed"
+        className="bg-orange-600 text-white hover:bg-orange-700"
+        size="sm"
       >
         {isPending ? labels.reserving : labels.reserveSelected} ({selected.size})
-      </button>
+      </Button>
     </div>
   );
 }

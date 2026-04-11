@@ -4,6 +4,8 @@ import { db } from "@/db";
 import { profiles } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 async function updateProfileAction(formData: FormData) {
   "use server";
@@ -41,12 +43,11 @@ export default async function AccountPage() {
           <label htmlFor="email" className="block text-sm font-medium mb-1">
             Email
           </label>
-          <input
+          <Input
             id="email"
             type="email"
             value={user.email}
             disabled
-            className="w-full rounded-md border border-input bg-muted px-3 py-2 text-sm"
           />
         </div>
 
@@ -54,12 +55,11 @@ export default async function AccountPage() {
           <label htmlFor="displayName" className="block text-sm font-medium mb-1">
             Display name
           </label>
-          <input
+          <Input
             id="displayName"
             name="displayName"
             type="text"
             defaultValue={profile?.displayName ?? ""}
-            className="w-full rounded-md border border-input px-3 py-2 text-sm"
           />
         </div>
 
@@ -67,12 +67,11 @@ export default async function AccountPage() {
           <label htmlFor="phone" className="block text-sm font-medium mb-1">
             Phone
           </label>
-          <input
+          <Input
             id="phone"
             name="phone"
             type="tel"
             defaultValue={profile?.phone ?? ""}
-            className="w-full rounded-md border border-input px-3 py-2 text-sm"
           />
         </div>
 
@@ -80,12 +79,9 @@ export default async function AccountPage() {
           Role: {user.role === "seller" ? "Seller" : "Buyer"}
         </div>
 
-        <button
-          type="submit"
-          className="inline-flex h-9 items-center justify-center rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/80"
-        >
+        <Button type="submit" size="lg">
           Save
-        </button>
+        </Button>
       </form>
     </div>
   );

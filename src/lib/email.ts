@@ -211,7 +211,7 @@ function emailHeader(): string {
 export async function sendWelcomeEmail(
   to: string,
   displayName: string,
-  locale: string = "fr"
+  locale: string = "en"
 ) {
   const fr = locale === "fr";
   const appUrl = siteConfig.url;
@@ -266,7 +266,7 @@ export async function sendMessageNotificationEmail(
   projectName: string,
   messagePreview: string,
   threadUrl: string,
-  locale: string = "fr"
+  locale: string = "en"
 ) {
   const fr = locale === "fr";
   const subject = fr
@@ -300,7 +300,7 @@ export async function sendIntentReceivedEmail(
   projectName: string,
   itemTitles: string[],
   intentUrl: string,
-  locale: string = "fr"
+  locale: string = "en"
 ) {
   const fr = locale === "fr";
   const subject = fr
@@ -330,7 +330,7 @@ export async function sendIntentStatusEmail(
   to: string,
   status: "accepted" | "declined",
   projectName: string,
-  locale: string = "fr"
+  locale: string = "en"
 ) {
   const fr = locale === "fr";
 
@@ -369,7 +369,7 @@ export async function sendMessageCopyEmail(
   projectName: string,
   messageBody: string,
   threadUrl: string,
-  locale: string = "fr"
+  locale: string = "en"
 ) {
   const fr = locale === "fr";
   const subject = fr

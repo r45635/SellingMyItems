@@ -78,7 +78,17 @@
     "items": "Articles",
     "categories": "Catégories",
     "noItems": "Aucun article pour le moment",
-    "viewItem": "Voir l'article"
+    "viewItem": "Voir l'article",
+    "itemCount": "{count, plural, one {article} other {articles}}",
+    "filterAll": "Tous les statuts",
+    "filterAvailable": "Disponible",
+    "filterReserved": "Réservé",
+    "filterSold": "Vendu",
+    "sortDefault": "Ordre par défaut",
+    "sortPriceAsc": "Prix croissant",
+    "sortPriceDesc": "Prix décroissant",
+    "sortNewest": "Plus récents",
+    "noMatchingItems": "Aucun article ne correspond au filtre"
   },
   "item": {
     "title": "Titre",
@@ -131,6 +141,8 @@
     "addToFavorites": "Cliquer pour ajouter aux favoris",
     "removeFromFavorites": "Cliquer pour retirer des favoris",
     "confirmRemove": "Retirer cet article de vos favoris ?",
+    "addedToWishlist": "Ajouté à la sélection",
+    "removedFromWishlist": "Retiré de la sélection",
     "unavailableItemsWarning": "{count, plural, one {# article n'est} other {# articles ne sont}} plus disponible(s) et ne sera/seront pas inclus dans votre intention.",
     "noAvailableItems": "Tous les articles de ce projet sont réservés ou vendus. Vous ne pouvez pas envoyer d'intention d'achat."
   },
@@ -166,7 +178,8 @@
     "seller": "Vendeur",
     "unknownProject": "Projet inconnu",
     "unknownSeller": "Vendeur inconnu",
-    "unknownBuyer": "Acheteur inconnu"
+    "unknownBuyer": "Acheteur inconnu",
+    "sent": "Message envoyé"
   },
   "seller": {
     "dashboard": "Tableau de bord vendeur",

@@ -5,9 +5,9 @@ import { buyerWishlistItems, buyerWishlists, items, projects } from "@/db/schema
 import { and, eq, inArray, isNull } from "drizzle-orm";
 import { Link } from "@/i18n/navigation";
 import { removeWishlistItemAction } from "@/features/wishlist/actions";
-import { submitIntentAction } from "@/features/intents/actions";
+import { IntentSubmitDialog } from "@/features/intents/components/intent-submit-dialog";
 import Image from "next/image";
-import { ImageOff, Tag, AlertTriangle, Ban } from "lucide-react";
+import { ImageOff, Tag } from "lucide-react";
 import { BLUR_PLACEHOLDER } from "@/lib/image/placeholders";
 import { Badge } from "@/components/ui/badge";
 
@@ -272,85 +272,27 @@ export default async function WishlistPage() {
                     );
                   })}
 
-                  {/* Intent submission form for this project */}
-                  {(() => {
-                    const availableItems = projectItems.filter((row) => row.itemStatus === "available");
-                    const unavailableItems = projectItems.filter((row) => row.itemStatus !== "available");
-                    const hasAvailable = availableItems.length > 0;
-
-                    return (
-                  <details className="rounded-lg border p-4">
-                    <summary className="cursor-pointer font-medium text-sm">
-                      {t("sendIntent")}
-                    </summary>
-                    {unavailableItems.length > 0 && (
-                      <div className="mt-3 rounded-lg border border-amber-300 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30 p-3 flex items-start gap-2">
-                        <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-                        <p className="text-xs text-amber-800 dark:text-amber-200">
-                          {t("unavailableItemsWarning", { count: unavailableItems.length })}
-                        </p>
-                      </div>
-                    )}
-                    {!hasAvailable ? (
-                      <div className="mt-3 rounded-lg border border-red-300 bg-red-50 dark:border-red-900 dark:bg-red-950/30 p-3 flex items-start gap-2">
-                        <Ban className="h-4 w-4 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
-                        <p className="text-xs text-red-800 dark:text-red-200 font-medium">
-                          {t("noAvailableItems")}
-                        </p>
-                      </div>
-                    ) : (
-                    <form action={submitIntentAction} className="mt-4 space-y-3">
-                      {availableItems.map((row) => (
-                        <input
-                          key={row.itemId}
-                          type="hidden"
-                          name="itemId"
-                          value={row.itemId}
-                        />
-                      ))}
-
-                      <div>
-                        <label
-                          htmlFor={`phone-${projectId}`}
-                          className="block text-sm font-medium mb-1"
-                        >
-                          {tIntent("phone")}{" "}
-                          <span className="text-muted-foreground font-normal">({tIntent("optional")})</span>
-                        </label>
-                        <input
-                          id={`phone-${projectId}`}
-                          name="phone"
-                          type="tel"
-                          className="w-full rounded-md border border-input px-3 py-2 text-sm"
-                        />
-                      </div>
-
-                      <div>
-                        <label
-                          htmlFor={`notes-${projectId}`}
-                          className="block text-sm font-medium mb-1"
-                        >
-                          {tIntent("pickupNotes")}
-                        </label>
-                        <textarea
-                          id={`notes-${projectId}`}
-                          name="pickupNotes"
-                          rows={2}
-                          className="w-full rounded-md border border-input px-3 py-2 text-sm"
-                        />
-                      </div>
-
-                      <button
-                        type="submit"
-                        className="inline-flex h-9 items-center justify-center rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/80"
-                      >
-                        {tIntent("submit")}
-                      </button>
-                    </form>
-                    )}
-                  </details>
-                    );
-                  })()}
+                  {/* Intent submission dialog for this project */}
+                  <IntentSubmitDialog
+                    projectId={projectId}
+                    items={projectItems.map((row) => ({
+                      itemId: row.itemId,
+                      itemTitle: row.itemTitle,
+                      itemStatus: row.itemStatus,
+                    }))}
+                    labels={{
+                      sendIntent: t("sendIntent"),
+                      phone: tIntent("phone"),
+                      optional: tIntent("optional"),
+                      pickupNotes: tIntent("pickupNotes"),
+                      submit: tIntent("submit"),
+                      submitted: tIntent("submitted"),
+                      unavailableItemsWarning: t("unavailableItemsWarning", {
+                        count: projectItems.filter((r) => r.itemStatus !== "available").length,
+                      }),
+                      noAvailableItems: t("noAvailableItems"),
+                    }}
+                  />
                 </div>
               );
             }

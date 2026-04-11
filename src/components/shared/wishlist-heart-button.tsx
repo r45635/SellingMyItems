@@ -3,6 +3,7 @@
 import { Heart } from "lucide-react";
 import { useTransition, useState } from "react";
 import { addWishlistItemAction, removeWishlistItemAction } from "@/features/wishlist/actions";
+import { toast } from "sonner";
 
 interface WishlistHeartButtonProps {
   itemId: string;
@@ -11,6 +12,8 @@ interface WishlistHeartButtonProps {
   addTitle?: string;
   removeTitle?: string;
   confirmRemoveMessage?: string;
+  addedMessage?: string;
+  removedMessage?: string;
 }
 
 export function WishlistHeartButton({
@@ -20,6 +23,8 @@ export function WishlistHeartButton({
   addTitle = "Click to add to favorites",
   removeTitle = "Click to remove from favorites",
   confirmRemoveMessage = "Remove this item from your favorites?",
+  addedMessage = "Added to wishlist",
+  removedMessage = "Removed from wishlist",
 }: WishlistHeartButtonProps) {
   const [isPending, startTransition] = useTransition();
   const [optimisticWishlisted, setOptimisticWishlisted] = useState(initialIsWishlisted);
@@ -39,6 +44,7 @@ export function WishlistHeartButton({
         formData.set("itemId", itemId);
         formData.set("returnPath", returnPath);
         await removeWishlistItemAction(formData);
+        toast.success(removedMessage);
       });
     } else {
       setOptimisticWishlisted(true);
@@ -47,6 +53,7 @@ export function WishlistHeartButton({
         formData.set("itemId", itemId);
         formData.set("returnPath", returnPath);
         await addWishlistItemAction(formData);
+        toast.success(addedMessage);
       });
     }
   }

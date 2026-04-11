@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { routing } from "@/i18n/routing";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
+import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav";
+import { Toaster } from "sonner";
 
 export default async function LocaleLayout({
   children,
@@ -22,8 +24,10 @@ export default async function LocaleLayout({
     <NextIntlClientProvider locale={locale} messages={messages}>
       <div className="flex flex-col min-h-screen" lang={locale}>
         <Header />
-        <main className="flex-1">{children}</main>
+        <main className="flex-1 pb-16 md:pb-0">{children}</main>
         <Footer />
+        <MobileBottomNav />
+        <Toaster position="bottom-right" richColors closeButton duration={3000} />
       </div>
     </NextIntlClientProvider>
   );

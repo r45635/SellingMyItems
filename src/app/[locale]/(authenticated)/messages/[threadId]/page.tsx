@@ -14,6 +14,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { sendMessageAction } from "@/features/messages/actions";
 import { LocalizedDateTime } from "@/components/shared/localized-date-time";
+import { MessageSendForm } from "@/features/messages/components/message-send-form";
 
 export default async function BuyerMessageThreadPage({
   params,
@@ -122,28 +123,13 @@ export default async function BuyerMessageThreadPage({
         )}
       </div>
 
-      <form action={sendMessageAction} className="space-y-2">
-        <input type="hidden" name="threadId" value={thread.id} />
-        <div className="flex gap-2">
-          <input
-            name="body"
-            type="text"
-            placeholder={t("placeholder")}
-            required
-            className="flex-1 rounded-md border border-input px-3 py-2 text-sm"
-          />
-          <button
-            type="submit"
-            className="inline-flex h-9 items-center justify-center rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/80"
-          >
-            {t("sendMessage")}
-          </button>
-        </div>
-        <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
-          <input type="checkbox" name="sendCopy" className="rounded border-gray-300" />
-          {t("sendCopy")}
-        </label>
-      </form>
+      <MessageSendForm
+        threadId={thread.id}
+        placeholder={t("placeholder")}
+        sendLabel={t("sendMessage")}
+        sendCopyLabel={t("sendCopy")}
+        sentMessage={t("sent")}
+      />
     </div>
   );
 }

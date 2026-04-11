@@ -1,10 +1,10 @@
 import { ItemTeaserCard } from "@/components/shared/item-teaser-card";
-import { WishlistHeartButton } from "@/components/shared/wishlist-heart-button";
+import { ProjectItemsGrid } from "@/features/items/components/project-items-grid";
 import { Badge } from "@/components/ui/badge";
 import { MapPin, ArrowLeft, Package, User, Mail, Lock } from "lucide-react";
 import { db } from "@/db";
 import { buyerWishlistItems, buyerWishlists, items, profiles, projectCategories, projects, sellerAccounts } from "@/db/schema";
-import { and, asc, eq, inArray, isNull, ne } from "drizzle-orm";
+import { and, asc, eq, isNull, ne } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { Link } from "@/i18n/navigation";
 import { getUser } from "@/lib/auth";
@@ -60,6 +60,7 @@ export default async function ProjectPage({
       status: items.status,
       updatedAt: items.updatedAt,
       viewCount: items.viewCount,
+      price: items.price,
       reservedForUserId: items.reservedForUserId,
     })
     .from(items)
@@ -145,39 +146,21 @@ export default async function ProjectPage({
 
       {/* Items Grid */}
       {user ? (
-        /* Authenticated: full items grid */
+        /* Authenticated: full items grid with filter/sort */
         projectItems.length > 0 ? (
-          <>
-            <div className="flex items-center gap-2 mb-4">
-              <Package className="h-5 w-5 text-orange-500" />
-              <h2 className="text-lg font-semibold">{projectItems.length} item{projectItems.length !== 1 ? "s" : ""}</h2>
-            </div>
-            <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
-              {projectItems.map((item) => (
-                <ItemTeaserCard
-                  key={item.id}
-                  title={item.title}
-                  coverImageUrl={item.coverImageUrl}
-                  status={item.status}
-                  updatedAt={item.updatedAt}
-                  viewCount={item.viewCount}
-                  href={`/project/${slug}/item/${item.id}`}
-                  isWishlisted={wishlistedItemIds.has(item.id)}
-                  isReservedForCurrentUser={item.status === "reserved" && item.reservedForUserId === user?.id}
-                  wishlistButton={
-                    <WishlistHeartButton
-                      itemId={item.id}
-                      isWishlisted={wishlistedItemIds.has(item.id)}
-                      returnPath={`/project/${slug}`}
-                      addTitle={tWishlist("addToFavorites")}
-                      removeTitle={tWishlist("removeFromFavorites")}
-                      confirmRemoveMessage={tWishlist("confirmRemove")}
-                    />
-                  }
-                />
-              ))}
-            </div>
-          </>
+          <ProjectItemsGrid
+            items={projectItems}
+            slug={slug}
+            userId={user.id}
+            wishlistedItemIds={Array.from(wishlistedItemIds)}
+            labels={{
+              addToFavorites: tWishlist("addToFavorites"),
+              removeFromFavorites: tWishlist("removeFromFavorites"),
+              confirmRemove: tWishlist("confirmRemove"),
+              addedToWishlist: tWishlist("addedToWishlist"),
+              removedFromWishlist: tWishlist("removedFromWishlist"),
+            }}
+          />
         ) : (
           <div className="text-center py-16 text-muted-foreground">
             <Package className="h-10 w-10 mx-auto mb-3 text-muted-foreground/30" />
