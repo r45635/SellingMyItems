@@ -4,8 +4,18 @@ import { count, eq, sql, and, gte, desc } from "drizzle-orm";
 import { Mail, AlertTriangle, CheckCircle, Key } from "lucide-react";
 import { UpdateResendKeyForm } from "@/features/admin-dashboard/components/update-resend-key-form";
 import { UpdateResendFromEmailForm } from "@/features/admin-dashboard/components/update-resend-from-email-form";
+import { Pagination } from "@/components/shared/pagination";
 
-export default async function AdminEmailsPage() {
+const LOG_PAGE_SIZE = 30;
+
+export default async function AdminEmailsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
+  const { page: pageParam } = await searchParams;
+  const currentPage = Math.max(1, Number(pageParam) || 1);
+  const logOffset = (currentPage - 1) * LOG_PAGE_SIZE;
   const now = new Date();
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const thirtyDaysAgo = new Date(
@@ -17,6 +27,7 @@ export default async function AdminEmailsPage() {
     todayFailed,
     last30DaysDaily,
     recentLogs,
+    totalLogCountResult,
     resendKeySetting,
     resendFromEmailSetting,
   ] = await Promise.all([
@@ -57,7 +68,7 @@ export default async function AdminEmailsPage() {
       .groupBy(sql`DATE(${emailLogs.createdAt})`)
       .orderBy(sql`DATE(${emailLogs.createdAt}) DESC`),
 
-    // Last 50 email logs
+    // Paginated email logs + total count
     db
       .select({
         id: emailLogs.id,
@@ -70,7 +81,10 @@ export default async function AdminEmailsPage() {
       })
       .from(emailLogs)
       .orderBy(desc(emailLogs.createdAt))
-      .limit(50),
+      .limit(LOG_PAGE_SIZE)
+      .offset(logOffset),
+
+    db.select({ count: count() }).from(emailLogs),
 
     // Resend API key from app_settings
     db.query.appSettings.findFirst({
@@ -87,6 +101,8 @@ export default async function AdminEmailsPage() {
 
   const todayTotal = todayByType.reduce((sum, r) => sum + Number(r.count), 0);
   const todayFailedCount = Number(todayFailed[0]?.count ?? 0);
+  const totalLogItems = Number(totalLogCountResult[0]?.count ?? 0);
+  const totalLogPages = Math.ceil(totalLogItems / LOG_PAGE_SIZE);
 
   const typeLabels: Record<string, string> = {
     welcome: "Welcome",
@@ -218,7 +234,7 @@ export default async function AdminEmailsPage() {
 
       {/* Recent Email Logs */}
       <div className="rounded-xl border bg-card p-5 shadow-sm">
-        <h3 className="text-sm font-semibold mb-3">Recent Emails (last 50)</h3>
+        <h3 className="text-sm font-semibold mb-3">Email Logs ({totalLogItems})</h3>
         {recentLogs.length === 0 ? (
           <p className="text-sm text-muted-foreground">No emails sent yet.</p>
         ) : (
@@ -255,6 +271,12 @@ export default async function AdminEmailsPage() {
             </table>
           </div>
         )}
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalLogPages}
+          totalItems={totalLogItems}
+          pageSize={LOG_PAGE_SIZE}
+        />
       </div>
 
       {/* Update Resend API Key */}

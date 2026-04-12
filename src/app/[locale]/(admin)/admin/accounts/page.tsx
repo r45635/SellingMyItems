@@ -1,27 +1,46 @@
 import { db } from "@/db";
 import { profiles } from "@/db/schema";
-import { desc } from "drizzle-orm";
+import { count, desc } from "drizzle-orm";
 import { ToggleActiveButton } from "./toggle-active-button";
+import { Pagination } from "@/components/shared/pagination";
 
-export default async function AdminAccountsPage() {
-  const allProfiles = await db
-    .select({
-      id: profiles.id,
-      email: profiles.email,
-      role: profiles.role,
-      displayName: profiles.displayName,
-      isActive: profiles.isActive,
-      createdAt: profiles.createdAt,
-    })
-    .from(profiles)
-    .orderBy(desc(profiles.createdAt));
+const PAGE_SIZE = 20;
+
+export default async function AdminAccountsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
+  const { page: pageParam } = await searchParams;
+  const currentPage = Math.max(1, Number(pageParam) || 1);
+  const offset = (currentPage - 1) * PAGE_SIZE;
+
+  const [allProfiles, totalCountResult] = await Promise.all([
+    db
+      .select({
+        id: profiles.id,
+        email: profiles.email,
+        role: profiles.role,
+        displayName: profiles.displayName,
+        isActive: profiles.isActive,
+        createdAt: profiles.createdAt,
+      })
+      .from(profiles)
+      .orderBy(desc(profiles.createdAt))
+      .limit(PAGE_SIZE)
+      .offset(offset),
+    db.select({ count: count() }).from(profiles),
+  ]);
+
+  const totalItems = Number(totalCountResult[0]?.count ?? 0);
+  const totalPages = Math.ceil(totalItems / PAGE_SIZE);
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">Accounts management</h1>
         <p className="text-muted-foreground mt-1">
-          {allProfiles.length} account{allProfiles.length > 1 ? "s" : ""} total
+          {totalItems} account{totalItems > 1 ? "s" : ""} total
         </p>
       </div>
 
@@ -82,6 +101,13 @@ export default async function AdminAccountsPage() {
           </tbody>
         </table>
       </div>
+
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalItems={totalItems}
+        pageSize={PAGE_SIZE}
+      />
     </div>
   );
 }

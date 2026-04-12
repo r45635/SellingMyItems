@@ -2,22 +2,41 @@ import { db } from "@/db";
 import { projects, sellerAccounts, profiles, items } from "@/db/schema";
 import { count, desc, eq, isNull } from "drizzle-orm";
 import { TogglePublicButton } from "./toggle-public-button";
+import { Pagination } from "@/components/shared/pagination";
 
-export default async function AdminProjectsPage() {
-  const allProjects = await db
-    .select({
-      id: projects.id,
-      name: projects.name,
-      slug: projects.slug,
-      isPublic: projects.isPublic,
-      deletedAt: projects.deletedAt,
-      createdAt: projects.createdAt,
-      sellerEmail: profiles.email,
-    })
-    .from(projects)
-    .innerJoin(sellerAccounts, eq(projects.sellerId, sellerAccounts.id))
-    .innerJoin(profiles, eq(sellerAccounts.userId, profiles.id))
-    .orderBy(desc(projects.createdAt));
+const PAGE_SIZE = 20;
+
+export default async function AdminProjectsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
+  const { page: pageParam } = await searchParams;
+  const currentPage = Math.max(1, Number(pageParam) || 1);
+  const offset = (currentPage - 1) * PAGE_SIZE;
+
+  const [allProjects, totalCountResult] = await Promise.all([
+    db
+      .select({
+        id: projects.id,
+        name: projects.name,
+        slug: projects.slug,
+        isPublic: projects.isPublic,
+        deletedAt: projects.deletedAt,
+        createdAt: projects.createdAt,
+        sellerEmail: profiles.email,
+      })
+      .from(projects)
+      .innerJoin(sellerAccounts, eq(projects.sellerId, sellerAccounts.id))
+      .innerJoin(profiles, eq(sellerAccounts.userId, profiles.id))
+      .orderBy(desc(projects.createdAt))
+      .limit(PAGE_SIZE)
+      .offset(offset),
+    db.select({ count: count() }).from(projects),
+  ]);
+
+  const totalItems = Number(totalCountResult[0]?.count ?? 0);
+  const totalPages = Math.ceil(totalItems / PAGE_SIZE);
 
   // Get item counts per project
   const itemCounts = await db
@@ -38,7 +57,7 @@ export default async function AdminProjectsPage() {
       <div>
         <h1 className="text-2xl font-bold">Projects management</h1>
         <p className="text-muted-foreground mt-1">
-          {allProjects.length} project{allProjects.length > 1 ? "s" : ""} total
+          {totalItems} project{totalItems > 1 ? "s" : ""} total
         </p>
       </div>
 
@@ -100,6 +119,13 @@ export default async function AdminProjectsPage() {
           </tbody>
         </table>
       </div>
+
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalItems={totalItems}
+        pageSize={PAGE_SIZE}
+      />
     </div>
   );
 }

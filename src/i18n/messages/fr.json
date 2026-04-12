@@ -34,7 +34,10 @@
     "browseProjects": "Parcourir les projets",
     "signInPrompt": "Connectez-vous pour voir les détails, sauvegarder vos favoris et contacter les vendeurs",
     "itemsForSale": "{count, plural, one {# article} other {# articles}}",
-    "inSelection": "{count} dans la sélection"
+    "inSelection": "{count} dans la sélection",
+    "searchPlaceholder": "Rechercher un projet...",
+    "noProjects": "Les projets apparaîtront ici",
+    "noSearchResults": "Aucun projet ne correspond à votre recherche"
   },
   "auth": {
     "signIn": "Se connecter",
@@ -183,6 +186,13 @@
   },
   "seller": {
     "dashboard": "Tableau de bord vendeur",
+    "dashboardTotalItems": "Total articles",
+    "dashboardTotalViews": "Vues totales",
+    "dashboardWishlisted": "En favoris",
+    "dashboardIntents": "Intentions d'achat",
+    "dashboardConversations": "Conversations",
+    "dashboardItemStatus": "Articles par statut",
+    "dashboardViewAll": "Voir tout",
     "projects": "Projets",
     "items": "Articles",
     "createProject": "Nouveau projet",

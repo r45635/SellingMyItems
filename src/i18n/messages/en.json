@@ -34,7 +34,10 @@
     "browseProjects": "Browse projects",
     "signInPrompt": "Sign in to see full item details, save favorites, and contact sellers",
     "itemsForSale": "{count, plural, one {# item} other {# items}}",
-    "inSelection": "{count} in selection"
+    "inSelection": "{count} in selection",
+    "searchPlaceholder": "Search projects...",
+    "noProjects": "Projects will appear here",
+    "noSearchResults": "No projects match your search"
   },
   "auth": {
     "signIn": "Sign in",
@@ -183,6 +186,13 @@
   },
   "seller": {
     "dashboard": "Seller Dashboard",
+    "dashboardTotalItems": "Total Items",
+    "dashboardTotalViews": "Total Views",
+    "dashboardWishlisted": "Wishlisted",
+    "dashboardIntents": "Purchase Intents",
+    "dashboardConversations": "Conversations",
+    "dashboardItemStatus": "Items by Status",
+    "dashboardViewAll": "View all",
     "projects": "Projects",
     "items": "Items",
     "createProject": "New project",

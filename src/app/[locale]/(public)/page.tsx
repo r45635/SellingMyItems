@@ -2,12 +2,18 @@ import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { db } from "@/db";
 import { profiles, projects, sellerAccounts, items, buyerWishlists, buyerWishlistItems } from "@/db/schema";
-import { and, count, desc, eq, isNull, ne, inArray } from "drizzle-orm";
+import { and, count, desc, eq, isNull, ne, inArray, ilike } from "drizzle-orm";
 import { MapPin, ArrowRight, Tag, Package, ShoppingBag, Heart } from "lucide-react";
 import { SmiLogo } from "@/components/shared/smi-logo";
+import { SearchBar } from "@/components/shared/search-bar";
 import { getUser } from "@/lib/auth";
 
-export default async function HomePage() {
+export default async function HomePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string }>;
+}) {
+  const { q: searchQuery } = await searchParams;
   const t = await getTranslations("home");
 
   // Get seller accounts whose profile is active
@@ -18,6 +24,10 @@ export default async function HomePage() {
     .where(and(eq(profiles.isActive, true), eq(sellerAccounts.isActive, true)));
 
   const activeSellerIdSet = activeSellerIds.map((s) => s.id);
+
+  const searchFilter = searchQuery?.trim()
+    ? ilike(projects.name, `%${searchQuery.trim()}%`)
+    : undefined;
 
   const [publicProjects, user] = await Promise.all([
     activeSellerIdSet.length > 0
@@ -34,7 +44,8 @@ export default async function HomePage() {
             and(
               eq(projects.isPublic, true),
               isNull(projects.deletedAt),
-              inArray(projects.sellerId, activeSellerIdSet)
+              inArray(projects.sellerId, activeSellerIdSet),
+              searchFilter
             )
           )
           .orderBy(desc(projects.createdAt))
@@ -104,15 +115,20 @@ export default async function HomePage() {
       {/* Projects */}
       <section className="py-8 md:py-10">
         <div className="container px-4 md:px-6">
-          <div className="flex items-center gap-2 mb-5">
-            <Package className="h-5 w-5 text-orange-500" />
-            <h2 className="text-xl font-bold">{t("browseProjects")}</h2>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-5">
+            <div className="flex items-center gap-2">
+              <Package className="h-5 w-5 text-orange-500" />
+              <h2 className="text-xl font-bold">{t("browseProjects")}</h2>
+            </div>
+            <div className="sm:ml-auto">
+              <SearchBar />
+            </div>
           </div>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {publicProjects.length === 0 ? (
               <div className="col-span-full rounded-xl border-2 border-dashed p-12 text-center text-muted-foreground">
                 <Tag className="h-8 w-8 mx-auto mb-3 text-muted-foreground/40" />
-                <p>Projects will appear here</p>
+                <p>{searchQuery?.trim() ? t("noSearchResults") : t("noProjects")}</p>
               </div>
             ) : (
               publicProjects.map((project) => (
