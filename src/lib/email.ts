@@ -10,7 +10,8 @@ type EmailType =
   | "message_copy"
   | "intent_received"
   | "intent_status"
-  | "password_reset";
+  | "password_reset"
+  | "reservation_recap";
 
 const FROM_EMAIL =
   process.env.RESEND_FROM_EMAIL ?? "SellingMyItems <onboarding@resend.dev>";
@@ -391,4 +392,117 @@ export async function sendMessageCopyEmail(
   );
 
   return sendEmail(to, subject, html, "message_copy");
+}
+
+// ─── Reservation Recap (sent by seller to buyer) ────────────────────────────
+
+export async function sendReservationRecapEmail(
+  to: string,
+  buyerName: string,
+  sellerName: string,
+  projectName: string,
+  reservedItems: { title: string; price: number | null; currency: string }[],
+  personalMessage: string,
+  projectUrl: string,
+  locale: string = "en"
+) {
+  const fr = locale === "fr";
+  const subject = fr
+    ? `Récapitulatif de vos articles réservés — ${projectName}`
+    : `Your reserved items summary — ${projectName}`;
+
+  const itemRows = reservedItems
+    .map((item) => {
+      const priceStr =
+        item.price != null
+          ? new Intl.NumberFormat(fr ? "fr-FR" : "en-US", {
+              style: "currency",
+              currency: item.currency,
+            }).format(item.price)
+          : fr
+            ? "Prix non défini"
+            : "Price not set";
+      return `<tr>
+        <td style="padding: 8px 12px; border-bottom: 1px solid #eee;">${item.title}</td>
+        <td style="padding: 8px 12px; border-bottom: 1px solid #eee; text-align: right; font-weight: 600;">${priceStr}</td>
+      </tr>`;
+    })
+    .join("");
+
+  const total = reservedItems.reduce((sum, i) => sum + (i.price ?? 0), 0);
+  const totalCurrency = reservedItems[0]?.currency ?? "USD";
+  const totalStr = new Intl.NumberFormat(fr ? "fr-FR" : "en-US", {
+    style: "currency",
+    currency: totalCurrency,
+  }).format(total);
+
+  const escapedMessage = personalMessage
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\n/g, "<br/>");
+
+  const html = emailLayout(
+    `${emailHeader()}
+    ${fr
+      ? `<h2>Récapitulatif de vos réservations</h2>
+         <p>Bonjour <strong>${buyerName}</strong>,</p>
+         <p><strong>${sellerName}</strong> vous envoie un récapitulatif de vos articles réservés dans le projet <strong>${projectName}</strong> :</p>
+         <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
+           <thead>
+             <tr style="background: #f5f5f5;">
+               <th style="padding: 8px 12px; text-align: left; font-size: 13px;">Article</th>
+               <th style="padding: 8px 12px; text-align: right; font-size: 13px;">Prix</th>
+             </tr>
+           </thead>
+           <tbody>${itemRows}</tbody>
+           <tfoot>
+             <tr>
+               <td style="padding: 10px 12px; font-weight: 700;">Total</td>
+               <td style="padding: 10px 12px; text-align: right; font-weight: 700;">${totalStr}</td>
+             </tr>
+           </tfoot>
+         </table>
+         ${personalMessage.trim()
+           ? `<div style="background: #f9f9f9; border-left: 3px solid #ddd; padding: 12px 16px; margin: 16px 0; color: #444;">
+               <p style="margin: 0 0 4px; font-weight: 600; font-size: 13px;">Message du vendeur :</p>
+               <p style="margin: 0;">${escapedMessage}</p>
+             </div>`
+           : ""
+         }
+         <p style="text-align: center; margin: 24px 0;">${emailButton(projectUrl, "Voir le projet")}</p>
+         <hr style="border: none; border-top: 1px solid #e5e5e5; margin: 24px 0;" />
+         <p style="color: #888; font-size: 13px;">— L'équipe SellingMyItems</p>`
+      : `<h2>Your Reserved Items Summary</h2>
+         <p>Hi <strong>${buyerName}</strong>,</p>
+         <p><strong>${sellerName}</strong> is sending you a summary of your reserved items in the project <strong>${projectName}</strong>:</p>
+         <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
+           <thead>
+             <tr style="background: #f5f5f5;">
+               <th style="padding: 8px 12px; text-align: left; font-size: 13px;">Item</th>
+               <th style="padding: 8px 12px; text-align: right; font-size: 13px;">Price</th>
+             </tr>
+           </thead>
+           <tbody>${itemRows}</tbody>
+           <tfoot>
+             <tr>
+               <td style="padding: 10px 12px; font-weight: 700;">Total</td>
+               <td style="padding: 10px 12px; text-align: right; font-weight: 700;">${totalStr}</td>
+             </tr>
+           </tfoot>
+         </table>
+         ${personalMessage.trim()
+           ? `<div style="background: #f9f9f9; border-left: 3px solid #ddd; padding: 12px 16px; margin: 16px 0; color: #444;">
+               <p style="margin: 0 0 4px; font-weight: 600; font-size: 13px;">Message from seller:</p>
+               <p style="margin: 0;">${escapedMessage}</p>
+             </div>`
+           : ""
+         }
+         <p style="text-align: center; margin: 24px 0;">${emailButton(projectUrl, "View project")}</p>
+         <hr style="border: none; border-top: 1px solid #e5e5e5; margin: 24px 0;" />
+         <p style="color: #888; font-size: 13px;">— The SellingMyItems Team</p>`
+    }`
+  );
+
+  return sendEmail(to, subject, html, "reservation_recap");
 }

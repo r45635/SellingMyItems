@@ -224,7 +224,14 @@
     "confirmSold": "Confirm sold",
     "confirmLink": "Link buyer",
     "cancelAction": "Cancel",
-    "searchBuyerPlaceholder": "Search buyer email..."
+    "searchBuyerPlaceholder": "Search buyer email...",
+    "reservations": "Reservations",
+    "noReservations": "No reserved items in this project.",
+    "reservationItemCount": "{count, plural, one {# item} other {# items}} reserved",
+    "recapEmailDescription": "Send this buyer an email with a summary of their reserved items and a personal message.",
+    "recapEmailPlaceholder": "Add a personal message (pickup details, payment info, etc.)",
+    "sendRecapEmail": "Send recap to {name}",
+    "recapEmailSent": "Recap email sent successfully!"
   },
   "reservations": {
     "title": "My Reservations",

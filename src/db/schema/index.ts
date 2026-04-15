@@ -309,6 +309,7 @@ export const emailTypeEnum = pgEnum("email_type", [
   "intent_received",
   "intent_status",
   "password_reset",
+  "reservation_recap",
 ]);
 
 export const emailStatusEnum = pgEnum("email_status", ["sent", "failed"]);

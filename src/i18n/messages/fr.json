@@ -224,7 +224,14 @@
     "confirmSold": "Confirmer la vente",
     "confirmLink": "Lier l'acheteur",
     "cancelAction": "Annuler",
-    "searchBuyerPlaceholder": "Rechercher un email acheteur..."
+    "searchBuyerPlaceholder": "Rechercher un email acheteur...",
+    "reservations": "Réservations",
+    "noReservations": "Aucun article réservé dans ce projet.",
+    "reservationItemCount": "{count, plural, one {# article} other {# articles}} réservé(s)",
+    "recapEmailDescription": "Envoyez un email récapitulatif des articles réservés avec un message personnalisé.",
+    "recapEmailPlaceholder": "Ajoutez un message personnel (lieu de retrait, paiement, etc.)",
+    "sendRecapEmail": "Envoyer le récap à {name}",
+    "recapEmailSent": "Email récapitulatif envoyé !"
   },
   "reservations": {
     "title": "Mes Réservations",

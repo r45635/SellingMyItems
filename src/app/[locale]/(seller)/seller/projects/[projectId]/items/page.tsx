@@ -1,6 +1,6 @@
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
-import { Plus, ArrowLeft, ImageOff, Eye } from "lucide-react";
+import { Plus, ArrowLeft, ImageOff, Eye, ClipboardList } from "lucide-react";
 import { requireSeller } from "@/lib/auth";
 import { db } from "@/db";
 import { items, profiles, projects, sellerAccounts } from "@/db/schema";
@@ -80,6 +80,13 @@ export default async function ProjectItemsPage({
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">{t("items")}</h1>
         <div className="flex gap-2">
+          <Link
+            href={`/seller/projects/${projectId}/reservations`}
+            className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-border bg-background px-2.5 text-sm font-medium transition-all hover:bg-muted hover:text-foreground"
+          >
+            <ClipboardList className="mr-1 h-4 w-4" />
+            {t("reservations")}
+          </Link>
           <Link
             href={`/seller/projects/${projectId}/edit`}
             className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-border bg-background px-2.5 text-sm font-medium transition-all hover:bg-muted hover:text-foreground"
