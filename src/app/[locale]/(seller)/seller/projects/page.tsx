@@ -72,7 +72,7 @@ export default async function SellerProjectsPage() {
                   Voir
                 </Link>
                 <Link
-                  href={`/seller/projects/${project.id}/items`}
+                  href={`/seller/projects/${project.slug}/items`}
                   className="inline-flex h-8 items-center justify-center rounded-lg bg-primary px-2.5 text-sm text-primary-foreground hover:bg-primary/80"
                 >
                   {t("items")}

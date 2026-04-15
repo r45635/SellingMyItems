@@ -10,6 +10,7 @@ import Image from "next/image";
 import { StatusSelect } from "@/features/items/components/status-select";
 import { LinkBuyerForm } from "@/features/items/components/link-buyer-form";
 import { BLUR_PLACEHOLDER } from "@/lib/image/placeholders";
+import { findSellerProject } from "@/lib/seller-accounts";
 
 export default async function ProjectItemsPage({
   params,
@@ -25,13 +26,7 @@ export default async function ProjectItemsPage({
   });
 
   const project = sellerAccount
-    ? await db.query.projects.findFirst({
-        where: and(
-          eq(projects.id, projectId),
-          eq(projects.sellerId, sellerAccount.id),
-          isNull(projects.deletedAt)
-        ),
-      })
+    ? await findSellerProject(sellerAccount.id, projectId)
     : null;
 
   if (!project) {

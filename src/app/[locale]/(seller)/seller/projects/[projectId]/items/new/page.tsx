@@ -4,9 +4,10 @@ import { Link } from "@/i18n/navigation";
 import { ArrowLeft } from "lucide-react";
 import { requireSeller } from "@/lib/auth";
 import { db } from "@/db";
-import { projectCategories, projects, sellerAccounts } from "@/db/schema";
-import { and, asc, eq, isNull } from "drizzle-orm";
+import { projectCategories, sellerAccounts } from "@/db/schema";
+import { asc, eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
+import { findSellerProject } from "@/lib/seller-accounts";
 
 export default async function NewItemPage({
   params,
@@ -25,13 +26,7 @@ export default async function NewItemPage({
     notFound();
   }
 
-  const ownedProject = await db.query.projects.findFirst({
-    where: and(
-      eq(projects.id, projectId),
-      eq(projects.sellerId, sellerAccount.id),
-      isNull(projects.deletedAt)
-    ),
-  });
+  const ownedProject = await findSellerProject(sellerAccount.id, projectId);
 
   if (!ownedProject) {
     notFound();

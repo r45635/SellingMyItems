@@ -3,13 +3,14 @@ import { Link } from "@/i18n/navigation";
 import { ArrowLeft, ImageOff, User, Package } from "lucide-react";
 import { requireSeller } from "@/lib/auth";
 import { db } from "@/db";
-import { items, profiles, projects, sellerAccounts } from "@/db/schema";
-import { and, desc, eq, isNull, sql } from "drizzle-orm";
+import { items, profiles, sellerAccounts } from "@/db/schema";
+import { and, desc, eq, isNull } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import { BLUR_PLACEHOLDER } from "@/lib/image/placeholders";
 import { SendRecapEmailForm } from "@/features/seller-dashboard/components/send-recap-email-form";
 import { getLocale } from "next-intl/server";
+import { findSellerProject } from "@/lib/seller-accounts";
 
 export default async function ProjectReservationsPage({
   params,
@@ -26,13 +27,7 @@ export default async function ProjectReservationsPage({
   });
 
   const project = sellerAccount
-    ? await db.query.projects.findFirst({
-        where: and(
-          eq(projects.id, projectId),
-          eq(projects.sellerId, sellerAccount.id),
-          isNull(projects.deletedAt)
-        ),
-      })
+    ? await findSellerProject(sellerAccount.id, projectId)
     : null;
 
   if (!project) {
