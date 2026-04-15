@@ -36,7 +36,7 @@ export default async function EditItemPage({
   const item = await db.query.items.findFirst({
     where: and(
       eq(items.id, itemId),
-      eq(items.projectId, projectId),
+      eq(items.projectId, ownedProject.id),
       isNull(items.deletedAt)
     ),
   });
@@ -48,7 +48,7 @@ export default async function EditItemPage({
   const categories = await db
     .select({ id: projectCategories.id, name: projectCategories.name })
     .from(projectCategories)
-    .where(eq(projectCategories.projectId, projectId))
+    .where(eq(projectCategories.projectId, ownedProject.id))
     .orderBy(asc(projectCategories.sortOrder), asc(projectCategories.name));
 
   const existingImages = await db

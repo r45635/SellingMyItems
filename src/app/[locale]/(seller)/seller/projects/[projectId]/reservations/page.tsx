@@ -51,7 +51,7 @@ export default async function ProjectReservationsPage({
     .innerJoin(profiles, eq(items.reservedForUserId, profiles.id))
     .where(
       and(
-        eq(items.projectId, projectId),
+        eq(items.projectId, project.id),
         eq(items.status, "reserved"),
         isNull(items.deletedAt)
       )

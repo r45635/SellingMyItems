@@ -35,7 +35,7 @@ export default async function NewItemPage({
   const categories = await db
     .select({ id: projectCategories.id, name: projectCategories.name })
     .from(projectCategories)
-    .where(eq(projectCategories.projectId, projectId))
+    .where(eq(projectCategories.projectId, ownedProject.id))
     .orderBy(asc(projectCategories.sortOrder), asc(projectCategories.name));
 
   return (
@@ -48,7 +48,7 @@ export default async function NewItemPage({
         {t("items")}
       </Link>
       <h1 className="text-2xl font-bold mb-6">{t("createItem")}</h1>
-      <ItemForm projectId={projectId} categories={categories} />
+      <ItemForm projectId={ownedProject.id} categories={categories} />
     </div>
   );
 }
