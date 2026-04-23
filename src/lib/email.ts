@@ -11,7 +11,12 @@ type EmailType =
   | "intent_received"
   | "intent_status"
   | "password_reset"
-  | "reservation_recap";
+  | "reservation_recap"
+  | "invitation_sent"
+  | "access_granted"
+  | "access_declined"
+  | "access_revoked"
+  | "access_requested";
 
 const FROM_EMAIL =
   process.env.RESEND_FROM_EMAIL ?? "SellingMyItems <onboarding@resend.dev>";
@@ -505,4 +510,154 @@ export async function sendReservationRecapEmail(
   );
 
   return sendEmail(to, subject, html, "reservation_recap");
+}
+
+// ─── Invitation Sent (targeted email or generic code share) ─────────────────
+
+export async function sendInvitationEmail(
+  to: string,
+  params: {
+    projectName: string;
+    sellerName: string;
+    code: string;
+    projectUrl: string;
+    expiresAt: Date;
+    isTargeted: boolean;
+    locale?: string;
+  }
+) {
+  const fr = params.locale === "fr";
+  const expiryStr = params.expiresAt.toLocaleDateString(fr ? "fr-FR" : "en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+
+  const subject = fr
+    ? `Invitation à rejoindre ${params.projectName}`
+    : `You're invited to ${params.projectName}`;
+
+  const codeBlock = `<div style="font-family: monospace; font-size: 22px; font-weight: 700; letter-spacing: 2px; background: #f5f5f5; border: 1px dashed #bbb; padding: 14px 18px; text-align: center; border-radius: 8px; margin: 16px 0;">${params.code}</div>`;
+
+  const html = emailLayout(
+    `${emailHeader()}
+    ${fr
+      ? `<h2 style="margin: 0 0 8px;">Vous êtes invité(e) par ${params.sellerName}</h2>
+         <p style="color: #444;">Le vendeur vous a invité(e) à accéder au projet <strong>${params.projectName}</strong> sur SellingMyItems.</p>
+         ${params.isTargeted
+           ? `<p style="color: #444;">Votre code d'invitation personnel :</p>${codeBlock}<p style="color: #666; font-size: 14px;">Connectez-vous (ou créez votre compte) avec cette adresse email pour obtenir l'accès automatique.</p>`
+           : `<p style="color: #444;">Entrez ce code d'invitation pour demander l'accès :</p>${codeBlock}<p style="color: #666; font-size: 14px;">Votre demande sera validée par le vendeur avant accès.</p>`
+         }
+         <p style="text-align: center; margin: 24px 0;">${emailButton(params.projectUrl, "Voir le projet")}</p>
+         <p style="color: #888; font-size: 13px;">Valide jusqu'au <strong>${expiryStr}</strong>.</p>`
+      : `<h2 style="margin: 0 0 8px;">You're invited by ${params.sellerName}</h2>
+         <p style="color: #444;">You've been invited to access the project <strong>${params.projectName}</strong> on SellingMyItems.</p>
+         ${params.isTargeted
+           ? `<p style="color: #444;">Your personal invitation code:</p>${codeBlock}<p style="color: #666; font-size: 14px;">Sign in (or sign up) with this email to get automatic access.</p>`
+           : `<p style="color: #444;">Enter this invitation code to request access:</p>${codeBlock}<p style="color: #666; font-size: 14px;">Your request will be reviewed by the seller before access is granted.</p>`
+         }
+         <p style="text-align: center; margin: 24px 0;">${emailButton(params.projectUrl, "View project")}</p>
+         <p style="color: #888; font-size: 13px;">Valid until <strong>${expiryStr}</strong>.</p>`
+    }`
+  );
+
+  return sendEmail(to, subject, html, "invitation_sent");
+}
+
+// ─── Access Granted (to buyer) ──────────────────────────────────────────────
+
+export async function sendAccessGrantedEmail(
+  to: string,
+  params: { projectName: string; projectUrl: string; locale?: string }
+) {
+  const fr = params.locale === "fr";
+  const subject = fr
+    ? `Accès accordé — ${params.projectName}`
+    : `Access granted — ${params.projectName}`;
+
+  const html = emailLayout(
+    fr
+      ? `<h2>Accès accordé</h2>
+         <p>Votre accès au projet <strong>${params.projectName}</strong> a été validé.</p>
+         <p>${emailButton(params.projectUrl, "Voir le projet")}</p>`
+      : `<h2>Access granted</h2>
+         <p>Your access to the project <strong>${params.projectName}</strong> has been approved.</p>
+         <p>${emailButton(params.projectUrl, "View project")}</p>`
+  );
+
+  return sendEmail(to, subject, html, "access_granted");
+}
+
+// ─── Access Declined (to buyer) ─────────────────────────────────────────────
+
+export async function sendAccessDeclinedEmail(
+  to: string,
+  params: { projectName: string; locale?: string }
+) {
+  const fr = params.locale === "fr";
+  const subject = fr
+    ? `Demande d'accès refusée — ${params.projectName}`
+    : `Access request declined — ${params.projectName}`;
+
+  const html = emailLayout(
+    fr
+      ? `<h2>Demande refusée</h2>
+         <p>Le vendeur a décliné votre demande d'accès au projet <strong>${params.projectName}</strong>.</p>`
+      : `<h2>Request declined</h2>
+         <p>The seller has declined your access request for <strong>${params.projectName}</strong>.</p>`
+  );
+
+  return sendEmail(to, subject, html, "access_declined");
+}
+
+// ─── Access Revoked (to buyer) ──────────────────────────────────────────────
+
+export async function sendAccessRevokedEmail(
+  to: string,
+  params: { projectName: string; locale?: string }
+) {
+  const fr = params.locale === "fr";
+  const subject = fr
+    ? `Accès retiré — ${params.projectName}`
+    : `Access revoked — ${params.projectName}`;
+
+  const html = emailLayout(
+    fr
+      ? `<h2>Accès retiré</h2>
+         <p>Votre accès au projet <strong>${params.projectName}</strong> a été retiré par le vendeur.</p>`
+      : `<h2>Access revoked</h2>
+         <p>Your access to the project <strong>${params.projectName}</strong> has been revoked by the seller.</p>`
+  );
+
+  return sendEmail(to, subject, html, "access_revoked");
+}
+
+// ─── Access Requested (to seller) ───────────────────────────────────────────
+
+export async function sendAccessRequestedEmail(
+  to: string,
+  params: {
+    buyerName: string;
+    buyerEmail: string;
+    projectName: string;
+    manageUrl: string;
+    locale?: string;
+  }
+) {
+  const fr = params.locale === "fr";
+  const subject = fr
+    ? `Nouvelle demande d'accès — ${params.projectName}`
+    : `New access request — ${params.projectName}`;
+
+  const html = emailLayout(
+    fr
+      ? `<h2>Nouvelle demande d'accès</h2>
+         <p><strong>${params.buyerName}</strong> (${params.buyerEmail}) demande l'accès au projet <strong>${params.projectName}</strong>.</p>
+         <p>${emailButton(params.manageUrl, "Gérer les accès")}</p>`
+      : `<h2>New access request</h2>
+         <p><strong>${params.buyerName}</strong> (${params.buyerEmail}) is requesting access to <strong>${params.projectName}</strong>.</p>
+         <p>${emailButton(params.manageUrl, "Manage access")}</p>`
+  );
+
+  return sendEmail(to, subject, html, "access_requested");
 }

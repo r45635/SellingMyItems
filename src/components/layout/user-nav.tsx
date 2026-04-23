@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { User, LogOut, LayoutDashboard, Heart, MessageSquare, Shield, Package, ShoppingBag } from "lucide-react";
+import { User, LogOut, LayoutDashboard, Heart, MessageSquare, Shield, Package, ShoppingBag, FolderKanban, Bell } from "lucide-react";
 import { useEffect, useState } from "react";
 import { signOutAction } from "@/lib/auth/actions";
 import { Badge } from "@/components/ui/badge";
@@ -94,6 +94,18 @@ export function UserNav() {
           </div>
         </div>
         <DropdownMenuSeparator />
+        <DropdownMenuItem>
+          <Link href="/my-projects" className="flex items-center cursor-pointer w-full">
+            <FolderKanban className="mr-2 h-4 w-4" />
+            {t("myProjects.title")}
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem>
+          <Link href="/notifications" className="flex items-center cursor-pointer w-full">
+            <Bell className="mr-2 h-4 w-4" />
+            Notifications
+          </Link>
+        </DropdownMenuItem>
         <DropdownMenuItem>
           <Link href="/wishlist" className="flex items-center cursor-pointer w-full">
             <Heart className="mr-2 h-4 w-4" />

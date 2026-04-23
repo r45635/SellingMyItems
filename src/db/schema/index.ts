@@ -7,6 +7,8 @@ import {
   integer,
   pgEnum,
   jsonb,
+  uniqueIndex,
+  index,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
@@ -34,6 +36,39 @@ export const intentStatusEnum = pgEnum("intent_status", [
 ]);
 
 export const userRoleEnum = pgEnum("user_role", ["purchaser", "seller", "admin"]);
+
+export const projectVisibilityEnum = pgEnum("project_visibility", [
+  "public",
+  "invitation_only",
+]);
+
+export const invitationStatusEnum = pgEnum("invitation_status", [
+  "active",
+  "used",
+  "expired",
+  "revoked",
+]);
+
+export const accessRequestStatusEnum = pgEnum("access_request_status", [
+  "pending",
+  "approved",
+  "declined",
+  "cancelled",
+]);
+
+export const accessGrantSourceEnum = pgEnum("access_grant_source", [
+  "targeted_invitation",
+  "generic_request",
+  "seller_manual",
+]);
+
+export const notificationTypeEnum = pgEnum("notification_type", [
+  "invitation_received",
+  "access_granted",
+  "access_declined",
+  "access_revoked",
+  "access_requested",
+]);
 
 // ─── Users / Profiles ───────────────────────────────────────────────────────
 
@@ -94,6 +129,7 @@ export const projects = pgTable("projects", {
   cityArea: text("city_area").notNull(),
   description: text("description"),
   isPublic: boolean("is_public").default(true).notNull(),
+  visibility: projectVisibilityEnum("visibility").default("public").notNull(),
   isSeoIndexable: boolean("is_seo_indexable").default(false).notNull(), // future
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
@@ -310,6 +346,11 @@ export const emailTypeEnum = pgEnum("email_type", [
   "intent_status",
   "password_reset",
   "reservation_recap",
+  "invitation_sent",
+  "access_granted",
+  "access_declined",
+  "access_revoked",
+  "access_requested",
 ]);
 
 export const emailStatusEnum = pgEnum("email_status", ["sent", "failed"]);
@@ -341,6 +382,138 @@ export const appSettings = pgTable("app_settings", {
     onDelete: "set null",
   }),
 });
+
+// ─── Project Invitations ────────────────────────────────────────────────────
+
+export const projectInvitations = pgTable(
+  "project_invitations",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    code: text("code").notNull().unique(),
+    email: text("email"), // null = generic code (one-active-per-project)
+    status: invitationStatusEnum("status").default("active").notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    usedByUserId: uuid("used_by_user_id").references(() => profiles.id, {
+      onDelete: "set null",
+    }),
+    usedAt: timestamp("used_at", { withTimezone: true }),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    createdBy: uuid("created_by")
+      .notNull()
+      .references(() => profiles.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index("project_invitations_project_status_idx").on(
+      table.projectId,
+      table.status
+    ),
+    index("project_invitations_email_project_idx").on(
+      table.email,
+      table.projectId
+    ),
+  ]
+);
+
+// ─── Project Access Grants ──────────────────────────────────────────────────
+
+export const projectAccessGrants = pgTable(
+  "project_access_grants",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => profiles.id, { onDelete: "cascade" }),
+    source: accessGrantSourceEnum("source").notNull(),
+    invitationId: uuid("invitation_id").references(
+      () => projectInvitations.id,
+      { onDelete: "set null" }
+    ),
+    grantedAt: timestamp("granted_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    revokedBy: uuid("revoked_by").references(() => profiles.id, {
+      onDelete: "set null",
+    }),
+  },
+  (table) => [
+    uniqueIndex("project_access_grants_project_user_idx").on(
+      table.projectId,
+      table.userId
+    ),
+  ]
+);
+
+// ─── Project Access Requests ────────────────────────────────────────────────
+
+export const projectAccessRequests = pgTable(
+  "project_access_requests",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => profiles.id, { onDelete: "cascade" }),
+    invitationId: uuid("invitation_id").references(
+      () => projectInvitations.id,
+      { onDelete: "set null" }
+    ),
+    codeUsed: text("code_used"),
+    status: accessRequestStatusEnum("status").default("pending").notNull(),
+    message: text("message"),
+    respondedBy: uuid("responded_by").references(() => profiles.id, {
+      onDelete: "set null",
+    }),
+    respondedAt: timestamp("responded_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index("project_access_requests_project_user_status_idx").on(
+      table.projectId,
+      table.userId,
+      table.status
+    ),
+  ]
+);
+
+// ─── Notifications ──────────────────────────────────────────────────────────
+
+export const notifications = pgTable(
+  "notifications",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => profiles.id, { onDelete: "cascade" }),
+    type: notificationTypeEnum("type").notNull(),
+    title: text("title").notNull(),
+    body: text("body"),
+    linkUrl: text("link_url"),
+    projectId: uuid("project_id").references(() => projects.id, {
+      onDelete: "cascade",
+    }),
+    readAt: timestamp("read_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index("notifications_user_read_idx").on(table.userId, table.readAt),
+  ]
+);
 
 // ─── Password Reset Tokens ──────────────────────────────────────────────────
 
@@ -397,6 +570,74 @@ export const projectsRelations = relations(projects, ({ one, many }) => ({
   wishlists: many(buyerWishlists),
   intents: many(buyerIntents),
   threads: many(conversationThreads),
+  invitations: many(projectInvitations),
+  accessGrants: many(projectAccessGrants),
+  accessRequests: many(projectAccessRequests),
+}));
+
+export const projectInvitationsRelations = relations(
+  projectInvitations,
+  ({ one }) => ({
+    project: one(projects, {
+      fields: [projectInvitations.projectId],
+      references: [projects.id],
+    }),
+    usedByUser: one(profiles, {
+      fields: [projectInvitations.usedByUserId],
+      references: [profiles.id],
+    }),
+    createdByUser: one(profiles, {
+      fields: [projectInvitations.createdBy],
+      references: [profiles.id],
+    }),
+  })
+);
+
+export const projectAccessGrantsRelations = relations(
+  projectAccessGrants,
+  ({ one }) => ({
+    project: one(projects, {
+      fields: [projectAccessGrants.projectId],
+      references: [projects.id],
+    }),
+    user: one(profiles, {
+      fields: [projectAccessGrants.userId],
+      references: [profiles.id],
+    }),
+    invitation: one(projectInvitations, {
+      fields: [projectAccessGrants.invitationId],
+      references: [projectInvitations.id],
+    }),
+  })
+);
+
+export const projectAccessRequestsRelations = relations(
+  projectAccessRequests,
+  ({ one }) => ({
+    project: one(projects, {
+      fields: [projectAccessRequests.projectId],
+      references: [projects.id],
+    }),
+    user: one(profiles, {
+      fields: [projectAccessRequests.userId],
+      references: [profiles.id],
+    }),
+    invitation: one(projectInvitations, {
+      fields: [projectAccessRequests.invitationId],
+      references: [projectInvitations.id],
+    }),
+  })
+);
+
+export const notificationsRelations = relations(notifications, ({ one }) => ({
+  user: one(profiles, {
+    fields: [notifications.userId],
+    references: [profiles.id],
+  }),
+  project: one(projects, {
+    fields: [notifications.projectId],
+    references: [projects.id],
+  }),
 }));
 
 export const projectCategoriesRelations = relations(

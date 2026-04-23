@@ -1,4 +1,6 @@
 import { getUser } from "@/lib/auth";
+import { computeProjectAccessState } from "@/lib/access";
+import { redirect } from "next/navigation";
 import { ItemTeaserCard } from "@/components/shared/item-teaser-card";
 import { ItemDetailCard } from "@/components/shared/item-detail-card";
 import { Link } from "@/i18n/navigation";
@@ -25,7 +27,7 @@ export default async function ItemPage({
 }: {
   params: Promise<{ slug: string; itemId: string; locale: string }>;
 }) {
-  const { slug, itemId } = await params;
+  const { slug, itemId, locale } = await params;
   const user = await getUser();
 
   const project = await db.query.projects.findFirst({
@@ -38,6 +40,22 @@ export default async function ItemPage({
 
   if (!project) {
     notFound();
+  }
+
+  // Invitation-only: block direct access to item details if user lacks grant.
+  // Send them back to the project page where the invitation gate is rendered.
+  if (project.visibility === "invitation_only") {
+    if (!user) {
+      redirect(`/${locale}/login?returnTo=/project/${slug}`);
+    }
+    const accessState = await computeProjectAccessState(
+      user.id,
+      user.email,
+      project.id
+    );
+    if (accessState !== "granted") {
+      redirect(`/${locale}/project/${slug}`);
+    }
   }
 
   const item = await db.query.items.findFirst({

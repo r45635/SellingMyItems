@@ -11,6 +11,7 @@ export const projectFormSchema = z.object({
     .regex(/^[a-z0-9-]+$/, "Only lowercase letters, numbers, and hyphens"),
   cityArea: z.string().min(2).max(100),
   description: z.string().max(500).optional(),
+  visibility: z.enum(["public", "invitation_only"]).optional(),
 });
 
 export type ProjectFormValues = z.infer<typeof projectFormSchema>;

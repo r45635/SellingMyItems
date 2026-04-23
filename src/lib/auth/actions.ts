@@ -9,6 +9,7 @@ import { cookies, headers } from "next/headers";
 import type { UserRole } from "@/lib/auth";
 import { consumeRateLimit } from "@/lib/security/rate-limit";
 import { sendPasswordResetEmail, sendWelcomeEmail } from "@/lib/email";
+import { claimTargetedInvitationsForEmail } from "@/lib/access";
 import { siteConfig } from "@/config";
 
 const SESSION_COOKIE = "session_token";
@@ -88,6 +89,13 @@ export async function signUpAction(formData: FormData) {
 
   // Seller registration is disabled — no seller account auto-creation
 
+  // Auto-claim any targeted invitations addressed to this email
+  try {
+    await claimTargetedInvitationsForEmail(newProfile.id, email);
+  } catch (err) {
+    console.error("Failed to auto-claim invitations on signup:", err);
+  }
+
   // Send welcome email (non-blocking) — detect locale from referer URL
   try {
     const headerStore = await headers();
@@ -161,6 +169,13 @@ export async function signInAction(formData: FormData) {
   const valid = await bcrypt.compare(password, profile.passwordHash);
   if (!valid) {
     return { error: "invalidCredentials" };
+  }
+
+  // Auto-claim any new targeted invitations addressed to this email
+  try {
+    await claimTargetedInvitationsForEmail(profile.id, email);
+  } catch (err) {
+    console.error("Failed to auto-claim invitations on signin:", err);
   }
 
   // Create session

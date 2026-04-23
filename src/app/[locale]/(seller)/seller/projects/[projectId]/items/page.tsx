@@ -1,6 +1,6 @@
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
-import { Plus, ArrowLeft, ImageOff, Eye, ClipboardList } from "lucide-react";
+import { Plus, ArrowLeft, ImageOff, Eye, ClipboardList, KeyRound } from "lucide-react";
 import { requireSeller } from "@/lib/auth";
 import { db } from "@/db";
 import { items, profiles, projects, sellerAccounts } from "@/db/schema";
@@ -81,6 +81,13 @@ export default async function ProjectItemsPage({
           >
             <ClipboardList className="mr-1 h-4 w-4" />
             {t("reservations")}
+          </Link>
+          <Link
+            href={`/seller/projects/${projectId}/access`}
+            className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-border bg-background px-2.5 text-sm font-medium transition-all hover:bg-muted hover:text-foreground"
+          >
+            <KeyRound className="mr-1 h-4 w-4" />
+            Access
           </Link>
           <Link
             href={`/seller/projects/${projectId}/edit`}

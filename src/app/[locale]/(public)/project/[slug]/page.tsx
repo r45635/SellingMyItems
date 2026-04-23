@@ -1,5 +1,6 @@
 import { ItemTeaserCard } from "@/components/shared/item-teaser-card";
 import { ProjectItemsGrid } from "@/features/items/components/project-items-grid";
+import { InvitationGate } from "@/features/projects/components/invitation-gate";
 import { Badge } from "@/components/ui/badge";
 import { MapPin, ArrowLeft, Package, User, Mail, Lock } from "lucide-react";
 import { db } from "@/db";
@@ -8,6 +9,7 @@ import { and, asc, eq, isNull, ne } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { Link } from "@/i18n/navigation";
 import { getUser } from "@/lib/auth";
+import { computeProjectAccessState } from "@/lib/access";
 import { getTranslations } from "next-intl/server";
 
 export default async function ProjectPage({
@@ -15,7 +17,7 @@ export default async function ProjectPage({
 }: {
   params: Promise<{ slug: string; locale: string }>;
 }) {
-  const { slug } = await params;
+  const { slug, locale } = await params;
   const project = await db.query.projects.findFirst({
     where: and(
       eq(projects.slug, slug),
@@ -89,6 +91,19 @@ export default async function ProjectPage({
   }
 
   const tWishlist = await getTranslations("wishlist");
+  const tInv = await getTranslations("invitations");
+
+  // Compute invitation-only access gate
+  const isInvitationOnly = project.visibility === "invitation_only";
+  let accessState: "granted" | "pending" | "declined" | "none" = "granted";
+  if (isInvitationOnly) {
+    if (user) {
+      accessState = await computeProjectAccessState(user.id, user.email, project.id);
+    } else {
+      accessState = "none";
+    }
+  }
+  const isLocked = isInvitationOnly && accessState !== "granted";
 
   return (
     <div className="container px-4 md:px-6 py-6">
@@ -123,10 +138,15 @@ export default async function ProjectPage({
             ))}
           </div>
         )}
+        {isInvitationOnly && (
+          <Badge variant="outline" className="rounded-full mt-3 border-amber-300 bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400">
+            <Lock className="h-3 w-3 mr-1" /> {tInv("visibilityInvitation")}
+          </Badge>
+        )}
       </div>
 
       {/* Seller contact — visible to authenticated users */}
-      {user && (
+      {user && !isLocked && (
         <div className="mb-6 rounded-lg border bg-muted/30 p-4 flex items-center gap-4">
           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
             <User className="h-5 w-5 text-primary" />
@@ -144,8 +164,36 @@ export default async function ProjectPage({
         </div>
       )}
 
-      {/* Items Grid */}
-      {user ? (
+      {/* Invitation gate (invitation_only + no access) */}
+      {isLocked ? (
+        <InvitationGate
+          projectId={project.id}
+          projectSlug={slug}
+          locale={locale}
+          isAuthenticated={!!user}
+          requestState={accessState === "none" ? "none" : accessState as "pending" | "declined"}
+          labels={{
+            lockedTitle: tInv("lockedTitle"),
+            lockedBody: tInv("lockedBody"),
+            signIn: tInv("signInFirst"),
+            enterCode: tInv("enterCode"),
+            code: tInv("code"),
+            redeem: tInv("redeem"),
+            orRequest: tInv("orRequest"),
+            messageLabel: tInv("messageLabel"),
+            messagePlaceholder: tInv("messagePlaceholder"),
+            requestAccess: tInv("requestAccess"),
+            pendingTitle: tInv("pendingTitle"),
+            pendingBody: tInv("pendingBody"),
+            declinedTitle: tInv("declinedTitle"),
+            declinedBody: tInv("declinedBody"),
+            grantedTitle: tInv("grantedInlineTitle"),
+            invalidCode: tInv("invalidCode"),
+            codeForAnotherUser: tInv("codeForAnotherUser"),
+            genericError: tInv("genericError"),
+          }}
+        />
+      ) : user ? (
         /* Authenticated: full items grid with filter/sort */
         projectItems.length > 0 ? (
           <ProjectItemsGrid

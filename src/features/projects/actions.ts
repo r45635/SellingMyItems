@@ -22,6 +22,7 @@ export async function createProjectAction(formData: FormData) {
     slug: formData.get("slug"),
     cityArea: formData.get("cityArea"),
     description: formData.get("description") || undefined,
+    visibility: formData.get("visibility") || undefined,
   };
 
   const validated = projectFormSchema.safeParse(rawData);
@@ -41,6 +42,7 @@ export async function createProjectAction(formData: FormData) {
       slug: validated.data.slug,
       cityArea: validated.data.cityArea,
       description: validated.data.description,
+      visibility: validated.data.visibility ?? "public",
     });
   } catch {
     return { error: { form: ["Unable to create project (slug already in use?)"] } };
@@ -58,6 +60,7 @@ export async function updateProjectAction(formData: FormData) {
     slug: formData.get("slug"),
     cityArea: formData.get("cityArea"),
     description: formData.get("description") || undefined,
+    // Note: visibility edits go through setProjectVisibilityAction (triggers reset)
   };
 
   const validated = projectFormSchema.safeParse(rawData);

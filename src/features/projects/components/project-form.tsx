@@ -19,7 +19,12 @@ interface ProjectFormProps {
 
 export function ProjectForm({ defaultValues, projectId }: ProjectFormProps) {
   const t = useTranslations();
+  const tInv = useTranslations("invitations");
   const [serverError, setServerError] = useState("");
+  const [visibility, setVisibility] = useState<"public" | "invitation_only">(
+    defaultValues?.visibility ?? "public"
+  );
+  const isEdit = !!projectId;
   const {
     register,
     handleSubmit,
@@ -43,6 +48,9 @@ export function ProjectForm({ defaultValues, projectId }: ProjectFormProps) {
         formData.set(key, String(value));
       }
     });
+    if (!isEdit) {
+      formData.set("visibility", visibility);
+    }
     if (projectId) {
       formData.set("projectId", projectId);
       const result = await updateProjectAction(formData);
@@ -100,6 +108,44 @@ export function ProjectForm({ defaultValues, projectId }: ProjectFormProps) {
               </p>
             )}
           </div>
+
+          {!isEdit && (
+            <div className="space-y-2">
+              <Label>{tInv("visibilityLabel")}</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setVisibility("public")}
+                  className={`rounded-lg border p-3 text-left text-sm transition-colors ${
+                    visibility === "public"
+                      ? "border-foreground bg-foreground/5"
+                      : "border-border hover:bg-muted"
+                  }`}
+                >
+                  <div className="font-semibold">{tInv("visibilityPublic")}</div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    {tInv("visibilityPublicHint")}
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setVisibility("invitation_only")}
+                  className={`rounded-lg border p-3 text-left text-sm transition-colors ${
+                    visibility === "invitation_only"
+                      ? "border-foreground bg-foreground/5"
+                      : "border-border hover:bg-muted"
+                  }`}
+                >
+                  <div className="font-semibold">
+                    {tInv("visibilityInvitation")}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    {tInv("visibilityInvitationHint")}
+                  </div>
+                </button>
+              </div>
+            </div>
+          )}
 
           <div className="flex gap-2 justify-end">
             <Button type="submit" disabled={isSubmitting}>
