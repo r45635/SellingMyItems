@@ -2,11 +2,13 @@
 
 import { useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Mail, Loader2, CheckCircle2 } from "lucide-react";
+import { Mail, Loader2, CheckCircle2, ArrowRight } from "lucide-react";
 import { sendReservationRecapAction } from "@/features/seller-dashboard/actions";
 import { toast } from "sonner";
+import { Link } from "@/i18n/navigation";
 
 export function SendRecapEmailForm({
   projectId,
@@ -20,9 +22,10 @@ export function SendRecapEmailForm({
   locale: string;
 }) {
   const t = useTranslations("seller");
+  const router = useRouter();
   const [message, setMessage] = useState("");
   const [isPending, startTransition] = useTransition();
-  const [sent, setSent] = useState(false);
+  const [sentThreadId, setSentThreadId] = useState<string | null>(null);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -33,20 +36,38 @@ export function SendRecapEmailForm({
         message,
         locale
       );
-      if (result.error) {
+      if ("error" in result && result.error) {
         toast.error(result.error);
-      } else {
-        toast.success(t("recapEmailSent"));
-        setSent(true);
+        return;
+      }
+      if (result.success) {
+        if ("emailError" in result && result.emailError) {
+          toast.warning(result.emailError);
+        } else {
+          toast.success(t("recapEmailSent"));
+        }
+        if (result.threadId) {
+          setSentThreadId(result.threadId);
+        }
+        router.refresh();
       }
     });
   }
 
-  if (sent) {
+  if (sentThreadId) {
     return (
-      <div className="flex items-center gap-2 text-sm text-green-600">
-        <CheckCircle2 className="h-4 w-4" />
-        {t("recapEmailSent")}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2 text-sm text-emerald-700 dark:text-emerald-400">
+          <CheckCircle2 className="h-4 w-4" />
+          {t("recapEmailSent")}
+        </div>
+        <Link
+          href={`/seller/messages/${sentThreadId}`}
+          className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-border bg-background px-3 text-xs font-medium hover:bg-muted"
+        >
+          {t("openConversation")}
+          <ArrowRight className="h-3.5 w-3.5" />
+        </Link>
       </div>
     );
   }

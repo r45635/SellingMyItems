@@ -1,14 +1,15 @@
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
-import { ArrowLeft, ImageOff, User, Package } from "lucide-react";
+import { ArrowLeft, ImageOff, User, Package, Clock } from "lucide-react";
 import { requireSeller } from "@/lib/auth";
 import { db } from "@/db";
-import { items, profiles, sellerAccounts } from "@/db/schema";
-import { and, desc, eq, isNull } from "drizzle-orm";
+import { emailLogs, items, profiles, sellerAccounts } from "@/db/schema";
+import { and, desc, eq, inArray, isNull } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import { BLUR_PLACEHOLDER } from "@/lib/image/placeholders";
 import { SendRecapEmailForm } from "@/features/seller-dashboard/components/send-recap-email-form";
+import { LocalizedDateTime } from "@/components/shared/localized-date-time";
 import { getLocale } from "next-intl/server";
 import { findSellerProject } from "@/lib/seller-accounts";
 
@@ -59,12 +60,14 @@ export default async function ProjectReservationsPage({
     )
     .orderBy(desc(items.reservedAt));
 
-  // Group by buyer
+  // Group by buyer. Keep real email separately from the display email so we
+  // can query email_logs even when the buyer chose hidden visibility.
   const buyerMap = new Map<
     string,
     {
       userId: string;
-      email: string;
+      realEmail: string;
+      displayEmail: string;
       displayName: string | null;
       items: typeof reservedItems;
     }
@@ -75,7 +78,9 @@ export default async function ProjectReservationsPage({
     if (!buyerMap.has(buyerId)) {
       buyerMap.set(buyerId, {
         userId: buyerId,
-        email: item.buyerEmailVisibility === "direct" ? item.buyerEmail : "",
+        realEmail: item.buyerEmail,
+        displayEmail:
+          item.buyerEmailVisibility === "direct" ? item.buyerEmail : "",
         displayName: item.buyerDisplayName,
         items: [],
       });
@@ -84,6 +89,32 @@ export default async function ProjectReservationsPage({
   }
 
   const buyers = Array.from(buyerMap.values());
+
+  // Last-recap-sent per buyer: latest sent reservation_recap in email_logs
+  // whose `toEmail` matches one of this page's buyers.
+  const lastRecapByEmail = new Map<string, Date>();
+  const buyerEmails = buyers.map((b) => b.realEmail).filter(Boolean);
+  if (buyerEmails.length > 0) {
+    const recapLogs = await db
+      .select({
+        toEmail: emailLogs.toEmail,
+        createdAt: emailLogs.createdAt,
+      })
+      .from(emailLogs)
+      .where(
+        and(
+          eq(emailLogs.type, "reservation_recap"),
+          eq(emailLogs.status, "sent"),
+          inArray(emailLogs.toEmail, buyerEmails)
+        )
+      )
+      .orderBy(desc(emailLogs.createdAt));
+    for (const row of recapLogs) {
+      if (!lastRecapByEmail.has(row.toEmail)) {
+        lastRecapByEmail.set(row.toEmail, row.createdAt);
+      }
+    }
+  }
 
   return (
     <div>
@@ -104,7 +135,7 @@ export default async function ProjectReservationsPage({
       ) : (
         <div className="space-y-6">
           {buyers.map((buyer) => {
-            const buyerName = buyer.displayName || buyer.email || "Buyer";
+            const buyerName = buyer.displayName || buyer.displayEmail || "Buyer";
             const total = buyer.items.reduce(
               (sum, i) => sum + (i.price ?? 0),
               0
@@ -114,6 +145,7 @@ export default async function ProjectReservationsPage({
               style: "currency",
               currency,
             }).format(total);
+            const lastRecapAt = lastRecapByEmail.get(buyer.realEmail) ?? null;
 
             return (
               <div
@@ -128,9 +160,9 @@ export default async function ProjectReservationsPage({
                     </div>
                     <div>
                       <p className="font-semibold text-sm">{buyerName}</p>
-                      {buyer.displayName && (
+                      {buyer.displayName && buyer.displayEmail && (
                         <p className="text-xs text-muted-foreground">
-                          {buyer.email}
+                          {buyer.displayEmail}
                         </p>
                       )}
                     </div>
@@ -193,10 +225,19 @@ export default async function ProjectReservationsPage({
                 </div>
 
                 {/* Email action */}
-                <div className="px-5 py-4 border-t bg-muted/30">
-                  <p className="text-xs text-muted-foreground mb-3">
-                    {t("recapEmailDescription")}
-                  </p>
+                <div className="px-5 py-4 border-t bg-muted/30 space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-xs text-muted-foreground">
+                      {t("recapEmailDescription")}
+                    </p>
+                    {lastRecapAt && (
+                      <p className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                        <Clock className="h-3 w-3" />
+                        {t("lastRecapSent")}:{" "}
+                        <LocalizedDateTime value={lastRecapAt} />
+                      </p>
+                    )}
+                  </div>
                   <SendRecapEmailForm
                     projectId={projectId}
                     buyerUserId={buyer.userId}

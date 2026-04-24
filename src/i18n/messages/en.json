@@ -281,10 +281,12 @@
     "reservations": "Reservations",
     "noReservations": "No reserved items in this project.",
     "reservationItemCount": "{count, plural, one {# item} other {# items}} reserved",
-    "recapEmailDescription": "Send this buyer an email with a summary of their reserved items and a personal message.",
+    "recapEmailDescription": "Send this buyer an email with a summary of their reserved items and a personal message. A copy is also posted into your in-app conversation with them.",
     "recapEmailPlaceholder": "Add a personal message (pickup details, payment info, etc.)",
     "sendRecapEmail": "Send recap to {name}",
-    "recapEmailSent": "Recap email sent successfully!"
+    "recapEmailSent": "Recap sent — email delivered and copy posted in the conversation.",
+    "lastRecapSent": "Last recap sent",
+    "openConversation": "Open conversation"
   },
   "reservations": {
     "title": "My Reservations",
@@ -292,7 +294,8 @@
     "description": "These items have been reserved for you. Contact the seller to arrange pickup and payment.",
     "itemCount": "{count, plural, one {# item} other {# items}}",
     "reservedForYou": "Reserved for you",
-    "projectTotal": "Project total"
+    "projectTotal": "Project total",
+    "contactSeller": "Contact seller"
   },
   "purchases": {
     "title": "My Purchases",

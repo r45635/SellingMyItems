@@ -5,7 +5,7 @@ import { items, projects } from "@/db/schema";
 import { and, eq, isNull } from "drizzle-orm";
 import { Link } from "@/i18n/navigation";
 import Image from "next/image";
-import { ImageOff, Package, Clock } from "lucide-react";
+import { ImageOff, Package, Clock, MessageCircle } from "lucide-react";
 import { BLUR_PLACEHOLDER } from "@/lib/image/placeholders";
 import { Badge } from "@/components/ui/badge";
 
@@ -81,17 +81,26 @@ export default async function ReservationsPage() {
 
               return (
                 <div key={projectId} className="space-y-3">
-                  <h2 className="text-lg font-semibold">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <h2 className="text-lg font-semibold">
+                      <Link
+                        href={`/project/${projectSlug}`}
+                        className="hover:underline"
+                      >
+                        {projectName}
+                      </Link>
+                      <span className="ml-2 text-sm font-normal text-muted-foreground">
+                        {t("itemCount", { count: projectItems.length })}
+                      </span>
+                    </h2>
                     <Link
-                      href={`/project/${projectSlug}`}
-                      className="hover:underline"
+                      href={`/messages/new?projectId=${projectId}`}
+                      className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-border bg-background px-3 text-xs font-medium transition-all hover:bg-muted"
                     >
-                      {projectName}
+                      <MessageCircle className="h-3.5 w-3.5" />
+                      {t("contactSeller")}
                     </Link>
-                    <span className="ml-2 text-sm font-normal text-muted-foreground">
-                      {t("itemCount", { count: projectItems.length })}
-                    </span>
-                  </h2>
+                  </div>
 
                   <div className="space-y-2">
                     {projectItems.map((row) => (

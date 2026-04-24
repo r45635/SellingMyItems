@@ -281,10 +281,12 @@
     "reservations": "Réservations",
     "noReservations": "Aucun article réservé dans ce projet.",
     "reservationItemCount": "{count, plural, one {# article} other {# articles}} réservé(s)",
-    "recapEmailDescription": "Envoyez un email récapitulatif des articles réservés avec un message personnalisé.",
+    "recapEmailDescription": "Envoyez un email récapitulatif des articles réservés avec un message personnalisé. Une copie est aussi postée dans votre conversation in-app avec l'acheteur.",
     "recapEmailPlaceholder": "Ajoutez un message personnel (lieu de retrait, paiement, etc.)",
     "sendRecapEmail": "Envoyer le récap à {name}",
-    "recapEmailSent": "Email récapitulatif envoyé !"
+    "recapEmailSent": "Récap envoyé — email livré et copie postée dans la conversation.",
+    "lastRecapSent": "Dernier récap envoyé",
+    "openConversation": "Ouvrir la conversation"
   },
   "reservations": {
     "title": "Mes Réservations",
@@ -292,7 +294,8 @@
     "description": "Ces articles vous sont réservés. Contactez le vendeur pour organiser le retrait et le paiement.",
     "itemCount": "{count, plural, one {# article} other {# articles}}",
     "reservedForYou": "Réservé pour vous",
-    "projectTotal": "Total du projet"
+    "projectTotal": "Total du projet",
+    "contactSeller": "Contacter le vendeur"
   },
   "purchases": {
     "title": "Mes Achats",

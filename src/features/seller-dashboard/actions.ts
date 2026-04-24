@@ -2,11 +2,88 @@
 
 import { requireSeller } from "@/lib/auth";
 import { db } from "@/db";
-import { items, profiles, sellerAccounts } from "@/db/schema";
+import {
+  conversationMessages,
+  conversationThreads,
+  items,
+  profiles,
+  sellerAccounts,
+} from "@/db/schema";
 import { and, eq, isNull } from "drizzle-orm";
 import { sendReservationRecapEmail } from "@/lib/email";
 import { siteConfig } from "@/config";
 import { findSellerProject } from "@/lib/seller-accounts";
+import { revalidatePath } from "next/cache";
+
+/**
+ * Build a plain-text recap body that will show up as a regular seller
+ * message inside the conversation thread. Mirrors the email layout without
+ * HTML — bullet list of items + total + optional personal message.
+ */
+function buildRecapMessageBody(
+  locale: string,
+  projectName: string,
+  reservedItems: { title: string; price: number | null; currency: string }[],
+  personalMessage: string
+): string {
+  const fr = locale === "fr";
+  const lines: string[] = [];
+  lines.push(
+    fr
+      ? `📋 Récapitulatif de vos articles réservés — ${projectName}`
+      : `📋 Your reserved items — ${projectName}`
+  );
+  lines.push("");
+  for (const item of reservedItems) {
+    const priceStr =
+      item.price != null
+        ? new Intl.NumberFormat(fr ? "fr-FR" : "en-US", {
+            style: "currency",
+            currency: item.currency,
+          }).format(item.price)
+        : fr
+          ? "Prix non défini"
+          : "Price not set";
+    lines.push(`• ${item.title} — ${priceStr}`);
+  }
+  const total = reservedItems.reduce((sum, i) => sum + (i.price ?? 0), 0);
+  const totalCurrency = reservedItems[0]?.currency ?? "USD";
+  const totalStr = new Intl.NumberFormat(fr ? "fr-FR" : "en-US", {
+    style: "currency",
+    currency: totalCurrency,
+  }).format(total);
+  lines.push("");
+  lines.push(fr ? `Total : ${totalStr}` : `Total: ${totalStr}`);
+
+  if (personalMessage.trim()) {
+    lines.push("");
+    lines.push("---");
+    lines.push(personalMessage.trim());
+  }
+
+  return lines.join("\n");
+}
+
+function revalidateRecapPaths(
+  projectIdOrSlug: string,
+  threadId: string
+) {
+  // Re-fetch both sides of the conversation (buyer + seller) and the seller's
+  // reservations page, for every locale variant the user may be viewing.
+  for (const locale of siteConfig.locales) {
+    revalidatePath(`/${locale}/messages`);
+    revalidatePath(`/${locale}/messages/${threadId}`);
+    revalidatePath(`/${locale}/seller/messages`);
+    revalidatePath(`/${locale}/seller/messages/${threadId}`);
+    revalidatePath(
+      `/${locale}/seller/projects/${projectIdOrSlug}/reservations`
+    );
+  }
+  // Unlocalized paths as belt-and-suspenders.
+  revalidatePath(`/messages`);
+  revalidatePath(`/seller/messages`);
+  revalidatePath(`/seller/projects/${projectIdOrSlug}/reservations`);
+}
 
 export async function sendReservationRecapAction(
   projectIdOrSlug: string,
@@ -29,7 +106,6 @@ export async function sendReservationRecapAction(
     return { error: "Project not found" };
   }
 
-  // Get buyer profile
   const buyer = await db.query.profiles.findFirst({
     where: eq(profiles.id, buyerUserId),
     columns: { id: true, email: true, displayName: true },
@@ -38,13 +114,11 @@ export async function sendReservationRecapAction(
     return { error: "Buyer not found" };
   }
 
-  // Get seller profile for name
   const sellerProfile = await db.query.profiles.findFirst({
     where: eq(profiles.id, user.id),
     columns: { displayName: true, email: true },
   });
 
-  // Get all reserved items for this buyer in this project
   const reservedItems = await db
     .select({
       title: items.title,
@@ -65,9 +139,59 @@ export async function sendReservationRecapAction(
     return { error: "No reserved items found for this buyer" };
   }
 
+  // Find-or-create the buyer↔project conversation thread so the recap lives
+  // alongside any existing messages. Mirrors startConversationAction's shape.
+  let thread = await db.query.conversationThreads.findFirst({
+    where: and(
+      eq(conversationThreads.projectId, project.id),
+      eq(conversationThreads.buyerId, buyerUserId)
+    ),
+  });
+  const now = new Date();
+  if (!thread) {
+    const [created] = await db
+      .insert(conversationThreads)
+      .values({
+        projectId: project.id,
+        buyerId: buyerUserId,
+        sellerLastReadAt: now,
+      })
+      .returning();
+    thread = created;
+  }
+
+  const messageBody = buildRecapMessageBody(
+    locale,
+    project.name,
+    reservedItems.map((i) => ({
+      title: i.title,
+      price: i.price,
+      currency: i.currency,
+    })),
+    message
+  );
+
+  // Persist the recap as a normal seller message so the buyer sees it in the
+  // conversation and the seller sees what they sent.
+  await db.insert(conversationMessages).values({
+    threadId: thread.id,
+    senderId: user.id,
+    body: messageBody,
+  });
+
+  // Mark the thread updated; the seller has implicitly read everything up to
+  // "now" by being the one who just wrote.
+  await db
+    .update(conversationThreads)
+    .set({ updatedAt: now, sellerLastReadAt: now })
+    .where(eq(conversationThreads.id, thread.id));
+
   const buyerName = buyer.displayName || buyer.email;
-  const sellerName = sellerProfile?.displayName || sellerProfile?.email || "Seller";
+  const sellerName =
+    sellerProfile?.displayName || sellerProfile?.email || "Seller";
   const projectUrl = `${siteConfig.url}/${locale}/project/${project.slug}`;
+  const threadUrl = `${siteConfig.url}/${locale}/messages/${thread.id}`;
+  const reservationsUrl = `${siteConfig.url}/${locale}/reservations`;
 
   const result = await sendReservationRecapEmail(
     buyer.email,
@@ -81,12 +205,22 @@ export async function sendReservationRecapAction(
     })),
     message,
     projectUrl,
+    threadUrl,
+    reservationsUrl,
     locale
   );
 
+  revalidateRecapPaths(projectIdOrSlug, thread.id);
+
   if (!result.ok) {
-    return { error: result.error || "Failed to send email" };
+    // Message was already persisted in-app, so surface the email failure but
+    // don't roll back the conversation — the buyer still has an in-app trace.
+    return {
+      success: true,
+      threadId: thread.id,
+      emailError: result.error || "Failed to send email",
+    };
   }
 
-  return { success: true };
+  return { success: true, threadId: thread.id };
 }

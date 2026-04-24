@@ -413,6 +413,8 @@ export async function sendReservationRecapEmail(
   reservedItems: { title: string; price: number | null; currency: string }[],
   personalMessage: string,
   projectUrl: string,
+  threadUrl: string,
+  reservationsUrl: string,
   locale: string = "en"
 ) {
   const fr = locale === "fr";
@@ -479,7 +481,13 @@ export async function sendReservationRecapEmail(
              </div>`
            : ""
          }
-         <p style="text-align: center; margin: 24px 0;">${emailButton(projectUrl, "Voir le projet")}</p>
+         <p style="text-align: center; margin: 24px 0;">${emailButton(threadUrl, "Répondre dans l'application")}</p>
+         <p style="text-align: center; font-size: 13px; color: #666; margin: 8px 0 24px;">
+           <a href="${projectUrl}" style="color: #666;">Voir le projet</a>
+           &nbsp;·&nbsp;
+           <a href="${reservationsUrl}" style="color: #666;">Mes réservations</a>
+         </p>
+         <p style="color: #888; font-size: 12px; margin-top: 16px;">Ne répondez pas à cet email — répondez directement dans l'application pour que ${sellerName} reçoive votre message.</p>
          <hr style="border: none; border-top: 1px solid #e5e5e5; margin: 24px 0;" />
          <p style="color: #888; font-size: 13px;">— L'équipe SellingMyItems</p>`
       : `<h2>Your Reserved Items Summary</h2>
@@ -507,7 +515,13 @@ export async function sendReservationRecapEmail(
              </div>`
            : ""
          }
-         <p style="text-align: center; margin: 24px 0;">${emailButton(projectUrl, "View project")}</p>
+         <p style="text-align: center; margin: 24px 0;">${emailButton(threadUrl, "Reply in the app")}</p>
+         <p style="text-align: center; font-size: 13px; color: #666; margin: 8px 0 24px;">
+           <a href="${projectUrl}" style="color: #666;">View project</a>
+           &nbsp;·&nbsp;
+           <a href="${reservationsUrl}" style="color: #666;">My reservations</a>
+         </p>
+         <p style="color: #888; font-size: 12px; margin-top: 16px;">Don't reply to this email — reply inside the app so ${sellerName} actually receives your message.</p>
          <hr style="border: none; border-top: 1px solid #e5e5e5; margin: 24px 0;" />
          <p style="color: #888; font-size: 13px;">— The SellingMyItems Team</p>`
     }`
