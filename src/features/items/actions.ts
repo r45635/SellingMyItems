@@ -3,11 +3,12 @@
 import { requireSeller } from "@/lib/auth";
 import { itemFormSchema, ITEM_STATUSES } from "@/lib/validations";
 import { db } from "@/db";
-import { items, itemImages, itemLinks, profiles, projects, sellerAccounts } from "@/db/schema";
+import { items, itemImages, itemLinks, profiles, sellerAccounts } from "@/db/schema";
 import { and, eq, isNull, inArray, notInArray, ilike } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { findSellerProject } from "@/lib/seller-accounts";
 
 async function getSellerAccountId(user: { id: string; email: string }) {
   const sellerAccount = await db.query.sellerAccounts.findFirst({
@@ -44,20 +45,13 @@ export async function createItemAction(formData: FormData) {
     return { error: { form: ["Seller account not found"] } };
   }
 
-  const ownedProject = await db.query.projects.findFirst({
-    where: and(
-      eq(projects.id, projectId),
-      eq(projects.sellerId, sellerAccountId),
-      isNull(projects.deletedAt)
-    ),
-  });
-
+  const ownedProject = await findSellerProject(sellerAccountId, projectId);
   if (!ownedProject) {
     return { error: { form: ["Project not found or unauthorized"] } };
   }
 
   const [createdItem] = await db.insert(items).values({
-    projectId,
+    projectId: ownedProject.id,
     title: validated.data.title,
     brand: validated.data.brand,
     description: validated.data.description,
@@ -139,14 +133,7 @@ export async function updateItemAction(formData: FormData) {
     return { error: { form: ["Seller account not found"] } };
   }
 
-  const ownedProject = await db.query.projects.findFirst({
-    where: and(
-      eq(projects.id, projectId),
-      eq(projects.sellerId, sellerAccountId),
-      isNull(projects.deletedAt)
-    ),
-  });
-
+  const ownedProject = await findSellerProject(sellerAccountId, projectId);
   if (!ownedProject) {
     return { error: { form: ["Project not found or unauthorized"] } };
   }
@@ -170,7 +157,7 @@ export async function updateItemAction(formData: FormData) {
     .where(
       and(
         eq(items.id, itemId),
-        eq(items.projectId, projectId),
+        eq(items.projectId, ownedProject.id),
         isNull(items.deletedAt)
       )
     );
@@ -294,7 +281,7 @@ export async function updateItemAction(formData: FormData) {
 
 const updateStatusSchema = z.object({
   itemId: z.string().uuid(),
-  projectId: z.string().uuid(),
+  projectId: z.string().min(1),
   status: z.enum(ITEM_STATUSES),
 });
 
@@ -318,14 +305,7 @@ export async function updateItemStatusAction(formData: FormData) {
     return { error: "Seller account not found" };
   }
 
-  const ownedProject = await db.query.projects.findFirst({
-    where: and(
-      eq(projects.id, projectId),
-      eq(projects.sellerId, sellerAccountId),
-      isNull(projects.deletedAt)
-    ),
-  });
-
+  const ownedProject = await findSellerProject(sellerAccountId, projectId);
   if (!ownedProject) {
     return { error: "Project not found or unauthorized" };
   }
@@ -334,7 +314,7 @@ export async function updateItemStatusAction(formData: FormData) {
   const existingItem = await db.query.items.findFirst({
     where: and(
       eq(items.id, itemId),
-      eq(items.projectId, projectId),
+      eq(items.projectId, ownedProject.id),
       isNull(items.deletedAt)
     ),
   });
@@ -369,7 +349,7 @@ export async function updateItemStatusAction(formData: FormData) {
     .where(
       and(
         eq(items.id, itemId),
-        eq(items.projectId, projectId),
+        eq(items.projectId, ownedProject.id),
         isNull(items.deletedAt)
       )
     );
@@ -386,14 +366,7 @@ export async function deleteItemAction(itemId: string, projectId: string) {
     return { error: { form: ["Seller account not found"] } };
   }
 
-  const ownedProject = await db.query.projects.findFirst({
-    where: and(
-      eq(projects.id, projectId),
-      eq(projects.sellerId, sellerAccountId),
-      isNull(projects.deletedAt)
-    ),
-  });
-
+  const ownedProject = await findSellerProject(sellerAccountId, projectId);
   if (!ownedProject) {
     return { error: { form: ["Project not found or unauthorized"] } };
   }
@@ -404,7 +377,7 @@ export async function deleteItemAction(itemId: string, projectId: string) {
     .where(
       and(
         eq(items.id, itemId),
-        eq(items.projectId, projectId),
+        eq(items.projectId, ownedProject.id),
         isNull(items.deletedAt)
       )
     );
@@ -433,14 +406,7 @@ export async function linkReservationToBuyerAction(formData: FormData) {
     return { error: "Seller account not found" };
   }
 
-  const ownedProject = await db.query.projects.findFirst({
-    where: and(
-      eq(projects.id, projectId),
-      eq(projects.sellerId, sellerAccountId),
-      isNull(projects.deletedAt)
-    ),
-  });
-
+  const ownedProject = await findSellerProject(sellerAccountId, projectId);
   if (!ownedProject) {
     return { error: "Project not found or unauthorized" };
   }
@@ -448,7 +414,7 @@ export async function linkReservationToBuyerAction(formData: FormData) {
   const item = await db.query.items.findFirst({
     where: and(
       eq(items.id, itemId),
-      eq(items.projectId, projectId),
+      eq(items.projectId, ownedProject.id),
       eq(items.status, "reserved"),
       isNull(items.deletedAt)
     ),
@@ -504,14 +470,7 @@ export async function markItemSoldAction(formData: FormData) {
     return { error: "Seller account not found" };
   }
 
-  const ownedProject = await db.query.projects.findFirst({
-    where: and(
-      eq(projects.id, projectId),
-      eq(projects.sellerId, sellerAccountId),
-      isNull(projects.deletedAt)
-    ),
-  });
-
+  const ownedProject = await findSellerProject(sellerAccountId, projectId);
   if (!ownedProject) {
     return { error: "Project not found or unauthorized" };
   }
@@ -519,7 +478,7 @@ export async function markItemSoldAction(formData: FormData) {
   const item = await db.query.items.findFirst({
     where: and(
       eq(items.id, itemId),
-      eq(items.projectId, projectId),
+      eq(items.projectId, ownedProject.id),
       isNull(items.deletedAt)
     ),
   });
