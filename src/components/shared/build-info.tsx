@@ -31,7 +31,7 @@ export function BuildInfo() {
             </code>
           </div>
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Date</span>
+            <span className="text-muted-foreground">Built</span>
             <span>{buildDate}</span>
           </div>
           <div className="pt-2 border-t text-xs text-muted-foreground text-center">

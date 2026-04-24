@@ -15,7 +15,7 @@ const gitHash = (() => {
     return "dev";
   }
 })();
-const buildDate = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+const buildDate = `${new Date().toISOString().slice(0, 16).replace("T", " ")} UTC`;
 
 const nextConfig: NextConfig = {
   output: "standalone",
