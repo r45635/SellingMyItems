@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
-import { Plus, ArrowLeft, ImageOff, Eye, ClipboardList, KeyRound } from "lucide-react";
+import { Plus, ArrowLeft, ImageOff, Eye, ClipboardList, KeyRound, Package } from "lucide-react";
+import { EmptyState } from "@/components/shared/empty-state";
 import { requireSeller } from "@/lib/auth";
 import { db } from "@/db";
 import { items, profiles, projects, sellerAccounts } from "@/db/schema";
@@ -73,7 +74,7 @@ export default async function ProjectItemsPage({
       </Link>
 
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">{t("items")}</h1>
+        <h1 className="text-heading-2">{t("items")}</h1>
         <div className="flex gap-2">
           <Link
             href={`/seller/projects/${projectId}/reservations`}
@@ -106,11 +107,22 @@ export default async function ProjectItemsPage({
       </div>
 
       {projectItems.length === 0 ? (
-        <div className="rounded-xl border-2 border-dashed p-12 text-center text-muted-foreground">
-          {t("noItems")}
-        </div>
+        <EmptyState
+          icon={Package}
+          title={t("noItems")}
+          description={t("noItemsDesc")}
+          action={
+            <Link
+              href={`/seller/projects/${projectId}/items/new`}
+              className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-primary px-3.5 text-sm font-medium text-primary-foreground transition-all hover:bg-primary/80"
+            >
+              <Plus className="h-4 w-4" />
+              {t("firstItem")}
+            </Link>
+          }
+        />
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-3 stagger-fade-in">
           {projectItems.map((item) => {
             const formattedPrice =
               item.price != null

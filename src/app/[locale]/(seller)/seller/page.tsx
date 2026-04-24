@@ -8,8 +8,10 @@ import {
   MessageSquare,
   FolderOpen,
   ArrowRight,
+  Plus,
 } from "lucide-react";
 import { requireSeller } from "@/lib/auth";
+import { EmptyState } from "@/components/shared/empty-state";
 import { db } from "@/db";
 import {
   projects,
@@ -38,8 +40,21 @@ export default async function SellerDashboardPage() {
   if (sellerAccountIds.length === 0) {
     return (
       <div>
-        <h1 className="text-2xl font-bold mb-6">{t("dashboard")}</h1>
-        <p className="text-muted-foreground">{t("noProjects")}</p>
+        <h1 className="text-heading-2 mb-6">{t("dashboard")}</h1>
+        <EmptyState
+          icon={FolderOpen}
+          title={t("noProjects")}
+          description={t("noProjectsDesc")}
+          action={
+            <Link
+              href="/seller/projects/new"
+              className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-primary px-3.5 text-sm font-medium text-primary-foreground transition-all hover:bg-primary/80"
+            >
+              <Plus className="h-4 w-4" />
+              {t("createProject")}
+            </Link>
+          }
+        />
       </div>
     );
   }
@@ -60,8 +75,21 @@ export default async function SellerDashboardPage() {
   if (projectIds.length === 0) {
     return (
       <div>
-        <h1 className="text-2xl font-bold mb-6">{t("dashboard")}</h1>
-        <p className="text-muted-foreground">{t("noProjects")}</p>
+        <h1 className="text-heading-2 mb-6">{t("dashboard")}</h1>
+        <EmptyState
+          icon={FolderOpen}
+          title={t("noProjects")}
+          description={t("noProjectsDesc")}
+          action={
+            <Link
+              href="/seller/projects/new"
+              className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-primary px-3.5 text-sm font-medium text-primary-foreground transition-all hover:bg-primary/80"
+            >
+              <Plus className="h-4 w-4" />
+              {t("createProject")}
+            </Link>
+          }
+        />
       </div>
     );
   }
@@ -174,20 +202,22 @@ export default async function SellerDashboardPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6">{t("dashboard")}</h1>
+      <h1 className="text-heading-2 mb-6">{t("dashboard")}</h1>
 
       {/* Stat cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-8 stagger-fade-in">
         {statCards.map((card) => (
           <div
             key={card.label}
-            className="rounded-xl border bg-card p-4 flex flex-col gap-2"
+            className="rounded-xl border bg-card p-4 flex flex-col gap-2 transition-all hover:-translate-y-0.5 hover:shadow-sm"
           >
-            <div className={`w-8 h-8 rounded-lg ${card.bg} flex items-center justify-center`}>
+            <div className={`w-9 h-9 rounded-lg ${card.bg} flex items-center justify-center`}>
               <card.icon className={`h-4 w-4 ${card.color}`} />
             </div>
-            <p className="text-2xl font-bold">{card.value.toLocaleString()}</p>
-            <p className="text-xs text-muted-foreground">{card.label}</p>
+            <p className="text-2xl font-bold tabular-nums tracking-tight">
+              {card.value.toLocaleString()}
+            </p>
+            <p className="text-xs font-medium text-muted-foreground">{card.label}</p>
           </div>
         ))}
       </div>

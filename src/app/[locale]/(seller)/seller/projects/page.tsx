@@ -1,11 +1,12 @@
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
-import { Plus } from "lucide-react";
+import { Plus, FolderOpen } from "lucide-react";
 import { requireSeller } from "@/lib/auth";
 import { db } from "@/db";
 import { projects } from "@/db/schema";
 import { and, desc, inArray, isNull } from "drizzle-orm";
 import { getSellerAccountIdsForUser } from "@/lib/seller-accounts";
+import { EmptyState } from "@/components/shared/empty-state";
 
 export default async function SellerProjectsPage() {
   const t = await getTranslations("seller");
@@ -37,22 +38,33 @@ export default async function SellerProjectsPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">{t("projects")}</h1>
+        <h1 className="text-heading-2">{t("projects")}</h1>
         <Link
           href="/seller/projects/new"
-          className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg bg-primary px-2.5 text-sm font-medium text-primary-foreground transition-all hover:bg-primary/80"
+          className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-primary px-3.5 text-sm font-medium text-primary-foreground transition-all hover:bg-primary/90"
         >
-          <Plus className="mr-2 h-4 w-4" />
+          <Plus className="h-4 w-4" />
           {t("createProject")}
         </Link>
       </div>
 
       {sellerProjects.length === 0 ? (
-        <div className="rounded-lg border p-6 text-center text-muted-foreground">
-          {t("noProjects")}
-        </div>
+        <EmptyState
+          icon={FolderOpen}
+          title={t("noProjects")}
+          description={t("noProjectsDesc")}
+          action={
+            <Link
+              href="/seller/projects/new"
+              className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-primary px-3.5 text-sm font-medium text-primary-foreground transition-all hover:bg-primary/80"
+            >
+              <Plus className="h-4 w-4" />
+              {t("createProject")}
+            </Link>
+          }
+        />
       ) : (
-        <div className="space-y-3">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 stagger-fade-in">
           {sellerProjects.map((project) => (
             <div
               key={project.id}
