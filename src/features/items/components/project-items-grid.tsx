@@ -85,7 +85,7 @@ export function ProjectItemsGrid({
       <div className="flex flex-wrap items-center gap-3 mb-4">
         <div className="flex items-center gap-2">
           <Package className="h-5 w-5 text-orange-500" />
-          <h2 className="text-lg font-semibold">
+          <h2 className="text-heading-4">
             {items.length} {t("itemCount", { count: items.length })}
           </h2>
         </div>
@@ -130,7 +130,7 @@ export function ProjectItemsGrid({
 
       {/* Items Grid */}
       {filteredAndSorted.length > 0 ? (
-        <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
+        <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 stagger-fade-in">
           {filteredAndSorted.map((item) => (
             <ItemTeaserCard
               key={item.id}
