@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { linkReservationToBuyerAction, markItemSoldAction, searchBuyersAction } from "../actions";
 import { UserCheck, Search, Loader2, ShoppingBag, X } from "lucide-react";
@@ -13,6 +14,8 @@ interface LinkBuyerFormProps {
   soldToEmail?: string | null;
 }
 
+const SEARCH_DEBOUNCE_MS = 300;
+
 export function LinkBuyerForm({
   itemId,
   projectId,
@@ -21,6 +24,7 @@ export function LinkBuyerForm({
   soldToEmail,
 }: LinkBuyerFormProps) {
   const t = useTranslations("seller");
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<{ id: string; email: string; displayName: string | null }[]>([]);
@@ -29,20 +33,33 @@ export function LinkBuyerForm({
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
 
-  async function handleSearch(query: string) {
-    setSearchQuery(query);
-    if (query.length < 2) {
+  // Debounced buyer search: runs 300ms after the user stops typing so we
+  // don't fire one server action per keystroke.
+  const latestQueryRef = useRef("");
+  useEffect(() => {
+    latestQueryRef.current = searchQuery;
+    if (searchQuery.length < 2 || searchQuery === selectedEmail) {
       setSearchResults([]);
+      setIsSearching(false);
       return;
     }
-    setIsSearching(true);
-    try {
-      const results = await searchBuyersAction(query);
-      setSearchResults(results);
-    } finally {
-      setIsSearching(false);
-    }
-  }
+    const timer = setTimeout(async () => {
+      setIsSearching(true);
+      try {
+        const results = await searchBuyersAction(searchQuery);
+        // Guard against out-of-order responses — if the user kept typing
+        // while the request was in flight, drop the stale results.
+        if (latestQueryRef.current === searchQuery) {
+          setSearchResults(results);
+        }
+      } finally {
+        if (latestQueryRef.current === searchQuery) {
+          setIsSearching(false);
+        }
+      }
+    }, SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [searchQuery, selectedEmail]);
 
   function handleSelectBuyer(email: string) {
     setSelectedEmail(email);
@@ -66,6 +83,7 @@ export function LinkBuyerForm({
         setShowForm(false);
         setSelectedEmail("");
         setSearchQuery("");
+        router.refresh();
       }
     });
   }
@@ -87,6 +105,7 @@ export function LinkBuyerForm({
         setShowForm(false);
         setSelectedEmail("");
         setSearchQuery("");
+        router.refresh();
       }
     });
   }
@@ -165,7 +184,12 @@ export function LinkBuyerForm({
                   <input
                     type="email"
                     value={searchQuery}
-                    onChange={(e) => handleSearch(e.target.value)}
+                    onChange={(e) => {
+                      setSearchQuery(e.target.value);
+                      if (selectedEmail && e.target.value !== selectedEmail) {
+                        setSelectedEmail("");
+                      }
+                    }}
                     placeholder={t("searchBuyerPlaceholder")}
                     className="h-6 w-full rounded border pl-6 pr-2 text-[11px]"
                   />
@@ -173,6 +197,7 @@ export function LinkBuyerForm({
                 </div>
                 <button
                   type="button"
+                  aria-label={t("cancelAction")}
                   onClick={() => { setShowForm(false); setSearchQuery(""); setSearchResults([]); setSelectedEmail(""); }}
                   className="inline-flex h-6 w-6 items-center justify-center rounded border hover:bg-muted"
                 >

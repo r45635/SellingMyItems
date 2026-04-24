@@ -1,6 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
   Select,
@@ -21,6 +22,7 @@ interface StatusSelectProps {
 
 export function StatusSelect({ itemId, projectId, currentStatus }: StatusSelectProps) {
   const t = useTranslations("seller");
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
   function handleChange(newStatus: string | null) {
@@ -31,6 +33,7 @@ export function StatusSelect({ itemId, projectId, currentStatus }: StatusSelectP
       formData.set("projectId", projectId);
       formData.set("status", newStatus);
       await updateItemStatusAction(formData);
+      router.refresh();
     });
   }
 

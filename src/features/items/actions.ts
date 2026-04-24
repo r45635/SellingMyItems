@@ -9,6 +9,18 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { findSellerProject } from "@/lib/seller-accounts";
+import { siteConfig } from "@/config";
+
+function revalidateSellerItemsPaths(projectIdOrSlug: string) {
+  // Revalidate both the unlocalized path and every localized variant so the
+  // browser's currently-rendered page (which lives under /en/... or /fr/...)
+  // picks up the fresh server data. Without the locale-prefixed path the
+  // rendered cache is stale and the client sees an unchanged UI.
+  revalidatePath(`/seller/projects/${projectIdOrSlug}/items`);
+  for (const locale of siteConfig.locales) {
+    revalidatePath(`/${locale}/seller/projects/${projectIdOrSlug}/items`);
+  }
+}
 
 async function getSellerAccountId(user: { id: string; email: string }) {
   const sellerAccount = await db.query.sellerAccounts.findFirst({
@@ -354,7 +366,7 @@ export async function updateItemStatusAction(formData: FormData) {
       )
     );
 
-  revalidatePath(`/seller/projects/${projectId}/items`);
+  revalidateSellerItemsPaths(projectId);
   return { success: true };
 }
 
@@ -446,7 +458,7 @@ export async function linkReservationToBuyerAction(formData: FormData) {
     })
     .where(eq(items.id, itemId));
 
-  revalidatePath(`/seller/projects/${projectId}/items`);
+  revalidateSellerItemsPaths(projectId);
   return { success: true };
 }
 
@@ -513,9 +525,11 @@ export async function markItemSoldAction(formData: FormData) {
     })
     .where(eq(items.id, itemId));
 
-  revalidatePath(`/seller/projects/${projectId}/items`);
-  revalidatePath("/reservations");
-  revalidatePath("/purchases");
+  revalidateSellerItemsPaths(projectId);
+  for (const locale of siteConfig.locales) {
+    revalidatePath(`/${locale}/reservations`);
+    revalidatePath(`/${locale}/purchases`);
+  }
   return { success: true };
 }
 
