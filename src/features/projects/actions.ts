@@ -4,8 +4,9 @@ import { requireSeller } from "@/lib/auth";
 import { projectFormSchema } from "@/lib/validations";
 import { db } from "@/db";
 import { projects, sellerAccounts } from "@/db/schema";
-import { and, eq, isNull } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
+import { findSellerProject } from "@/lib/seller-accounts";
 
 async function getSellerAccount(userId: string) {
   const sellerAccount = await db.query.sellerAccounts.findFirst({
@@ -53,7 +54,7 @@ export async function createProjectAction(formData: FormData) {
 
 export async function updateProjectAction(formData: FormData) {
   const user = await requireSeller();
-  const projectId = formData.get("projectId") as string;
+  const projectIdOrSlug = formData.get("projectId") as string;
 
   const rawData = {
     name: formData.get("name"),
@@ -73,6 +74,11 @@ export async function updateProjectAction(formData: FormData) {
     return { error: { form: ["Seller account not found"] } };
   }
 
+  const ownedProject = await findSellerProject(sellerAccount.id, projectIdOrSlug);
+  if (!ownedProject) {
+    return { error: { form: ["Project not found or unauthorized"] } };
+  }
+
   try {
     await db
       .update(projects)
@@ -83,13 +89,7 @@ export async function updateProjectAction(formData: FormData) {
         description: validated.data.description,
         updatedAt: new Date(),
       })
-      .where(
-        and(
-          eq(projects.id, projectId),
-          eq(projects.sellerId, sellerAccount.id),
-          isNull(projects.deletedAt)
-        )
-      );
+      .where(eq(projects.id, ownedProject.id));
   } catch {
     return { error: { form: ["Unable to update project"] } };
   }
@@ -97,22 +97,19 @@ export async function updateProjectAction(formData: FormData) {
   redirect("/seller/projects");
 }
 
-export async function deleteProjectAction(projectId: string) {
+export async function deleteProjectAction(projectIdOrSlug: string) {
   const user = await requireSeller();
 
   const sellerAccount = await getSellerAccount(user.id);
   if (!sellerAccount) return;
 
+  const ownedProject = await findSellerProject(sellerAccount.id, projectIdOrSlug);
+  if (!ownedProject) return;
+
   await db
     .update(projects)
     .set({ deletedAt: new Date(), updatedAt: new Date() })
-    .where(
-      and(
-        eq(projects.id, projectId),
-        eq(projects.sellerId, sellerAccount.id),
-        isNull(projects.deletedAt)
-      )
-    );
+    .where(eq(projects.id, ownedProject.id));
 
   redirect("/seller/projects");
 }
