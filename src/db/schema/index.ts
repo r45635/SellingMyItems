@@ -75,11 +75,6 @@ export const emailVisibilityEnum = pgEnum("email_visibility", [
   "direct",
 ]);
 
-export const threadAliasRoleEnum = pgEnum("thread_alias_role", [
-  "buyer",
-  "seller",
-]);
-
 // ─── Users / Profiles ───────────────────────────────────────────────────────
 
 export const profiles = pgTable("profiles", {
@@ -349,33 +344,6 @@ export const conversationMessages = pgTable("conversation_messages", {
     .notNull(),
 });
 
-// ─── Thread Aliases (email relay) ───────────────────────────────────────────
-
-export const threadAliases = pgTable(
-  "thread_aliases",
-  {
-    id: uuid("id").defaultRandom().primaryKey(),
-    threadId: uuid("thread_id")
-      .notNull()
-      .references(() => conversationThreads.id, { onDelete: "cascade" }),
-    participantRole: threadAliasRoleEnum("participant_role").notNull(),
-    profileId: uuid("profile_id")
-      .notNull()
-      .references(() => profiles.id, { onDelete: "cascade" }),
-    localPart: text("local_part").notNull().unique(),
-    revokedAt: timestamp("revoked_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .defaultNow()
-      .notNull(),
-  },
-  (table) => [
-    uniqueIndex("thread_aliases_thread_role_unique").on(
-      table.threadId,
-      table.participantRole
-    ),
-  ]
-);
-
 // ─── Email Logs ─────────────────────────────────────────────────────────────
 
 export const emailTypeEnum = pgEnum("email_type", [
@@ -391,7 +359,6 @@ export const emailTypeEnum = pgEnum("email_type", [
   "access_declined",
   "access_revoked",
   "access_requested",
-  "inbound_relay",
 ]);
 
 export const emailStatusEnum = pgEnum("email_status", ["sent", "failed"]);

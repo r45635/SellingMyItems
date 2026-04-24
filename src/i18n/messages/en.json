@@ -96,7 +96,7 @@
     "emailVisibility": "Email visibility",
     "emailVisibilityDesc": "Choose whether other users can see your real email address. Regardless of this setting, you always receive notifications at your registered address.",
     "visibilityHidden": "Hidden (recommended)",
-    "visibilityHiddenDesc": "Your email stays private. Messages from sellers or buyers reach you via a relay address we manage.",
+    "visibilityHiddenDesc": "Your email stays private. Conversations happen inside the app; we send you a notification email when there's a new message.",
     "visibilityDirect": "Direct",
     "visibilityDirectDesc": "Your email is shown to your counterparty when they also chose direct mode."
   },
@@ -225,7 +225,7 @@
     "sent": "Message sent",
     "contactSellerTitle": "Contact the seller",
     "contactSellerIntro": "Send a message about {project} to {seller}. Your real email stays hidden unless you've chosen to share it.",
-    "privacyNotice": "Your email address is kept private. The seller will reply through our relay.",
+    "privacyNotice": "Your email address stays private. The seller replies inside the app and you'll be notified by email.",
     "composePlaceholder": "Hi, I'm interested in…",
     "backToProject": "Back to project"
   },

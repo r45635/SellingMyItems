@@ -16,17 +16,7 @@ type EmailType =
   | "access_granted"
   | "access_declined"
   | "access_revoked"
-  | "access_requested"
-  | "inbound_relay";
-
-type SendOptions = {
-  /** Address for the `Reply-To` header (e.g. a thread relay alias). */
-  replyTo?: string;
-  /** Override the From display name, e.g. "Alice via SellingMyItems". */
-  fromName?: string;
-  /** Extra SMTP headers, e.g. X-SMI-Thread-Id for debugging and abuse triage. */
-  headers?: Record<string, string>;
-};
+  | "access_requested";
 
 const FROM_EMAIL =
   process.env.RESEND_FROM_EMAIL ?? "SellingMyItems <onboarding@resend.dev>";
@@ -108,64 +98,43 @@ async function sendEmail(
   to: string,
   subject: string,
   html: string,
-  type: EmailType,
-  opts: SendOptions = {}
+  type: EmailType
 ): Promise<{ ok: boolean; resendId?: string; error?: string }> {
   const apiKey = await getResendApiKey();
-  const baseFrom = await getResendFromEmail();
+  const fromEmail = await getResendFromEmail();
   if (!apiKey) {
     const errorMsg = "Resend API key not configured";
     console.error(errorMsg);
-    await logEmail(to, baseFrom, subject, type, "failed", errorMsg);
+    await logEmail(to, fromEmail, subject, type, "failed", errorMsg);
     return { ok: false, error: errorMsg };
   }
-
-  // If caller provided a fromName, wrap the configured address with the display name.
-  // Parse existing `"Name <email>"` form if needed so we don't stack display names.
-  const bareEmail = extractEmailAddress(baseFrom) ?? baseFrom;
-  const fromHeader = opts.fromName
-    ? `${sanitizeFromName(opts.fromName)} <${bareEmail}>`
-    : baseFrom;
 
   const resend = new Resend(apiKey);
 
   try {
     const { data, error } = await resend.emails.send({
-      from: fromHeader,
+      from: fromEmail,
       to,
       subject,
       html,
-      ...(opts.replyTo ? { replyTo: opts.replyTo } : {}),
-      ...(opts.headers ? { headers: opts.headers } : {}),
     });
 
     if (error) {
       const errorMsg = error.message || "Resend API error";
       console.error(`Failed to send ${type} email to ${to}:`, error);
-      await logEmail(to, fromHeader, subject, type, "failed", errorMsg);
+      await logEmail(to, fromEmail, subject, type, "failed", errorMsg);
       return { ok: false, error: errorMsg };
     }
 
     const resendId = data?.id ?? undefined;
-    await logEmail(to, fromHeader, subject, type, "sent", undefined, resendId);
+    await logEmail(to, fromEmail, subject, type, "sent", undefined, resendId);
     return { ok: true, resendId };
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : "Unknown error";
     console.error(`Failed to send ${type} email to ${to}:`, errorMsg);
-    await logEmail(to, fromHeader, subject, type, "failed", errorMsg);
+    await logEmail(to, fromEmail, subject, type, "failed", errorMsg);
     return { ok: false, error: errorMsg };
   }
-}
-
-function extractEmailAddress(s: string): string | null {
-  const m = s.match(/<([^>]+)>/);
-  if (m) return m[1].trim();
-  return s.includes("@") ? s.trim() : null;
-}
-
-function sanitizeFromName(name: string): string {
-  // Strip angle brackets and quotes so we don't break the From header.
-  return name.replace(/[<>"]/g, "").trim();
 }
 
 async function logEmail(
@@ -303,8 +272,7 @@ export async function sendMessageNotificationEmail(
   projectName: string,
   messagePreview: string,
   threadUrl: string,
-  locale: string = "en",
-  opts: SendOptions = {}
+  locale: string = "en"
 ) {
   const fr = locale === "fr";
   const subject = fr
@@ -315,25 +283,23 @@ export async function sendMessageNotificationEmail(
     ? messagePreview.slice(0, 200) + "…"
     : messagePreview;
 
-  const replyHint = opts.replyTo
-    ? fr
-      ? `<p style="color:#888;font-size:12px;margin-top:16px;">Vous pouvez répondre directement à cet email — votre message sera transmis à ${senderName} sans partager votre adresse.</p>`
-      : `<p style="color:#888;font-size:12px;margin-top:16px;">You can reply directly to this email — your message will reach ${senderName} without sharing your address.</p>`
-    : "";
+  const replyHint = fr
+    ? `<p style="color:#888;font-size:12px;margin-top:20px;">Ne répondez pas à cet email — répondez directement dans l'application pour que ${senderName} reçoive votre message.</p>`
+    : `<p style="color:#888;font-size:12px;margin-top:20px;">Don't reply to this email — reply inside the app so ${senderName} actually receives your message.</p>`;
 
   const html = emailLayout(
     (fr
       ? `<h2>Nouveau message</h2>
          <p><strong>${senderName}</strong> vous a envoyé un message concernant <strong>${projectName}</strong> :</p>
          <blockquote style="border-left: 3px solid #ddd; padding-left: 12px; color: #555; margin: 16px 0;">${preview}</blockquote>
-         <p>${emailButton(threadUrl, "Voir la conversation")}</p>`
+         <p>${emailButton(threadUrl, "Répondre dans l'application")}</p>`
       : `<h2>New Message</h2>
          <p><strong>${senderName}</strong> sent you a message about <strong>${projectName}</strong>:</p>
          <blockquote style="border-left: 3px solid #ddd; padding-left: 12px; color: #555; margin: 16px 0;">${preview}</blockquote>
-         <p>${emailButton(threadUrl, "View conversation")}</p>`) + replyHint
+         <p>${emailButton(threadUrl, "Reply in the app")}</p>`) + replyHint
   );
 
-  return sendEmail(to, subject, html, "message_notification", opts);
+  return sendEmail(to, subject, html, "message_notification");
 }
 
 // ─── Intent Received (sent to seller) ───────────────────────────────────────

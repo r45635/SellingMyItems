@@ -101,7 +101,6 @@ Three user roles govern the platform:
 - **Account management** — list all profiles, toggle active/inactive (admin accounts protected)
 - **Project management** — list all projects with item counts, toggle public/private visibility
 - **Email dashboard** — today's email stats by type, failure monitoring, 30-day daily breakdown chart, last 50 email logs, Resend API key management
-- **Email relay** — flip `app_settings.relay_enabled` / `relay_domain` to turn the inbound email relay on once DNS + Cloudflare Worker are wired (see [Admin operations](#admin-operations))
 - **Secret access** — admin pages at `/admin` with no navigation link
 
 ### Cross-cutting
@@ -192,11 +191,6 @@ APP_PORT=5050
 NEXT_PUBLIC_APP_URL=https://yourdomain.com
 RESEND_API_KEY=re_your_key_here              # Required: for email sending
 RESEND_FROM_EMAIL=YourApp <noreply@yourdomain.com>  # Required: verified domain sender
-
-# Email privacy & relay (optional — see "Email privacy" section)
-RELAY_ENABLED=false                          # flip to true once DNS is set up
-RELAY_DOMAIN=relay.yourdomain.com            # subdomain with MX pointing at your inbound provider
-INBOUND_WEBHOOK_SECRET=<random-token>        # shared secret between Cloudflare Worker and /api/inbound/email
 ```
 
 ### 3. Database setup
@@ -480,9 +474,6 @@ Emails are sent via [Resend](https://resend.com) from a **verified domain** send
 |---|---|
 | `RESEND_API_KEY` | Resend API key — also configurable via Admin UI (`/admin/emails`), stored in `app_settings` with 5-min cache |
 | `RESEND_FROM_EMAIL` | Sender address — configurable via Admin UI (`/admin/emails`) or env var fallback. **Must use a domain verified on [resend.com/domains](https://resend.com/domains)**. Without a verified domain, emails can only be sent to the Resend account owner's email. |
-| `RELAY_ENABLED` | `true` to advertise per-thread relay aliases in outbound `Reply-To:` and honor inbound POSTs on `/api/inbound/email`. Also readable from `app_settings.relay_enabled`. Default `false`. **No effect without `RELAY_DOMAIN` and a working inbound Worker** — see [Admin operations](#admin-operations). |
-| `RELAY_DOMAIN` | Subdomain for alias addresses, e.g. `relay.toprecipes.best`. Also readable from `app_settings.relay_domain`. The app treats relay as disabled if this is empty. |
-| `INBOUND_WEBHOOK_SECRET` | Shared secret between the Cloudflare Email Worker (or any inbound provider) and `POST /api/inbound/email`. **Env-only** — not settable via admin UI. Missing value → webhook returns `503 not_configured`. |
 
 > **Important**: The default sandbox address (`onboarding@resend.dev`) only works for the account owner. To send emails to all users, you **must** verify a domain on Resend and set `RESEND_FROM_EMAIL` accordingly (e.g. `YourApp <noreply@yourdomain.com>`).
 
@@ -498,47 +489,20 @@ All emails are logged to the `email_logs` table with status (sent/failed), error
 | **Intent received** | Buyer submits intent | Item list, buyer contact info → seller |
 | **Intent status** | Seller accepts/declines | Status update → buyer |
 | **Password reset** | Forgot password request | Reset link with 1h token |
-| **Inbound relay** | User replies to a notification via email | Stripped reply body is stored as a new `conversation_messages` row and forwarded to the counterparty |
 
 All emails support English and French based on detected locale.
 
-### Email privacy & relay
+### Email privacy
 
-The feature has **two independent layers**. The first ships active from day 1 and requires no infra. The second only works once DNS + a Cloudflare Worker are wired up AND the flag is flipped on.
-
-#### Layer 1 — Privacy UI (active out of the box)
-
-No setup. This is enforced purely in-app:
+No inbound email infrastructure. Real addresses are masked in the UI; the app is the only reply surface.
 
 - Each user has `profiles.email_visibility` (`hidden` by default, togglable via `/account`).
 - Public project & item pages never render `mailto:<seller-email>`. Instead a **"Send a message"** CTA deep-links to `/messages/new?projectId=…` which opens an in-app composer.
 - Seller dashboards (`/seller/messages`, `/seller/intents`, `/seller/projects/[id]/reservations`) only render a buyer's real email when the **buyer** chose `direct`.
 - Public pages only render a seller's real email when the **seller** chose `direct`.
-- The admin dashboard is exempt from this gating (admins always see real emails — trust boundary).
+- The admin dashboard is exempt (trust boundary — admins always see real emails).
 
-This layer works fully without Cloudflare, DNS, or inbound webhook. It simply stops leaking emails and routes conversations through the in-app messaging system that already exists.
-
-#### Layer 2 — Inbound relay (opt-in, needs DNS + Worker)
-
-This is what makes a seller's Gmail reply to a notification land back inside the conversation thread without exposing their real address. It's **disabled by default** and only activates when **all** of the following are true at the same time:
-
-1. `relay_enabled = 'true'` in either `app_settings` (preferred, admin-controlled) OR the `RELAY_ENABLED` env var.
-2. `relay_domain` is set in either `app_settings` OR the `RELAY_DOMAIN` env var (e.g. `relay.toprecipes.best`). Without a domain, the library returns `isRelayEnabled() = false` even when the flag is true.
-3. The DNS for that subdomain has an `MX` record pointing at the inbound provider (Cloudflare Email Routing, by default) and a compatible SPF TXT.
-4. A Cloudflare Email Worker (or equivalent) POSTs parsed replies to `https://<your-app>/api/inbound/email` with header `x-webhook-secret: <INBOUND_WEBHOOK_SECRET>`.
-5. `INBOUND_WEBHOOK_SECRET` is set on the app container (env var) and matches what the Worker sends.
-
-If any of those five is missing, the webhook returns `503 relay_disabled` or `503 relay_domain_unset` and outbound notifications silently fall back to the previous behavior (no `Reply-To` alias). There's no half-working mode.
-
-When active, the outbound flow still uses your verified Resend domain for `From:` (DKIM intact) and only puts the alias on `Reply-To:`. We **never** send From the `relay.` subdomain, so you don't need to set up DKIM/DMARC on it.
-
-Minimal Worker → webhook payload:
-
-```json
-{ "to": "t-abc123@relay.yourdomain.com", "from": "reply@user-mail.com", "subject": "Re: …", "text": "reply body …" }
-```
-
-See the [admin operations section](#admin-operations) below for the concrete step-by-step to turn Layer 2 on.
+Outbound notifications fire as usual (new message, intent received, reservation recap, etc.). The notification body contains a **"Reply in the app"** button and a line asking the recipient not to reply by email. We intentionally do **not** run an inbound mail parser; replies sent directly to a notification email go to the configured Resend `From:` address (which doesn't process them). Users go through the app to continue the conversation.
 
 ---
 
@@ -621,71 +585,6 @@ ssh root@VPS_IP "cd /root/sellingmyitems && docker compose exec -T app npx drizz
 
 Confirm the proposed changes when prompted. If the command offers to create or alter a column, check it matches the latest SQL file in `src/db/migrations/`.
 
-#### Enable the inbound email relay (Layer 2)
-
-The privacy UI (Layer 1, described in [Email privacy & relay](#email-privacy--relay)) ships active. The inbound relay (Layer 2) is **off by default** and needs all of these before it starts working:
-
-1. **Pick a subdomain** — e.g. `relay.toprecipes.best`.
-
-2. **Set DNS on that subdomain** (free with Cloudflare Email Routing):
-   - Add an `MX` record pointing to Cloudflare's email ingest servers (`route1.mx.cloudflare.net`, `route2…`, `route3…`).
-   - Add an SPF `TXT` record: `v=spf1 include:_spf.mx.cloudflare.net ~all`.
-   - DMARC on the subdomain can start at `p=none` — we never send From there, we only use it as `Reply-To`, so DMARC alignment isn't required for deliverability.
-
-3. **Create a Cloudflare Email Worker** that catches every address on `relay.toprecipes.best` and forwards the parsed envelope to the app:
-
-   ```js
-   export default {
-     async email(message, env) {
-       const to = message.to;          // e.g. t-abc123@relay.toprecipes.best
-       const from = message.from;
-       const subject = message.headers.get("subject") ?? "";
-       const text = await new Response(message.raw).text();
-       await fetch("https://sellingmyitems.toprecipes.best:5055/api/inbound/email", {
-         method: "POST",
-         headers: {
-           "content-type": "application/json",
-           "x-webhook-secret": env.INBOUND_WEBHOOK_SECRET,
-         },
-         body: JSON.stringify({ to, from, subject, text }),
-       });
-     },
-   };
-   ```
-
-   Bind `INBOUND_WEBHOOK_SECRET` as a Worker secret (match exactly what's in the app's env). Attach the Worker as the **catch-all** route for the relay subdomain in the Cloudflare Email dashboard.
-
-4. **Set the app env vars** (in `/root/sellingmyitems/.env` on the VPS):
-
-   ```env
-   RELAY_ENABLED=true
-   RELAY_DOMAIN=relay.toprecipes.best
-   INBOUND_WEBHOOK_SECRET=<the-same-token-as-the-worker>
-   ```
-
-   Then `docker compose up -d --force-recreate app` to pick them up.
-
-   Alternatively, keep env vars unset and drive the flag from the DB so the admin can flip it at runtime without a restart:
-
-   ```bash
-   docker exec sellingmyitems-db-1 psql -U sellingmyitems -d sellingmyitems <<'SQL'
-     INSERT INTO app_settings (key, value) VALUES ('relay_enabled', 'true')
-       ON CONFLICT (key) DO UPDATE SET value = 'true', updated_at = now();
-     INSERT INTO app_settings (key, value) VALUES ('relay_domain', 'relay.toprecipes.best')
-       ON CONFLICT (key) DO UPDATE SET value = 'relay.toprecipes.best', updated_at = now();
-   SQL
-   ```
-
-   The app caches these values for 5 minutes. The secret still has to live as an env var on the container.
-
-5. **Verify**:
-   - `dig MX relay.toprecipes.best` returns Cloudflare hosts.
-   - `curl -i -X POST https://sellingmyitems.toprecipes.best:5055/api/inbound/email` returns `401 unauthorized` (secret guard).
-   - Same call with the correct secret header but a random JSON body returns `400` or `404` — not `503`. If it returns `503 relay_disabled`, the flag/domain isn't picked up yet.
-   - Send yourself a test message from one account to another in the app; the notification email should land with a `Reply-To: t-xxxxxx@relay.toprecipes.best` header. Reply to it from your mail client; the reply should appear in the thread within seconds.
-
-6. **Turn it off** (rollback): set `RELAY_ENABLED=false` or `UPDATE app_settings SET value = 'false' WHERE key = 'relay_enabled';`. Outbound flow immediately falls back to not advertising aliases; inbound POSTs return `503 relay_disabled`.
-
 ### Deploy On Another VPS / Another Account
 
 Use this checklist when transferring the project to a different VPS or GitHub account.
@@ -715,9 +614,6 @@ Use this checklist when transferring the project to a different VPS or GitHub ac
   - `NEXT_PUBLIC_APP_URL`
   - `RESEND_API_KEY`
   - `RESEND_FROM_EMAIL` (must use a verified Resend domain)
-  - `INBOUND_WEBHOOK_SECRET` (random token — only required if you plan to enable the email relay; see [Admin operations](#admin-operations))
-  - `RELAY_ENABLED` (optional; leave `false` and flip it later via `app_settings` once DNS + Worker are ready)
-  - `RELAY_DOMAIN` (optional; e.g. `relay.yourdomain.com`)
 
 5. Bootstrap and deploy
   - Run: `bash scripts/vps-setup.sh`

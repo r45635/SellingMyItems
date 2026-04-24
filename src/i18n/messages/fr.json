@@ -96,7 +96,7 @@
     "emailVisibility": "Visibilité de l'email",
     "emailVisibilityDesc": "Choisissez si les autres utilisateurs peuvent voir votre adresse email réelle. Vous recevez toujours les notifications sur l'adresse enregistrée.",
     "visibilityHidden": "Masqué (recommandé)",
-    "visibilityHiddenDesc": "Votre email reste privé. Les messages des vendeurs ou acheteurs vous parviennent via une adresse de relais que nous gérons.",
+    "visibilityHiddenDesc": "Votre email reste privé. Les conversations se déroulent dans l'application ; nous vous envoyons une notification par email quand un nouveau message arrive.",
     "visibilityDirect": "Direct",
     "visibilityDirectDesc": "Votre email est visible par votre interlocuteur uniquement s'il a aussi choisi le mode direct."
   },
@@ -225,7 +225,7 @@
     "sent": "Message envoyé",
     "contactSellerTitle": "Contacter le vendeur",
     "contactSellerIntro": "Envoyez un message à {seller} au sujet de {project}. Votre adresse email reste privée sauf si vous avez choisi de la partager.",
-    "privacyNotice": "Votre adresse email reste confidentielle. Le vendeur vous répondra via notre relais.",
+    "privacyNotice": "Votre adresse email reste confidentielle. Le vendeur vous répondra dans l'application et vous serez notifié(e) par email.",
     "composePlaceholder": "Bonjour, je suis intéressé(e) par…",
     "backToProject": "Retour au projet"
   },

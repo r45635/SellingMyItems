@@ -17,12 +17,6 @@ import { redirect } from "next/navigation";
 import { consumeRateLimit } from "@/lib/security/rate-limit";
 import { siteConfig } from "@/config";
 import { sendMessageNotificationEmail, sendMessageCopyEmail } from "@/lib/email";
-import {
-  aliasEmail,
-  formatSenderName,
-  getOrCreateThreadAlias,
-  isRelayEnabled,
-} from "@/lib/relay";
 
 function revalidateMessagePaths(threadId: string) {
   revalidatePath("/messages");
@@ -349,8 +343,6 @@ async function notifyMessageRecipient(
 
   // Determine recipient (the *other* party)
   let recipientEmail: string | undefined;
-  let recipientProfileId: string | undefined;
-  let recipientRole: "buyer" | "seller";
   let threadUrl: string;
 
   if (senderRole === "buyer") {
@@ -361,49 +353,20 @@ async function notifyMessageRecipient(
     if (!sellerAccount) return;
     const sellerProfile = await db.query.profiles.findFirst({
       where: eq(profiles.id, sellerAccount.userId),
-      columns: { id: true, email: true },
+      columns: { email: true },
     });
     recipientEmail = sellerProfile?.email;
-    recipientProfileId = sellerProfile?.id;
-    recipientRole = "seller";
     threadUrl = `${siteConfig.url}/fr/seller/messages/${threadId}`;
   } else {
     const buyerProfile = await db.query.profiles.findFirst({
       where: eq(profiles.id, buyerId),
-      columns: { id: true, email: true },
+      columns: { email: true },
     });
     recipientEmail = buyerProfile?.email;
-    recipientProfileId = buyerProfile?.id;
-    recipientRole = "buyer";
     threadUrl = `${siteConfig.url}/fr/messages/${threadId}`;
   }
 
-  if (!recipientEmail || !recipientProfileId) return;
-
-  // Relay: mint the recipient's own alias and use it as Reply-To so when they
-  // reply from their mail client, the inbound webhook can route the message
-  // back into the thread without exposing the sender's real email address.
-  let replyTo: string | undefined;
-  let extraHeaders: Record<string, string> | undefined;
-  if (await isRelayEnabled()) {
-    try {
-      const alias = await getOrCreateThreadAlias(
-        threadId,
-        recipientRole,
-        recipientProfileId
-      );
-      const aliasAddr = await aliasEmail(alias.localPart);
-      if (aliasAddr) {
-        replyTo = aliasAddr;
-        extraHeaders = {
-          "X-SMI-Thread-Id": threadId,
-          "X-SMI-Recipient-Id": recipientProfileId,
-        };
-      }
-    } catch (err) {
-      console.error("Failed to mint thread alias:", err);
-    }
-  }
+  if (!recipientEmail) return;
 
   await sendMessageNotificationEmail(
     recipientEmail,
@@ -411,12 +374,7 @@ async function notifyMessageRecipient(
     project.name,
     messageBody,
     threadUrl,
-    "fr",
-    {
-      replyTo,
-      fromName: formatSenderName(sender.displayName ?? null),
-      headers: extraHeaders,
-    }
+    "fr"
   );
 }
 
