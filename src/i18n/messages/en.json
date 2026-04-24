@@ -227,7 +227,12 @@
     "contactSellerIntro": "Send a message about {project} to {seller}. Your real email stays hidden unless you've chosen to share it.",
     "privacyNotice": "Your email address stays private. The seller replies inside the app and you'll be notified by email.",
     "composePlaceholder": "Hi, I'm interested in…",
-    "backToProject": "Back to project"
+    "backToProject": "Back to project",
+    "conversation": "Conversation",
+    "withSeller": "With {name}",
+    "withBuyer": "With {name}",
+    "noThreadsDesc": "Start a conversation from a project page — sellers will see it here.",
+    "noThreadsSellerDesc": "Once a buyer reaches out about one of your projects, their message will appear here."
   },
   "seller": {
     "dashboard": "Seller Dashboard",

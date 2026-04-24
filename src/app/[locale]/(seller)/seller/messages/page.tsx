@@ -7,10 +7,12 @@ import {
   profiles,
   projects,
 } from "@/db/schema";
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { desc, inArray } from "drizzle-orm";
 import { Link } from "@/i18n/navigation";
-import { Badge } from "@/components/ui/badge";
+import { MessageSquare, Package } from "lucide-react";
+import { EmptyState } from "@/components/shared/empty-state";
 import { LocalizedDateTime } from "@/components/shared/localized-date-time";
+import { MessageAvatar } from "@/features/messages/components/message-avatar";
 import { getSellerAccountIdsForUser } from "@/lib/seller-accounts";
 
 export default async function SellerMessagesPage() {
@@ -23,10 +25,12 @@ export default async function SellerMessagesPage() {
   if (sellerAccountIds.length === 0) {
     return (
       <div>
-        <h1 className="text-2xl font-bold mb-6">{t("title")}</h1>
-        <div className="rounded-lg border p-6 text-center text-muted-foreground">
-          {t("noThreads")}
-        </div>
+        <h1 className="text-heading-2 mb-6">{t("title")}</h1>
+        <EmptyState
+          icon={MessageSquare}
+          title={t("noThreads")}
+          description={t("noThreadsSellerDesc")}
+        />
       </div>
     );
   }
@@ -42,10 +46,12 @@ export default async function SellerMessagesPage() {
   if (projectIds.length === 0) {
     return (
       <div>
-        <h1 className="text-2xl font-bold mb-6">{t("title")}</h1>
-        <div className="rounded-lg border p-6 text-center text-muted-foreground">
-          {t("noThreads")}
-        </div>
+        <h1 className="text-heading-2 mb-6">{t("title")}</h1>
+        <EmptyState
+          icon={MessageSquare}
+          title={t("noThreads")}
+          description={t("noThreadsSellerDesc")}
+        />
       </div>
     );
   }
@@ -95,29 +101,25 @@ export default async function SellerMessagesPage() {
           .orderBy(desc(conversationMessages.createdAt))
       : [];
 
-  const threadStats = new Map<
-    string,
-    {
-      messageCount: number;
-      lastMessageBody: string;
-      lastMessageDate: Date | null;
-      lastMessageSenderId: string | null;
-    }
-  >();
-
+  type LastMessage = {
+    body: string;
+    createdAt: Date;
+    senderId: string;
+    count: number;
+  };
+  const threadStats = new Map<string, LastMessage>();
   for (const message of allMessages) {
     const existing = threadStats.get(message.threadId);
     if (!existing) {
       threadStats.set(message.threadId, {
-        messageCount: 1,
-        lastMessageBody: message.body,
-        lastMessageDate: message.createdAt,
-        lastMessageSenderId: message.senderId,
+        body: message.body,
+        createdAt: message.createdAt,
+        senderId: message.senderId,
+        count: 1,
       });
-      continue;
+    } else {
+      existing.count += 1;
     }
-
-    existing.messageCount += 1;
   }
 
   const groupedThreads = threads.reduce<
@@ -128,7 +130,6 @@ export default async function SellerMessagesPage() {
         id: string;
         buyerName: string;
         buyerEmail: string;
-        messageCount: number;
         lastMessageBody: string;
         lastMessageDate: Date | null;
         lastMessageSenderId: string | null;
@@ -143,15 +144,16 @@ export default async function SellerMessagesPage() {
       id: thread.id,
       buyerName: buyer?.displayName ?? "Unknown",
       buyerEmail: buyer?.email ?? "",
-      messageCount: stats?.messageCount ?? 0,
-      lastMessageBody: stats?.lastMessageBody ?? "",
-      lastMessageDate: stats?.lastMessageDate ?? null,
-      lastMessageSenderId: stats?.lastMessageSenderId ?? null,
+      lastMessageBody: stats?.body ?? "",
+      lastMessageDate: stats?.createdAt ?? null,
+      lastMessageSenderId: stats?.senderId ?? null,
       isUnread:
         !thread.sellerLastReadAt || thread.updatedAt > thread.sellerLastReadAt,
     };
 
-    const existingGroup = groups.find((group) => group.projectId === thread.projectId);
+    const existingGroup = groups.find(
+      (group) => group.projectId === thread.projectId
+    );
     if (existingGroup) {
       existingGroup.threads.push(threadData);
       return groups;
@@ -166,63 +168,93 @@ export default async function SellerMessagesPage() {
   }, []);
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold mb-6">{t("title")}</h1>
+    <div className="max-w-3xl">
+      <h1 className="text-heading-2 mb-6">{t("title")}</h1>
 
       {groupedThreads.length === 0 ? (
-        <div className="rounded-lg border p-6 text-center text-muted-foreground">
-          {t("noThreads")}
-        </div>
+        <EmptyState
+          icon={MessageSquare}
+          title={t("noThreads")}
+          description={t("noThreadsSellerDesc")}
+        />
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-5">
           {groupedThreads.map((group) => (
-            <section key={group.projectId} className="rounded-lg border p-4 space-y-3">
-              <div className="flex items-center justify-between border-b pb-2">
-                <h2 className="font-semibold">{group.projectName}</h2>
-                <span className="text-xs text-muted-foreground">
-                  {group.threads.length} {t("threadsCount")}
+            <section key={group.projectId} className="space-y-2">
+              <div className="flex items-center gap-2 px-1">
+                <Package className="h-4 w-4 text-orange-500" />
+                <h2 className="text-eyebrow">{group.projectName}</h2>
+                <span className="ml-1 text-[11px] text-muted-foreground">
+                  {group.threads.length}
                 </span>
               </div>
-
-              <div className="space-y-2">
-                {group.threads.map((thread) => (
-                  <Link
-                    key={thread.id}
-                    href={`/seller/messages/${thread.id}`}
-                    className={`block rounded-md border p-3 transition-colors hover:bg-muted/50 ${
-                      thread.isUnread ? "border-primary/40 bg-primary/5" : ""
-                    }`}
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="font-medium truncate">
-                        {thread.buyerName}
-                        {thread.buyerEmail ? ` (${thread.buyerEmail})` : ""}
-                      </p>
-                      <div className="flex shrink-0 items-center gap-2">
-                        {thread.isUnread ? <Badge variant="destructive" className="font-bold">{t("new")}</Badge> : null}
-                        <span className="text-xs text-muted-foreground">
-                          {thread.messageCount} {t("messagesCount")}
-                        </span>
-                      </div>
-                    </div>
-                    {thread.lastMessageBody && (
-                      <div className="mt-1 rounded-md bg-muted/40 p-2">
-                        <p className="text-xs text-muted-foreground mb-1">
-                          {t("lastMessage")}: {thread.lastMessageSenderId === profileId ? t("you") : t("buyer")}
-                        </p>
-                        <p className="text-sm text-muted-foreground truncate">
-                          {thread.lastMessageBody}
-                        </p>
-                      </div>
-                    )}
-                    {thread.lastMessageDate && (
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {t("lastActivity")}: <LocalizedDateTime value={thread.lastMessageDate} />
-                      </p>
-                    )}
-                  </Link>
-                ))}
-              </div>
+              <ul className="divide-y rounded-xl border bg-card overflow-hidden">
+                {group.threads.map((thread) => {
+                  const preview =
+                    thread.lastMessageBody.length > 90
+                      ? thread.lastMessageBody.slice(0, 90) + "…"
+                      : thread.lastMessageBody;
+                  const isFromMe = thread.lastMessageSenderId === profileId;
+                  return (
+                    <li key={thread.id}>
+                      <Link
+                        href={`/seller/messages/${thread.id}`}
+                        className="flex items-start gap-3 px-4 py-3.5 transition-colors hover:bg-muted/40 focus-visible:bg-muted/60 focus-visible:outline-none"
+                      >
+                        <div className="relative">
+                          <MessageAvatar name={thread.buyerName} />
+                          {thread.isUnread && (
+                            <span
+                              className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-background"
+                              aria-label={t("new")}
+                            />
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-baseline justify-between gap-2">
+                            <p
+                              className={`truncate text-sm ${
+                                thread.isUnread
+                                  ? "font-semibold"
+                                  : "font-medium"
+                              }`}
+                            >
+                              {thread.buyerName}
+                              {thread.buyerEmail ? (
+                                <span className="ml-1 text-xs font-normal text-muted-foreground">
+                                  · {thread.buyerEmail}
+                                </span>
+                              ) : null}
+                            </p>
+                            {thread.lastMessageDate && (
+                              <LocalizedDateTime
+                                value={thread.lastMessageDate}
+                                className="shrink-0 text-[11px] text-muted-foreground"
+                              />
+                            )}
+                          </div>
+                          {preview && (
+                            <p
+                              className={`mt-0.5 truncate text-sm ${
+                                thread.isUnread
+                                  ? "text-foreground"
+                                  : "text-muted-foreground"
+                              }`}
+                            >
+                              {isFromMe && (
+                                <span className="text-muted-foreground">
+                                  {t("you")}:{" "}
+                                </span>
+                              )}
+                              {preview}
+                            </p>
+                          )}
+                        </div>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
             </section>
           ))}
         </div>

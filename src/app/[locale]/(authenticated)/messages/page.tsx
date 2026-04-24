@@ -8,8 +8,10 @@ import {
 } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { Link } from "@/i18n/navigation";
-import { Badge } from "@/components/ui/badge";
+import { MessageSquare } from "lucide-react";
+import { EmptyState } from "@/components/shared/empty-state";
 import { LocalizedDateTime } from "@/components/shared/localized-date-time";
+import { MessageAvatar } from "@/features/messages/components/message-avatar";
 
 export default async function MessagesPage() {
   const t = await getTranslations("messages");
@@ -49,64 +51,76 @@ export default async function MessagesPage() {
   );
 
   return (
-    <div className="container px-4 md:px-6 py-8">
-      <h1 className="text-2xl font-bold mb-6">{t("title")}</h1>
+    <div className="container px-4 md:px-6 py-6 md:py-8 max-w-3xl">
+      <h1 className="text-heading-2 mb-6">{t("title")}</h1>
 
       {enrichedThreads.length === 0 ? (
-        <div className="rounded-lg border p-6 text-center text-muted-foreground">
-          {t("noThreads")}
-        </div>
+        <EmptyState
+          icon={MessageSquare}
+          title={t("noThreads")}
+          description={t("noThreadsDesc")}
+        />
       ) : (
-        <div className="space-y-4">
-          {enrichedThreads.map((thread) => (
-            <div
-              key={thread.id}
-              className={`rounded-lg border p-4 space-y-3 ${
-                thread.isUnread ? "border-primary/40 bg-primary/5" : ""
-              }`}
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <Link
-                    href={`/project/${thread.projectSlug}`}
-                    className="font-medium hover:underline"
-                  >
-                    {thread.projectName}
-                  </Link>
-                  <p className="text-sm text-muted-foreground">
-                    {thread.messageCount} {t("messagesCount")}
-                    {thread.lastMessageDate ? (
-                      <>
-                        {" • "}
-                        {t("lastActivity")}: <LocalizedDateTime value={thread.lastMessageDate} />
-                      </>
-                    ) : null}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  {thread.isUnread ? <Badge variant="destructive" className="font-bold">{t("new")}</Badge> : null}
-                  <Link
-                    href={`/messages/${thread.id}`}
-                    className="inline-flex h-8 items-center justify-center rounded-lg border border-border px-2.5 text-sm hover:bg-muted"
-                  >
-                    {t("openThread")}
-                  </Link>
-                </div>
-              </div>
-
-              {thread.lastMessageBody && (
-                <div className="rounded-md bg-muted/40 p-2.5">
-                  <p className="text-xs text-muted-foreground mb-1">
-                    {t("lastMessage")}: {thread.lastMessageSenderId === profileId ? t("you") : t("seller")}
-                  </p>
-                  <p className="text-sm text-muted-foreground truncate">
-                    {thread.lastMessageBody}
-                  </p>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
+        <ul className="divide-y rounded-xl border bg-card overflow-hidden">
+          {enrichedThreads.map((thread) => {
+            const preview =
+              thread.lastMessageBody.length > 90
+                ? thread.lastMessageBody.slice(0, 90) + "…"
+                : thread.lastMessageBody;
+            const isFromMe = thread.lastMessageSenderId === profileId;
+            return (
+              <li key={thread.id}>
+                <Link
+                  href={`/messages/${thread.id}`}
+                  className="flex items-start gap-3 px-4 py-3.5 transition-colors hover:bg-muted/40 focus-visible:bg-muted/60 focus-visible:outline-none"
+                >
+                  <div className="relative">
+                    <MessageAvatar name={thread.projectName} />
+                    {thread.isUnread && (
+                      <span
+                        className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-background"
+                        aria-label={t("new")}
+                      />
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <p
+                        className={`truncate text-sm ${
+                          thread.isUnread ? "font-semibold" : "font-medium"
+                        }`}
+                      >
+                        {thread.projectName}
+                      </p>
+                      {thread.lastMessageDate && (
+                        <LocalizedDateTime
+                          value={thread.lastMessageDate}
+                          className="shrink-0 text-[11px] text-muted-foreground"
+                        />
+                      )}
+                    </div>
+                    {preview && (
+                      <p
+                        className={`mt-0.5 truncate text-sm ${
+                          thread.isUnread
+                            ? "text-foreground"
+                            : "text-muted-foreground"
+                        }`}
+                      >
+                        {isFromMe && (
+                          <span className="text-muted-foreground">
+                            {t("you")}:{" "}
+                          </span>
+                        )}
+                        {preview}
+                      </p>
+                    )}
+                  </div>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
       )}
     </div>
   );

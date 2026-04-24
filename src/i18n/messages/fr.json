@@ -227,7 +227,12 @@
     "contactSellerIntro": "Envoyez un message à {seller} au sujet de {project}. Votre adresse email reste privée sauf si vous avez choisi de la partager.",
     "privacyNotice": "Votre adresse email reste confidentielle. Le vendeur vous répondra dans l'application et vous serez notifié(e) par email.",
     "composePlaceholder": "Bonjour, je suis intéressé(e) par…",
-    "backToProject": "Retour au projet"
+    "backToProject": "Retour au projet",
+    "conversation": "Conversation",
+    "withSeller": "Avec {name}",
+    "withBuyer": "Avec {name}",
+    "noThreadsDesc": "Commencez une conversation depuis une page projet — les vendeurs la verront apparaître ici.",
+    "noThreadsSellerDesc": "Dès qu'un acheteur contactera l'un de vos projets, son message s'affichera ici."
   },
   "seller": {
     "dashboard": "Tableau de bord vendeur",

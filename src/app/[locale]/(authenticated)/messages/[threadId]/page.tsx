@@ -11,10 +11,11 @@ import {
 } from "@/db/schema";
 import { and, asc, eq, isNull } from "drizzle-orm";
 import { notFound } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
-import { sendMessageAction } from "@/features/messages/actions";
-import { LocalizedDateTime } from "@/components/shared/localized-date-time";
+import { ArrowLeft, Package } from "lucide-react";
 import { MessageSendForm } from "@/features/messages/components/message-send-form";
+import { MessageBubble } from "@/features/messages/components/message-bubble";
+
+const MESSAGE_GROUP_WINDOW_MS = 5 * 60 * 1000;
 
 export default async function BuyerMessageThreadPage({
   params,
@@ -46,6 +47,7 @@ export default async function BuyerMessageThreadPage({
       id: profiles.id,
       displayName: profiles.displayName,
       email: profiles.email,
+      emailVisibility: profiles.emailVisibility,
     })
     .from(sellerAccounts)
     .innerJoin(profiles, eq(sellerAccounts.userId, profiles.id))
@@ -53,6 +55,13 @@ export default async function BuyerMessageThreadPage({
     .limit(1);
 
   const sellerInfo = seller[0] ?? null;
+  const sellerName = sellerInfo?.displayName ?? t("unknownSeller");
+
+  const myProfile = await db.query.profiles.findFirst({
+    where: eq(profiles.id, user.id),
+    columns: { displayName: true },
+  });
+  const myName = myProfile?.displayName ?? t("you");
 
   const messages = await db.query.conversationMessages.findMany({
     where: eq(conversationMessages.threadId, thread.id),
@@ -67,69 +76,79 @@ export default async function BuyerMessageThreadPage({
   }
 
   return (
-    <div className="container px-4 md:px-6 py-8 max-w-3xl space-y-4">
+    <div className="container px-4 md:px-6 py-4 md:py-6 max-w-3xl">
       <Link
         href="/messages"
-        className="inline-flex h-7 items-center gap-1 rounded-lg px-2.5 text-sm text-muted-foreground transition-all hover:bg-muted hover:text-foreground"
+        className="inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-sm text-muted-foreground transition-all hover:bg-muted hover:text-foreground"
       >
         <ArrowLeft className="h-4 w-4" />
         {t("backToMessages")}
       </Link>
 
-      <div className="rounded-lg border p-4 space-y-1">
-        <h1 className="text-xl font-semibold">{project.name}</h1>
-        <p className="text-sm text-muted-foreground">
-          {t("seller")}: {sellerInfo?.displayName ?? t("unknownSeller")}
-          {sellerInfo?.email ? ` (${sellerInfo.email})` : ""}
-        </p>
+      <div className="mt-4 rounded-xl border bg-gradient-to-br from-orange-50/60 to-background px-4 py-3 dark:from-orange-950/20">
+        <p className="text-eyebrow">{t("conversation")}</p>
+        <div className="mt-1 flex items-center justify-between gap-3">
+          <Link
+            href={`/project/${project.slug}`}
+            className="inline-flex items-center gap-1.5 text-heading-4 hover:text-orange-600 dark:hover:text-orange-400"
+          >
+            <Package className="h-4 w-4 text-orange-500" />
+            {project.name}
+          </Link>
+          <p className="truncate text-xs text-muted-foreground">
+            {t("withSeller", { name: sellerName })}
+            {sellerInfo?.email && sellerInfo.emailVisibility === "direct"
+              ? ` · ${sellerInfo.email}`
+              : ""}
+          </p>
+        </div>
       </div>
 
-      <div className="rounded-lg border p-4 space-y-3">
+      <div className="mt-4 space-y-3 rounded-xl border bg-card/40 p-3 md:p-4">
         {messages.length === 0 ? (
-          <p className="text-sm text-muted-foreground">{t("noMessagesYet")}</p>
+          <div className="py-10 text-center">
+            <p className="text-sm text-muted-foreground">{t("noMessagesYet")}</p>
+          </div>
         ) : (
-          messages.map((message) => {
-            const isBuyerMessage = message.senderId === user.id;
-
+          messages.map((message, idx) => {
+            const isMe = message.senderId === user.id;
+            const prev = messages[idx - 1];
+            const sameSenderAsPrev =
+              prev && prev.senderId === message.senderId;
+            const gapMs = prev
+              ? message.createdAt.valueOf() - prev.createdAt.valueOf()
+              : Infinity;
+            const grouped = sameSenderAsPrev && gapMs < MESSAGE_GROUP_WINDOW_MS;
+            const next = messages[idx + 1];
+            const isLastInGroup =
+              !next ||
+              next.senderId !== message.senderId ||
+              next.createdAt.valueOf() - message.createdAt.valueOf() >=
+                MESSAGE_GROUP_WINDOW_MS;
             return (
-              <div
+              <MessageBubble
                 key={message.id}
-                className={`flex ${isBuyerMessage ? "justify-end" : "justify-start"}`}
-              >
-                <div
-                  className={`max-w-[85%] rounded-lg px-3 py-2 text-sm ${
-                    isBuyerMessage
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted text-foreground"
-                  }`}
-                >
-                  <p className="text-xs opacity-85 mb-1">
-                    {isBuyerMessage ? t("you") : t("seller")}
-                  </p>
-                  <p className="whitespace-pre-wrap">{message.body}</p>
-                  <p
-                    className={`mt-1 text-[11px] ${
-                      isBuyerMessage
-                        ? "text-primary-foreground/80"
-                        : "text-muted-foreground"
-                    }`}
-                  >
-                    {t("sentAt")}: <LocalizedDateTime value={message.createdAt} />
-                  </p>
-                </div>
-              </div>
+                body={message.body}
+                createdAt={message.createdAt}
+                side={isMe ? "me" : "them"}
+                senderName={isMe ? myName : sellerName}
+                showAvatar={!grouped}
+                showTimestamp={isLastInGroup}
+              />
             );
           })
         )}
       </div>
 
-      <MessageSendForm
-        threadId={thread.id}
-        placeholder={t("placeholder")}
-        sendLabel={t("sendMessage")}
-        sendCopyLabel={t("sendCopy")}
-        sentMessage={t("sent")}
-      />
+      <div className="mt-4">
+        <MessageSendForm
+          threadId={thread.id}
+          placeholder={t("placeholder")}
+          sendLabel={t("sendMessage")}
+          sendCopyLabel={t("sendCopy")}
+          sentMessage={t("sent")}
+        />
+      </div>
     </div>
   );
 }
