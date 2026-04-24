@@ -67,6 +67,19 @@ export function LinkBuyerForm({
     setSearchResults([]);
   }
 
+  // Auto-close the edit form whenever server-fresh props reveal the link
+  // succeeded. router.refresh() inside startTransition can land slightly
+  // before or after our manual state resets, so anchoring the reset on
+  // the props guarantees the UI catches up to server truth.
+  useEffect(() => {
+    if (reservedForEmail || soldToEmail) {
+      setShowForm(false);
+      setSelectedEmail("");
+      setSearchQuery("");
+      setError(null);
+    }
+  }, [reservedForEmail, soldToEmail]);
+
   function handleLinkBuyer() {
     if (!selectedEmail) return;
     setError(null);
@@ -79,12 +92,9 @@ export function LinkBuyerForm({
       const result = await linkReservationToBuyerAction(formData);
       if (result?.error) {
         setError(result.error);
-      } else {
-        setShowForm(false);
-        setSelectedEmail("");
-        setSearchQuery("");
-        router.refresh();
+        return;
       }
+      router.refresh();
     });
   }
 
@@ -101,12 +111,9 @@ export function LinkBuyerForm({
       const result = await markItemSoldAction(formData);
       if (result?.error) {
         setError(result.error);
-      } else {
-        setShowForm(false);
-        setSelectedEmail("");
-        setSearchQuery("");
-        router.refresh();
+        return;
       }
+      router.refresh();
     });
   }
 

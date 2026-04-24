@@ -2,20 +2,21 @@
 
 import { requireSeller } from "@/lib/auth";
 import { db } from "@/db";
-import { items, profiles, projects, sellerAccounts } from "@/db/schema";
-import { and, eq, isNull, inArray } from "drizzle-orm";
+import { items, profiles, sellerAccounts } from "@/db/schema";
+import { and, eq, isNull } from "drizzle-orm";
 import { sendReservationRecapEmail } from "@/lib/email";
 import { siteConfig } from "@/config";
+import { findSellerProject } from "@/lib/seller-accounts";
 
 export async function sendReservationRecapAction(
-  projectId: string,
+  projectIdOrSlug: string,
   buyerUserId: string,
   message: string,
   locale: string
 ) {
   const user = await requireSeller();
 
-  // Verify seller owns this project
+  // Verify seller owns this project (accepts UUID or slug from the URL).
   const sellerAccount = await db.query.sellerAccounts.findFirst({
     where: eq(sellerAccounts.userId, user.id),
   });
@@ -23,13 +24,7 @@ export async function sendReservationRecapAction(
     return { error: "Seller account not found" };
   }
 
-  const project = await db.query.projects.findFirst({
-    where: and(
-      eq(projects.id, projectId),
-      eq(projects.sellerId, sellerAccount.id),
-      isNull(projects.deletedAt)
-    ),
-  });
+  const project = await findSellerProject(sellerAccount.id, projectIdOrSlug);
   if (!project) {
     return { error: "Project not found" };
   }
@@ -59,7 +54,7 @@ export async function sendReservationRecapAction(
     .from(items)
     .where(
       and(
-        eq(items.projectId, projectId),
+        eq(items.projectId, project.id),
         eq(items.reservedForUserId, buyerUserId),
         eq(items.status, "reserved"),
         isNull(items.deletedAt)
