@@ -45,6 +45,7 @@ export default async function ProjectReservationsPage({
       reservedForUserId: items.reservedForUserId,
       reservedAt: items.reservedAt,
       buyerEmail: profiles.email,
+      buyerEmailVisibility: profiles.emailVisibility,
       buyerDisplayName: profiles.displayName,
     })
     .from(items)
@@ -74,7 +75,7 @@ export default async function ProjectReservationsPage({
     if (!buyerMap.has(buyerId)) {
       buyerMap.set(buyerId, {
         userId: buyerId,
-        email: item.buyerEmail,
+        email: item.buyerEmailVisibility === "direct" ? item.buyerEmail : "",
         displayName: item.buyerDisplayName,
         items: [],
       });
@@ -103,7 +104,7 @@ export default async function ProjectReservationsPage({
       ) : (
         <div className="space-y-6">
           {buyers.map((buyer) => {
-            const buyerName = buyer.displayName || buyer.email;
+            const buyerName = buyer.displayName || buyer.email || "Buyer";
             const total = buyer.items.reduce(
               (sum, i) => sum + (i.price ?? 0),
               0

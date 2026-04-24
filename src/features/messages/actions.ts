@@ -13,9 +13,16 @@ import { requireUser } from "@/lib/auth";
 import { messageSchema } from "@/lib/validations";
 import { and, eq, isNull, desc, gte } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { consumeRateLimit } from "@/lib/security/rate-limit";
 import { siteConfig } from "@/config";
 import { sendMessageNotificationEmail, sendMessageCopyEmail } from "@/lib/email";
+import {
+  aliasEmail,
+  formatSenderName,
+  getOrCreateThreadAlias,
+  isRelayEnabled,
+} from "@/lib/relay";
 
 function revalidateMessagePaths(threadId: string) {
   revalidatePath("/messages");
@@ -213,6 +220,94 @@ export async function sendMessageAction(formData: FormData) {
   revalidateMessagePaths(thread.id);
 }
 
+// ─── Start conversation (buyer → seller, new thread) ───────────────────────
+
+/**
+ * Buyer compose flow: given a projectId and a message body, create the thread
+ * if needed, persist the message, notify the seller, then redirect the buyer
+ * to the thread view so they can see the conversation. Used by the public
+ * "Contact seller" CTA once the buyer has signed in.
+ */
+export async function startConversationAction(formData: FormData) {
+  const user = await requireUser();
+  const profileId = user.id;
+
+  const rateCheck = consumeRateLimit(`messages:start:user:${profileId}`, {
+    windowMs: 60 * 1000,
+    max: 10,
+  });
+  if (!rateCheck.ok) return;
+
+  const projectId = String(formData.get("projectId") ?? "");
+  const body = String(formData.get("body") ?? "");
+  const sendCopy = formData.get("sendCopy") === "on";
+
+  const validated = messageSchema.safeParse({ body });
+  if (!validated.success || !projectId) return;
+
+  const project = await db.query.projects.findFirst({
+    where: and(eq(projects.id, projectId), isNull(projects.deletedAt)),
+  });
+  if (!project) return;
+
+  let thread = await db.query.conversationThreads.findFirst({
+    where: and(
+      eq(conversationThreads.projectId, projectId),
+      eq(conversationThreads.buyerId, profileId)
+    ),
+  });
+
+  const now = new Date();
+  if (!thread) {
+    const [created] = await db
+      .insert(conversationThreads)
+      .values({ projectId, buyerId: profileId, buyerLastReadAt: now })
+      .returning();
+    thread = created;
+  }
+
+  await db.insert(conversationMessages).values({
+    threadId: thread.id,
+    senderId: profileId,
+    body: validated.data.body,
+  });
+
+  await db
+    .update(conversationThreads)
+    .set({ updatedAt: now, buyerLastReadAt: now })
+    .where(eq(conversationThreads.id, thread.id));
+
+  try {
+    await notifyMessageRecipient(
+      thread.id,
+      thread.projectId,
+      "buyer",
+      profileId,
+      profileId,
+      validated.data.body
+    );
+  } catch {
+    // non-blocking
+  }
+
+  if (sendCopy) {
+    try {
+      await sendCopyToSender(
+        profileId,
+        thread.id,
+        thread.projectId,
+        "buyer",
+        validated.data.body
+      );
+    } catch {
+      // non-blocking
+    }
+  }
+
+  revalidateMessagePaths(thread.id);
+  redirect(`/messages/${thread.id}`);
+}
+
 // ─── Email notification helper (throttled: max 1 per thread per 5 min) ──────
 
 const MESSAGE_NOTIF_THROTTLE_MS = 5 * 60 * 1000; // 5 minutes
@@ -252,12 +347,13 @@ async function notifyMessageRecipient(
   });
   if (!sender) return;
 
-  // Determine recipient
+  // Determine recipient (the *other* party)
   let recipientEmail: string | undefined;
+  let recipientProfileId: string | undefined;
+  let recipientRole: "buyer" | "seller";
   let threadUrl: string;
 
   if (senderRole === "buyer") {
-    // Notify the seller
     const sellerAccount = await db.query.sellerAccounts.findFirst({
       where: eq(sellerAccounts.id, project.sellerId),
       columns: { userId: true },
@@ -265,21 +361,49 @@ async function notifyMessageRecipient(
     if (!sellerAccount) return;
     const sellerProfile = await db.query.profiles.findFirst({
       where: eq(profiles.id, sellerAccount.userId),
-      columns: { email: true },
+      columns: { id: true, email: true },
     });
     recipientEmail = sellerProfile?.email;
+    recipientProfileId = sellerProfile?.id;
+    recipientRole = "seller";
     threadUrl = `${siteConfig.url}/fr/seller/messages/${threadId}`;
   } else {
-    // Notify the buyer
     const buyerProfile = await db.query.profiles.findFirst({
       where: eq(profiles.id, buyerId),
-      columns: { email: true },
+      columns: { id: true, email: true },
     });
     recipientEmail = buyerProfile?.email;
+    recipientProfileId = buyerProfile?.id;
+    recipientRole = "buyer";
     threadUrl = `${siteConfig.url}/fr/messages/${threadId}`;
   }
 
-  if (!recipientEmail) return;
+  if (!recipientEmail || !recipientProfileId) return;
+
+  // Relay: mint the recipient's own alias and use it as Reply-To so when they
+  // reply from their mail client, the inbound webhook can route the message
+  // back into the thread without exposing the sender's real email address.
+  let replyTo: string | undefined;
+  let extraHeaders: Record<string, string> | undefined;
+  if (await isRelayEnabled()) {
+    try {
+      const alias = await getOrCreateThreadAlias(
+        threadId,
+        recipientRole,
+        recipientProfileId
+      );
+      const aliasAddr = await aliasEmail(alias.localPart);
+      if (aliasAddr) {
+        replyTo = aliasAddr;
+        extraHeaders = {
+          "X-SMI-Thread-Id": threadId,
+          "X-SMI-Recipient-Id": recipientProfileId,
+        };
+      }
+    } catch (err) {
+      console.error("Failed to mint thread alias:", err);
+    }
+  }
 
   await sendMessageNotificationEmail(
     recipientEmail,
@@ -287,7 +411,12 @@ async function notifyMessageRecipient(
     project.name,
     messageBody,
     threadUrl,
-    "fr"
+    "fr",
+    {
+      replyTo,
+      fromName: formatSenderName(sender.displayName ?? null),
+      headers: extraHeaders,
+    }
   );
 }
 

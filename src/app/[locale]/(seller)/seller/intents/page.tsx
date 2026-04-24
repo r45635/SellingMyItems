@@ -86,7 +86,7 @@ export default async function SellerIntentsPage() {
       return {
         ...intent,
         items: intentItems,
-        buyerEmail: buyer?.email ?? "Unknown",
+        buyerEmail: buyer?.emailVisibility === "direct" ? buyer.email : "",
         buyerName: buyer?.displayName ?? "Unknown",
         projectName: project?.name ?? "Unknown",
       };
@@ -115,7 +115,8 @@ export default async function SellerIntentsPage() {
               <div className="flex items-center justify-between gap-4">
                 <div>
                   <p className="font-medium">
-                    {intent.buyerName} ({intent.buyerEmail})
+                    {intent.buyerName}
+                    {intent.buyerEmail ? ` (${intent.buyerEmail})` : ""}
                   </p>
                   <p className="text-sm text-muted-foreground">
                     {intent.projectName} •{" "}

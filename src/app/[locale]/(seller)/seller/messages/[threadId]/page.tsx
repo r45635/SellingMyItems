@@ -80,7 +80,9 @@ export default async function SellerMessageThreadPage({
         <h1 className="text-xl font-semibold">{project.name}</h1>
         <p className="text-sm text-muted-foreground">
           {buyer?.displayName ?? t("unknownBuyer")}
-          {buyer?.email ? ` (${buyer.email})` : ""}
+          {buyer?.email && buyer.emailVisibility === "direct"
+            ? ` (${buyer.email})`
+            : ""}
         </p>
       </div>
 

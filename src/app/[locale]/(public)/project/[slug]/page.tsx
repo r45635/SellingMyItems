@@ -3,7 +3,7 @@ import { ProjectItemsGrid } from "@/features/items/components/project-items-grid
 import { InvitationGate } from "@/features/projects/components/invitation-gate";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, ArrowLeft, Package, User, Mail, Lock, ArrowRight } from "lucide-react";
+import { MapPin, ArrowLeft, Package, User, Mail, Lock, ArrowRight, MessageCircle } from "lucide-react";
 import { db } from "@/db";
 import { buyerWishlistItems, buyerWishlists, items, profiles, projectCategories, projects, sellerAccounts } from "@/db/schema";
 import { and, asc, eq, isNull, ne } from "drizzle-orm";
@@ -36,6 +36,7 @@ export default async function ProjectPage({
       isActive: profiles.isActive,
       displayName: profiles.displayName,
       email: profiles.email,
+      emailVisibility: profiles.emailVisibility,
     })
     .from(sellerAccounts)
     .innerJoin(profiles, eq(sellerAccounts.userId, profiles.id))
@@ -184,25 +185,38 @@ export default async function ProjectPage({
 
             {user && !isLocked && (
               <div className="md:col-span-1">
-                <div className="rounded-xl border bg-card/80 p-4 backdrop-blur shadow-sm">
+                <div className="rounded-xl border bg-card/80 p-4 backdrop-blur shadow-sm space-y-3">
                   <p className="text-eyebrow">{t("contactSeller")}</p>
-                  <div className="mt-3 flex items-center gap-3">
+                  <div className="flex items-center gap-3">
                     <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-orange-100 text-orange-600 dark:bg-orange-950/50 dark:text-orange-400">
                       <User className="h-5 w-5" />
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="truncate font-semibold text-sm">
-                        {sellerInfo.displayName ?? "Seller"}
+                        {sellerInfo.displayName ?? t("contactSeller")}
                       </p>
-                      <a
-                        href={`mailto:${sellerInfo.email}`}
-                        className="inline-flex items-center gap-1 truncate text-xs text-muted-foreground hover:text-primary transition-colors"
-                      >
-                        <Mail className="h-3.5 w-3.5 shrink-0" />
-                        <span className="truncate">{sellerInfo.email}</span>
-                      </a>
+                      {sellerInfo.emailVisibility === "direct" ? (
+                        <a
+                          href={`mailto:${sellerInfo.email}`}
+                          className="inline-flex items-center gap-1 truncate text-xs text-muted-foreground hover:text-primary transition-colors"
+                        >
+                          <Mail className="h-3.5 w-3.5 shrink-0" />
+                          <span className="truncate">{sellerInfo.email}</span>
+                        </a>
+                      ) : (
+                        <p className="text-xs text-muted-foreground">
+                          {t("contactViaAppHint")}
+                        </p>
+                      )}
                     </div>
                   </div>
+                  <Link
+                    href={`/messages/new?projectId=${project.id}`}
+                    className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-lg bg-primary px-3.5 text-sm font-semibold text-primary-foreground transition-all hover:bg-primary/90"
+                  >
+                    <MessageCircle className="h-4 w-4" />
+                    {t("sendMessageCta")}
+                  </Link>
                 </div>
               </div>
             )}

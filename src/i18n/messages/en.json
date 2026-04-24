@@ -86,6 +86,20 @@
     "requestNewLink": "Request a new link",
     "tooManyRequests": "Too many requests. Please try again later."
   },
+  "account": {
+    "displayName": "Display name",
+    "phone": "Phone",
+    "role": "Role",
+    "seller": "Seller",
+    "buyer": "Buyer",
+    "save": "Save",
+    "emailVisibility": "Email visibility",
+    "emailVisibilityDesc": "Choose whether other users can see your real email address. Regardless of this setting, you always receive notifications at your registered address.",
+    "visibilityHidden": "Hidden (recommended)",
+    "visibilityHiddenDesc": "Your email stays private. Messages from sellers or buyers reach you via a relay address we manage.",
+    "visibilityDirect": "Direct",
+    "visibilityDirectDesc": "Your email is shown to your counterparty when they also chose direct mode."
+  },
   "project": {
     "title": "Project",
     "cityArea": "Area",
@@ -107,6 +121,8 @@
     "backToProjects": "All projects",
     "backToProject": "Back to project",
     "contactSeller": "Seller",
+    "contactViaAppHint": "Email stays private — send a message via the app.",
+    "sendMessageCta": "Send a message",
     "guestOverlayTitle": "Sign in to view this project",
     "guestOverlayBody": "Create a free account or sign in to see item photos, prices and contact the seller.",
     "guestSignIn": "Sign in",
@@ -206,7 +222,12 @@
     "unknownProject": "Unknown project",
     "unknownSeller": "Unknown seller",
     "unknownBuyer": "Unknown buyer",
-    "sent": "Message sent"
+    "sent": "Message sent",
+    "contactSellerTitle": "Contact the seller",
+    "contactSellerIntro": "Send a message about {project} to {seller}. Your real email stays hidden unless you've chosen to share it.",
+    "privacyNotice": "Your email address is kept private. The seller will reply through our relay.",
+    "composePlaceholder": "Hi, I'm interested in…",
+    "backToProject": "Back to project"
   },
   "seller": {
     "dashboard": "Seller Dashboard",

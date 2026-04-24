@@ -86,6 +86,20 @@
     "requestNewLink": "Demander un nouveau lien",
     "tooManyRequests": "Trop de requêtes. Veuillez réessayer plus tard."
   },
+  "account": {
+    "displayName": "Nom affiché",
+    "phone": "Téléphone",
+    "role": "Rôle",
+    "seller": "Vendeur",
+    "buyer": "Acheteur",
+    "save": "Enregistrer",
+    "emailVisibility": "Visibilité de l'email",
+    "emailVisibilityDesc": "Choisissez si les autres utilisateurs peuvent voir votre adresse email réelle. Vous recevez toujours les notifications sur l'adresse enregistrée.",
+    "visibilityHidden": "Masqué (recommandé)",
+    "visibilityHiddenDesc": "Votre email reste privé. Les messages des vendeurs ou acheteurs vous parviennent via une adresse de relais que nous gérons.",
+    "visibilityDirect": "Direct",
+    "visibilityDirectDesc": "Votre email est visible par votre interlocuteur uniquement s'il a aussi choisi le mode direct."
+  },
   "project": {
     "title": "Projet",
     "cityArea": "Zone",
@@ -107,6 +121,8 @@
     "backToProjects": "Tous les projets",
     "backToProject": "Retour au projet",
     "contactSeller": "Vendeur",
+    "contactViaAppHint": "L'email reste privé — envoyez un message via l'application.",
+    "sendMessageCta": "Envoyer un message",
     "guestOverlayTitle": "Connectez-vous pour voir ce projet",
     "guestOverlayBody": "Créez un compte gratuit ou connectez-vous pour voir les photos, les prix et contacter le vendeur.",
     "guestSignIn": "Se connecter",
@@ -206,7 +222,12 @@
     "unknownProject": "Projet inconnu",
     "unknownSeller": "Vendeur inconnu",
     "unknownBuyer": "Acheteur inconnu",
-    "sent": "Message envoyé"
+    "sent": "Message envoyé",
+    "contactSellerTitle": "Contacter le vendeur",
+    "contactSellerIntro": "Envoyez un message à {seller} au sujet de {project}. Votre adresse email reste privée sauf si vous avez choisi de la partager.",
+    "privacyNotice": "Votre adresse email reste confidentielle. Le vendeur vous répondra via notre relais.",
+    "composePlaceholder": "Bonjour, je suis intéressé(e) par…",
+    "backToProject": "Retour au projet"
   },
   "seller": {
     "dashboard": "Tableau de bord vendeur",

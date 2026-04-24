@@ -18,6 +18,7 @@ import {
   Clock,
   Eye,
   Heart,
+  MessageCircle,
 } from "lucide-react";
 import { db } from "@/db";
 import {
@@ -134,6 +135,7 @@ export default async function ItemPage({
     .select({
       displayName: profiles.displayName,
       email: profiles.email,
+      emailVisibility: profiles.emailVisibility,
     })
     .from(sellerAccounts)
     .innerJoin(profiles, eq(sellerAccounts.userId, profiles.id))
@@ -410,22 +412,37 @@ export default async function ItemPage({
 
             {/* Seller contact */}
             {sellerInfo && (
-              <div className="rounded-xl border bg-muted/30 p-4 flex items-center gap-4">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-orange-100 text-orange-600 dark:bg-orange-950/50 dark:text-orange-400">
-                  <User className="h-5 w-5" />
+              <div className="rounded-xl border bg-muted/30 p-4 space-y-3">
+                <div className="flex items-center gap-4">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-orange-100 text-orange-600 dark:bg-orange-950/50 dark:text-orange-400">
+                    <User className="h-5 w-5" />
+                  </div>
+                  <div className="min-w-0 flex-1 text-sm">
+                    <p className="truncate font-semibold">
+                      {sellerInfo.displayName ?? tProject("contactSeller")}
+                    </p>
+                    {sellerInfo.emailVisibility === "direct" ? (
+                      <a
+                        href={`mailto:${sellerInfo.email}`}
+                        className="inline-flex items-center gap-1 truncate text-muted-foreground hover:text-primary transition-colors"
+                      >
+                        <Mail className="h-3.5 w-3.5 shrink-0" />
+                        <span className="truncate">{sellerInfo.email}</span>
+                      </a>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">
+                        {tProject("contactViaAppHint")}
+                      </p>
+                    )}
+                  </div>
                 </div>
-                <div className="min-w-0 flex-1 text-sm">
-                  <p className="truncate font-semibold">
-                    {sellerInfo.displayName ?? tProject("contactSeller")}
-                  </p>
-                  <a
-                    href={`mailto:${sellerInfo.email}`}
-                    className="inline-flex items-center gap-1 truncate text-muted-foreground hover:text-primary transition-colors"
-                  >
-                    <Mail className="h-3.5 w-3.5 shrink-0" />
-                    <span className="truncate">{sellerInfo.email}</span>
-                  </a>
-                </div>
+                <Link
+                  href={`/messages/new?projectId=${project.id}`}
+                  className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-lg bg-primary px-3.5 text-sm font-semibold text-primary-foreground transition-all hover:bg-primary/90"
+                >
+                  <MessageCircle className="h-4 w-4" />
+                  {tProject("sendMessageCta")}
+                </Link>
               </div>
             )}
           </div>

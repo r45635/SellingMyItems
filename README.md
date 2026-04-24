@@ -191,6 +191,11 @@ APP_PORT=5050
 NEXT_PUBLIC_APP_URL=https://yourdomain.com
 RESEND_API_KEY=re_your_key_here              # Required: for email sending
 RESEND_FROM_EMAIL=YourApp <noreply@yourdomain.com>  # Required: verified domain sender
+
+# Email privacy & relay (optional — see "Email privacy" section)
+RELAY_ENABLED=false                          # flip to true once DNS is set up
+RELAY_DOMAIN=relay.yourdomain.com            # subdomain with MX pointing at your inbound provider
+INBOUND_WEBHOOK_SECRET=<random-token>        # shared secret between Cloudflare Worker and /api/inbound/email
 ```
 
 ### 3. Database setup
@@ -489,8 +494,32 @@ All emails are logged to the `email_logs` table with status (sent/failed), error
 | **Intent received** | Buyer submits intent | Item list, buyer contact info → seller |
 | **Intent status** | Seller accepts/declines | Status update → buyer |
 | **Password reset** | Forgot password request | Reset link with 1h token |
+| **Inbound relay** | User replies to a notification via email | Stripped reply body is stored as a new `conversation_messages` row and forwarded to the counterparty |
 
 All emails support English and French based on detected locale.
+
+### Email privacy & relay (optional)
+
+Users can keep their real email address hidden from their counterparties. When `RELAY_ENABLED=true` (or `app_settings.relay_enabled = 'true'`):
+
+- Each (thread, participant) pair gets a lazy-minted alias such as `t-abc123@relay.yourdomain.com`.
+- Outbound notifications still send `From:` from your verified Resend domain (DKIM intact) but set `Reply-To:` to the recipient's alias.
+- Replies sent to the alias land in Cloudflare Email Routing (or Postmark Inbound, SES, etc.), which POSTs them to `/api/inbound/email` with a shared secret (`INBOUND_WEBHOOK_SECRET`).
+- The webhook validates the secret, resolves the alias, strips the quoted reply, stores a `conversation_messages` row, and fires a forwarded notification to the other party (with their own alias as `Reply-To`).
+
+Each user controls their own visibility via the Account page (`Email visibility: Hidden / Direct`). Real addresses are shown in the UI only when **both** parties have chosen `Direct`. The admin dashboard is excluded from this gating.
+
+To set up the Cloudflare route (recommended, free):
+
+1. Add an `MX` + `SPF TXT` for `relay.yourdomain.com` pointing to Cloudflare Email.
+2. Create a catch-all rule that forwards to an Email Worker.
+3. In the Worker, POST the parsed envelope to `https://yourdomain.com/api/inbound/email` with header `x-webhook-secret: $INBOUND_WEBHOOK_SECRET`.
+
+Feature flag toggle: set `relay_enabled=true` in the admin `app_settings` UI. Minimal worker payload:
+
+```json
+{ "to": "t-abc123@relay.yourdomain.com", "from": "reply@user-mail.com", "subject": "Re: …", "text": "…" }
+```
 
 ---
 

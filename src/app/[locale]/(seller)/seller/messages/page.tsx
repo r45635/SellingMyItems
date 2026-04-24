@@ -64,6 +64,7 @@ export default async function SellerMessagesPage() {
             id: profiles.id,
             displayName: profiles.displayName,
             email: profiles.email,
+            emailVisibility: profiles.emailVisibility,
           })
           .from(profiles)
           .where(inArray(profiles.id, buyerIds))
@@ -74,7 +75,7 @@ export default async function SellerMessagesPage() {
       buyer.id,
       {
         displayName: buyer.displayName ?? t("unknownBuyer"),
-        email: buyer.email,
+        email: buyer.emailVisibility === "direct" ? buyer.email : "",
       },
     ])
   );
