@@ -94,11 +94,18 @@ export function invalidateResendFromEmailCache() {
 
 // ─── Core send function with logging ────────────────────────────────────────
 
+type EmailAttachment = {
+  filename: string;
+  /** Raw bytes; will be base64-encoded for Resend. */
+  content: Buffer;
+};
+
 async function sendEmail(
   to: string,
   subject: string,
   html: string,
-  type: EmailType
+  type: EmailType,
+  options?: { attachments?: EmailAttachment[] }
 ): Promise<{ ok: boolean; resendId?: string; error?: string }> {
   const apiKey = await getResendApiKey();
   const fromEmail = await getResendFromEmail();
@@ -117,6 +124,14 @@ async function sendEmail(
       to,
       subject,
       html,
+      ...(options?.attachments && options.attachments.length > 0
+        ? {
+            attachments: options.attachments.map((a) => ({
+              filename: a.filename,
+              content: a.content.toString("base64"),
+            })),
+          }
+        : {}),
     });
 
     if (error) {
@@ -415,7 +430,8 @@ export async function sendReservationRecapEmail(
   projectUrl: string,
   threadUrl: string,
   reservationsUrl: string,
-  locale: string = "en"
+  locale: string = "en",
+  options?: { attachment?: EmailAttachment }
 ) {
   const fr = locale === "fr";
   const subject = fr
@@ -527,7 +543,56 @@ export async function sendReservationRecapEmail(
     }`
   );
 
-  return sendEmail(to, subject, html, "reservation_recap");
+  return sendEmail(to, subject, html, "reservation_recap", {
+    attachments: options?.attachment ? [options.attachment] : undefined,
+  });
+}
+
+// ─── Project recap PDF (standalone, sent to any address) ────────────────────
+
+export async function sendProjectRecapPdfEmail(
+  to: string,
+  senderName: string,
+  projectName: string,
+  attachment: EmailAttachment,
+  personalMessage: string,
+  locale: string = "en"
+) {
+  const fr = locale === "fr";
+  const subject = fr
+    ? `PDF récapitulatif — ${projectName}`
+    : `Recap PDF — ${projectName}`;
+
+  const escapedMessage = personalMessage
+    ? personalMessage
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/\n/g, "<br/>")
+    : "";
+
+  const html = emailLayout(
+    `${emailHeader()}
+    ${
+      fr
+        ? `<h2>Récapitulatif PDF</h2>
+           <p><strong>${senderName}</strong> vous transmet un PDF récapitulatif du projet <strong>${projectName}</strong>.</p>
+           ${escapedMessage ? `<div style="background:#f9f9f9;border-left:3px solid #ddd;padding:12px 16px;margin:16px 0;color:#444;"><p style="margin:0;">${escapedMessage}</p></div>` : ""}
+           <p style="color:#666;font-size:13px;">Le PDF est attaché à cet email.</p>
+           <hr style="border:none;border-top:1px solid #e5e5e5;margin:24px 0;" />
+           <p style="color:#888;font-size:13px;">— L'équipe SellingMyItems</p>`
+        : `<h2>Recap PDF</h2>
+           <p><strong>${senderName}</strong> is sharing a recap PDF for the project <strong>${projectName}</strong>.</p>
+           ${escapedMessage ? `<div style="background:#f9f9f9;border-left:3px solid #ddd;padding:12px 16px;margin:16px 0;color:#444;"><p style="margin:0;">${escapedMessage}</p></div>` : ""}
+           <p style="color:#666;font-size:13px;">The PDF is attached to this email.</p>
+           <hr style="border:none;border-top:1px solid #e5e5e5;margin:24px 0;" />
+           <p style="color:#888;font-size:13px;">— The SellingMyItems Team</p>`
+    }`
+  );
+
+  return sendEmail(to, subject, html, "reservation_recap", {
+    attachments: [attachment],
+  });
 }
 
 // ─── Invitation Sent (targeted email or generic code share) ─────────────────

@@ -14,6 +14,8 @@ import { sendReservationRecapEmail } from "@/lib/email";
 import { siteConfig } from "@/config";
 import { findSellerProject } from "@/lib/seller-accounts";
 import { revalidatePath } from "next/cache";
+import { buildRecapPayload, recapPdfFilename } from "@/lib/pdf/build-recap-payload";
+import { renderProjectRecapPdf } from "@/lib/pdf/project-recap-pdf";
 
 /**
  * Build a plain-text recap body that will show up as a regular seller
@@ -89,7 +91,8 @@ export async function sendReservationRecapAction(
   projectIdOrSlug: string,
   buyerUserId: string,
   message: string,
-  locale: string
+  locale: string,
+  options?: { attachPdf?: boolean }
 ) {
   const user = await requireSeller();
 
@@ -193,6 +196,48 @@ export async function sendReservationRecapAction(
   const threadUrl = `${siteConfig.url}/${locale}/messages/${thread.id}`;
   const reservationsUrl = `${siteConfig.url}/${locale}/reservations`;
 
+  // Optionally render the buyer-scoped PDF and attach it. Filter to this
+  // buyer's reserved items only so the recipient receives a recap of what's
+  // actually reserved for them.
+  let attachment: { filename: string; content: Buffer } | undefined;
+  if (options?.attachPdf) {
+    try {
+      const reservedRows = await db
+        .select({ id: items.id })
+        .from(items)
+        .where(
+          and(
+            eq(items.projectId, project.id),
+            eq(items.reservedForUserId, buyerUserId),
+            eq(items.status, "reserved"),
+            isNull(items.deletedAt)
+          )
+        );
+      const itemIds = reservedRows.map((r) => r.id);
+      if (itemIds.length > 0) {
+        const payload = await buildRecapPayload(project, {
+          itemIds,
+          locale,
+          subtitle:
+            locale === "fr"
+              ? `Réservation pour ${buyerName}`
+              : `Reservation for ${buyerName}`,
+        });
+        const pdfBuffer = await renderProjectRecapPdf(payload);
+        attachment = {
+          filename: recapPdfFilename(
+            project.slug,
+            buyerName.replace(/[^a-zA-Z0-9]+/g, "-").slice(0, 32)
+          ),
+          content: pdfBuffer,
+        };
+      }
+    } catch (err) {
+      console.error("Failed to build recap PDF attachment:", err);
+      // Don't block the email if the PDF fails — surface as a warning later.
+    }
+  }
+
   const result = await sendReservationRecapEmail(
     buyer.email,
     buyerName,
@@ -207,7 +252,8 @@ export async function sendReservationRecapAction(
     projectUrl,
     threadUrl,
     reservationsUrl,
-    locale
+    locale,
+    attachment ? { attachment } : undefined
   );
 
   revalidateRecapPaths(projectIdOrSlug, thread.id);

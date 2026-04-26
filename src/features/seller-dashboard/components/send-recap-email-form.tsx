@@ -5,7 +5,14 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Mail, Loader2, CheckCircle2, ArrowRight } from "lucide-react";
+import {
+  Mail,
+  Loader2,
+  CheckCircle2,
+  ArrowRight,
+  Download,
+  Paperclip,
+} from "lucide-react";
 import { sendReservationRecapAction } from "@/features/seller-dashboard/actions";
 import { toast } from "sonner";
 import { Link } from "@/i18n/navigation";
@@ -24,8 +31,11 @@ export function SendRecapEmailForm({
   const t = useTranslations("seller");
   const router = useRouter();
   const [message, setMessage] = useState("");
+  const [attachPdf, setAttachPdf] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [sentThreadId, setSentThreadId] = useState<string | null>(null);
+
+  const downloadPdfHref = `/api/seller/projects/${projectId}/recap.pdf?buyer=${buyerUserId}&locale=${locale}`;
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -34,7 +44,8 @@ export function SendRecapEmailForm({
         projectId,
         buyerUserId,
         message,
-        locale
+        locale,
+        { attachPdf }
       );
       if ("error" in result && result.error) {
         toast.error(result.error);
@@ -81,14 +92,35 @@ export function SendRecapEmailForm({
         rows={3}
         className="resize-none text-sm"
       />
-      <Button type="submit" size="sm" disabled={isPending}>
-        {isPending ? (
-          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-        ) : (
-          <Mail className="mr-2 h-4 w-4" />
-        )}
-        {t("sendRecapEmail", { name: buyerName })}
-      </Button>
+      <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none">
+        <input
+          type="checkbox"
+          checked={attachPdf}
+          onChange={(e) => setAttachPdf(e.target.checked)}
+          className="rounded border-gray-300"
+        />
+        <Paperclip className="h-3.5 w-3.5" />
+        {t("attachPdf")}
+      </label>
+      <div className="flex flex-wrap items-center gap-2">
+        <Button type="submit" size="sm" disabled={isPending}>
+          {isPending ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <Mail className="mr-2 h-4 w-4" />
+          )}
+          {t("sendRecapEmail", { name: buyerName })}
+        </Button>
+        <a
+          href={downloadPdfHref}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-background px-3 text-xs font-medium hover:bg-muted"
+        >
+          <Download className="h-3.5 w-3.5" />
+          {t("pdfDownload")}
+        </a>
+      </div>
     </form>
   );
 }

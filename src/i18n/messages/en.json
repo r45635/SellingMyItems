@@ -286,7 +286,19 @@
     "sendRecapEmail": "Send recap to {name}",
     "recapEmailSent": "Recap sent — email delivered and copy posted in the conversation.",
     "lastRecapSent": "Last recap sent",
-    "openConversation": "Open conversation"
+    "openConversation": "Open conversation",
+    "attachPdf": "Attach a PDF recap to the email",
+    "pdfDownload": "Download PDF",
+    "pdfEmail": "Email PDF",
+    "pdfEmailTitle": "Email {count, plural, one {# item} other {# items}} as PDF",
+    "pdfEmailRecipient": "Recipient email",
+    "pdfEmailMessage": "Optional message…",
+    "pdfEmailSend": "Send",
+    "pdfEmailSent": "PDF sent",
+    "pdfSelectedCount": "{count, plural, =0 {No items selected} one {# selected} other {# selected}}",
+    "pdfSelectAll": "Select all",
+    "pdfSelectReserved": "Reserved only",
+    "pdfSelectNone": "Clear"
   },
   "reservations": {
     "title": "My Reservations",

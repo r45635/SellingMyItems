@@ -1,4 +1,4 @@
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { Plus, ArrowLeft, ImageOff, Eye, ClipboardList, KeyRound, Package } from "lucide-react";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -10,6 +10,7 @@ import { notFound } from "next/navigation";
 import Image from "next/image";
 import { StatusSelect } from "@/features/items/components/status-select";
 import { LinkBuyerForm } from "@/features/items/components/link-buyer-form";
+import { ItemsExportControls } from "@/features/items/components/items-export-controls";
 import { BLUR_PLACEHOLDER } from "@/lib/image/placeholders";
 import { findSellerProject } from "@/lib/seller-accounts";
 
@@ -20,6 +21,7 @@ export default async function ProjectItemsPage({
 }) {
   const { projectId } = await params;
   const t = await getTranslations("seller");
+  const locale = await getLocale();
   const user = await requireSeller();
 
   const sellerAccount = await db.query.sellerAccounts.findFirst({
@@ -122,6 +124,16 @@ export default async function ProjectItemsPage({
           }
         />
       ) : (
+        <>
+          <ItemsExportControls
+            projectIdOrSlug={projectId}
+            items={projectItems.map((i) => ({
+              id: i.id,
+              title: i.title,
+              status: i.status,
+            }))}
+            locale={locale}
+          />
         <div className="space-y-3 stagger-fade-in">
           {projectItems.map((item) => {
             const formattedPrice =
@@ -137,13 +149,22 @@ export default async function ProjectItemsPage({
                 key={item.id}
                 className="rounded-xl border p-4 space-y-2 transition-shadow hover:shadow-sm"
               >
-                {/* Top row: status left, price right */}
-                <div className="flex items-center justify-between">
-                  <StatusSelect
-                    itemId={item.id}
-                    projectId={projectId}
-                    currentStatus={item.status}
-                  />
+                {/* Top row: checkbox + status left, price right */}
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="checkbox"
+                      data-selector-row="1"
+                      value={item.id}
+                      aria-label={`Select ${item.title}`}
+                      className="h-4 w-4 rounded border-gray-300 cursor-pointer"
+                    />
+                    <StatusSelect
+                      itemId={item.id}
+                      projectId={projectId}
+                      currentStatus={item.status}
+                    />
+                  </div>
                   {formattedPrice && (
                     <span className="font-semibold text-primary">
                       {formattedPrice}
@@ -213,6 +234,7 @@ export default async function ProjectItemsPage({
             );
           })}
         </div>
+        </>
       )}
     </div>
   );
