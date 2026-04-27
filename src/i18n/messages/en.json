@@ -48,7 +48,8 @@
     "noProjectsDesc": "As soon as sellers publish projects near you, they'll show up here.",
     "noSearchResults": "No projects match your search",
     "noSearchResultsDesc": "Try a different keyword or clear your search to see all projects.",
-    "clearSearch": "Clear search"
+    "clearSearch": "Clear search",
+    "searchResultsFor": "Results for \"{q}\""
   },
   "auth": {
     "signIn": "Sign in",

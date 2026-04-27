@@ -48,7 +48,8 @@
     "noProjectsDesc": "Dès que des vendeurs publieront des projets près de chez vous, ils apparaîtront ici.",
     "noSearchResults": "Aucun projet ne correspond à votre recherche",
     "noSearchResultsDesc": "Essayez un autre mot-clé ou effacez votre recherche pour voir tous les projets.",
-    "clearSearch": "Effacer la recherche"
+    "clearSearch": "Effacer la recherche",
+    "searchResultsFor": "Résultats pour « {q} »"
   },
   "auth": {
     "signIn": "Se connecter",

@@ -3,8 +3,7 @@ import { Link } from "@/i18n/navigation";
 import { db } from "@/db";
 import { profiles, projects, sellerAccounts, items, buyerWishlists, buyerWishlistItems } from "@/db/schema";
 import { and, count, desc, eq, isNull, ne, inArray, ilike } from "drizzle-orm";
-import { MapPin, ArrowRight, Package, ShoppingBag, Heart, Search, MapPinned, HandCoins } from "lucide-react";
-import { SmiLogo } from "@/components/shared/smi-logo";
+import { MapPin, Package, Heart, MapPinned, HandCoins } from "lucide-react";
 import { SearchBar } from "@/components/shared/search-bar";
 import { EmptyState } from "@/components/shared/empty-state";
 import { getUser } from "@/lib/auth";
@@ -100,83 +99,53 @@ export default async function HomePage({
 
   return (
     <div className="flex flex-col">
-      <section className="relative overflow-hidden border-b bg-gradient-to-b from-orange-50/70 via-background to-background">
-        <div className="absolute inset-0 bg-dot-pattern opacity-40 [mask-image:radial-gradient(ellipse_at_center,black_30%,transparent_75%)]" />
-        <div
-          className="pointer-events-none absolute -top-24 -right-16 h-72 w-72 rounded-full bg-orange-200/40 blur-3xl dark:bg-orange-900/20"
-          aria-hidden
-        />
-        <div
-          className="pointer-events-none absolute -bottom-32 -left-16 h-72 w-72 rounded-full bg-amber-100/40 blur-3xl dark:bg-amber-900/10"
-          aria-hidden
-        />
-
-        <div className="container relative px-4 py-12 md:px-6 md:py-20">
-          <div className="mx-auto flex max-w-3xl flex-col items-center text-center animate-fade-up">
-            <div className="mb-6 inline-flex items-center gap-2 rounded-full border bg-card/80 px-3 py-1 shadow-sm backdrop-blur">
-              <SmiLogo size="sm" showText={false} />
-              <span className="text-xs font-semibold tracking-wide text-muted-foreground">
-                SellingMyItems
-              </span>
-            </div>
-
-            <h1 className="text-display bg-gradient-to-br from-foreground via-foreground to-orange-600 bg-clip-text text-transparent dark:to-orange-400">
-              {t("hero")}
-            </h1>
-            <p className="text-lead mt-4 max-w-xl">{t("subtitle")}</p>
-
-            <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row">
-              {!user ? (
-                <Link
-                  href="/auth/signin"
-                  className="inline-flex h-11 items-center justify-center gap-1.5 rounded-lg bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-sm transition-all hover:bg-primary/90 hover:shadow"
-                >
-                  {t("heroCtaSignIn")}
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-              ) : null}
-              <a
-                href="#browse"
-                className="inline-flex h-11 items-center justify-center gap-1.5 rounded-lg border border-border bg-background/80 px-5 text-sm font-semibold backdrop-blur transition-all hover:bg-muted"
-              >
-                <Search className="h-4 w-4" />
-                {t("heroCtaBrowse")}
-              </a>
-            </div>
+      {/* Hero — compact, search-first. On mobile: ~150px tall vs the
+          previous ~700px. The SearchBar replaces the two stacked CTAs as
+          the primary action; the auth nudge is a single inline line. */}
+      <section className="border-b bg-gradient-to-b from-orange-50/60 to-background dark:from-orange-950/15">
+        <div className="container px-4 py-5 md:px-6 md:py-12 mx-auto max-w-3xl text-center animate-fade-up">
+          <h1 className="text-2xl sm:text-4xl md:text-display font-extrabold tracking-tight bg-gradient-to-br from-foreground to-orange-600 bg-clip-text text-transparent dark:to-orange-400">
+            {t("hero")}
+          </h1>
+          <p className="mt-2 text-sm md:text-lead text-muted-foreground max-w-xl mx-auto">
+            {t("subtitle")}
+          </p>
+          <div className="mt-4 flex justify-center">
+            <SearchBar />
           </div>
-
-          <div className="mx-auto mt-12 grid max-w-4xl gap-3 sm:grid-cols-3 stagger-fade-in">
-            {valueProps.map((v) => (
-              <div
-                key={v.title}
-                className="flex items-start gap-3 rounded-xl border bg-card/70 p-4 backdrop-blur-sm"
+          {!user && (
+            <p className="mt-3 text-xs text-muted-foreground">
+              <Link
+                href="/login"
+                className="font-semibold text-orange-600 dark:text-orange-400 hover:underline"
               >
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-orange-100 text-orange-600 dark:bg-orange-950/50 dark:text-orange-400">
-                  <v.icon className="h-4 w-4" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold">{v.title}</p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">{v.desc}</p>
-                </div>
-              </div>
-            ))}
-          </div>
+                {t("heroCtaSignIn")}
+              </Link>
+              <span className="mx-1.5">·</span>
+              {t("signInPrompt")}
+            </p>
+          )}
         </div>
       </section>
 
-      <section id="browse" className="py-10 md:py-14 scroll-mt-16">
+      {/* Projects — front and center */}
+      <section className="py-5 md:py-10">
         <div className="container px-4 md:px-6">
-          <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <p className="text-eyebrow">{t("browseProjects")}</p>
-              <h2 className="text-heading-2 mt-1 flex items-center gap-2">
-                <Package className="h-6 w-6 text-orange-500" />
-                {t("browseProjects")}
-              </h2>
-            </div>
-            <div className="sm:ml-auto">
-              <SearchBar />
-            </div>
+          <div className="mb-4 flex items-baseline justify-between gap-3">
+            <h2 className="text-base sm:text-lg font-semibold flex items-baseline gap-2">
+              {searchQuery?.trim() ? t("searchResultsFor", { q: searchQuery.trim() }) : t("browseProjects")}
+              <span className="text-xs font-normal text-muted-foreground tabular-nums">
+                {publicProjects.length}
+              </span>
+            </h2>
+            {searchQuery?.trim() && (
+              <Link
+                href="/"
+                className="text-xs text-muted-foreground hover:text-foreground hover:underline"
+              >
+                {t("clearSearch")}
+              </Link>
+            )}
           </div>
 
           {publicProjects.length === 0 ? (
@@ -196,53 +165,73 @@ export default async function HomePage({
               }
             />
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 stagger-fade-in">
-              {publicProjects.map((project) => (
-                <Link
-                  key={project.id}
-                  href={`/project/${project.slug}`}
-                  className="group relative rounded-xl border bg-card p-4 transition-all hover:-translate-y-0.5 hover:shadow-md hover:border-orange-300 dark:hover:border-orange-700"
-                >
-                  {(wishlistCountMap.get(project.id) ?? 0) > 0 && (
-                    <span className="absolute top-2.5 right-2.5 inline-flex items-center gap-1 rounded-full bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400 px-2 py-0.5 text-xs font-semibold shadow-sm">
-                      <Heart className="h-3 w-3 fill-current" />
-                      {t("inSelection", { count: wishlistCountMap.get(project.id) ?? 0 })}
-                    </span>
-                  )}
-
-                  <h3 className="text-heading-4 pr-24 group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors">
-                    {project.name}
-                  </h3>
-                  {project.cityArea && (
-                    <div className="flex items-center gap-1.5 text-sm text-muted-foreground mt-1.5">
-                      <MapPin className="h-3.5 w-3.5" />
-                      <span>{project.cityArea}</span>
-                    </div>
-                  )}
-                  {project.description && (
-                    <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
-                      {project.description}
-                    </p>
-                  )}
-                  <div className="flex items-center justify-between mt-3">
-                    <span className="inline-flex items-center gap-1 text-sm font-medium text-orange-600 dark:text-orange-400 opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all">
-                      View items <ArrowRight className="h-3.5 w-3.5" />
-                    </span>
-                    <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-                      <ShoppingBag className="h-3.5 w-3.5" />
-                      {t("itemsForSale", { count: itemCountMap.get(project.id) ?? 0 })}
-                    </span>
-                  </div>
-                </Link>
-              ))}
-            </div>
+            <ul className="grid gap-2.5 sm:gap-4 sm:grid-cols-2 lg:grid-cols-3 stagger-fade-in">
+              {publicProjects.map((project) => {
+                const wishlistCount = wishlistCountMap.get(project.id) ?? 0;
+                const itemCount = itemCountMap.get(project.id) ?? 0;
+                return (
+                  <li key={project.id}>
+                    <Link
+                      href={`/project/${project.slug}`}
+                      className="group block rounded-xl border bg-card p-3 sm:p-4 transition-all active:scale-[0.99] sm:hover:-translate-y-0.5 sm:hover:shadow-md sm:hover:border-orange-300 dark:sm:hover:border-orange-700"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <h3 className="text-base sm:text-heading-4 font-semibold leading-tight group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors">
+                          {project.name}
+                        </h3>
+                        {wishlistCount > 0 && (
+                          <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400 px-2 py-0.5 text-[10px] font-semibold">
+                            <Heart className="h-2.5 w-2.5 fill-current" />
+                            {wishlistCount}
+                          </span>
+                        )}
+                      </div>
+                      <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
+                        {project.cityArea && (
+                          <span className="inline-flex items-center gap-1">
+                            <MapPin className="h-3 w-3" />
+                            {project.cityArea}
+                          </span>
+                        )}
+                        <span className="text-muted-foreground/40">·</span>
+                        <span>{t("itemsForSale", { count: itemCount })}</span>
+                      </div>
+                      {/* Description shown only on tablet+ to keep mobile cards
+                          compact and scannable. */}
+                      {project.description && (
+                        <p className="hidden sm:block text-sm text-muted-foreground mt-2 line-clamp-2">
+                          {project.description}
+                        </p>
+                      )}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
           )}
+        </div>
+      </section>
 
-          {!user && publicProjects.length > 0 && (
-            <p className="mt-8 text-center text-sm text-muted-foreground">
-              {t("signInPrompt")}
-            </p>
-          )}
+      {/* Value props — secondary placement, desktop only. Hidden on
+          mobile to keep the projects above the fold. */}
+      <section className="hidden md:block py-10 border-t bg-muted/20">
+        <div className="container px-4 md:px-6">
+          <div className="grid grid-cols-3 gap-4 max-w-4xl mx-auto">
+            {valueProps.map((v) => (
+              <div
+                key={v.title}
+                className="flex items-start gap-3 rounded-xl bg-card border p-4"
+              >
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-orange-100 text-orange-600 dark:bg-orange-950/50 dark:text-orange-400">
+                  <v.icon className="h-4 w-4" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold">{v.title}</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">{v.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
     </div>
