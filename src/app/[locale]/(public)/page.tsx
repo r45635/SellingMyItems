@@ -42,6 +42,7 @@ export default async function HomePage({
           .where(
             and(
               eq(projects.isPublic, true),
+              eq(projects.publishStatus, "approved"),
               isNull(projects.deletedAt),
               inArray(projects.sellerId, activeSellerIdSet),
               searchFilter

@@ -22,6 +22,7 @@
     "messages": "Messages",
     "account": "Account",
     "sellerDashboard": "Seller Dashboard",
+    "myListings": "My listings",
     "adminDashboard": "Administration",
     "adminEmails": "Emails",
     "adminEmailsDescription": "Monitor email sending and manage Resend API configuration",
@@ -313,7 +314,20 @@
     "pdfSelectedCount": "{count, plural, =0 {No items selected} one {# selected} other {# selected}}",
     "pdfSelectAll": "Select all",
     "pdfSelectReserved": "Reserved only",
-    "pdfSelectNone": "Clear"
+    "pdfSelectNone": "Clear",
+    "viewPublic": "View public page",
+    "publishStatus": {
+      "draft": "Draft",
+      "pending": "Pending review",
+      "approved": "Live",
+      "rejected": "Rejected",
+      "submit": "Submit for review",
+      "resubmit": "Submit again",
+      "approvedHint": "Your project is live and visible publicly.",
+      "pendingHint": "Awaiting admin review — you'll be notified once approved.",
+      "rejectedReason": "Reviewer note",
+      "submittedToast": "Submitted for review."
+    }
   },
   "reservations": {
     "title": "My Reservations",

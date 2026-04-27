@@ -4,12 +4,16 @@ import { useEffect, useState } from "react";
 import { Link, usePathname } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
-import { Home, Heart, MessageCircle, User } from "lucide-react";
+import { Home, Heart, MessageCircle, Store, User } from "lucide-react";
 
+// 5 tabs: keep the action surface flat. "My listings" is the new tab —
+// selling is open to every signed-in user, so it deserves a top-level
+// slot rather than living buried in the avatar dropdown.
 const navItems = [
   { href: "/", icon: Home, labelKey: "home" },
   { href: "/wishlist", icon: Heart, labelKey: "wishlist" },
   { href: "/messages", icon: MessageCircle, labelKey: "messages" },
+  { href: "/seller", icon: Store, labelKey: "myListings" },
   { href: "/account", icon: User, labelKey: "account" },
 ] as const;
 

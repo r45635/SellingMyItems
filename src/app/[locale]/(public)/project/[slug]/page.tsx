@@ -23,6 +23,7 @@ export default async function ProjectPage({
     where: and(
       eq(projects.slug, slug),
       eq(projects.isPublic, true),
+      eq(projects.publishStatus, "approved"),
       isNull(projects.deletedAt)
     ),
   });

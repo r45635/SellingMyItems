@@ -7,6 +7,10 @@ import { projects } from "@/db/schema";
 import { and, desc, inArray, isNull } from "drizzle-orm";
 import { getSellerAccountIdsForUser } from "@/lib/seller-accounts";
 import { EmptyState } from "@/components/shared/empty-state";
+import {
+  PublishStatusBadge,
+  SubmitForReviewButton,
+} from "@/features/projects/components/publish-status-controls";
 
 export default async function SellerProjectsPage() {
   const t = await getTranslations("seller");
@@ -24,6 +28,8 @@ export default async function SellerProjectsPage() {
           slug: projects.slug,
           cityArea: projects.cityArea,
           createdAt: projects.createdAt,
+          publishStatus: projects.publishStatus,
+          reviewerNote: projects.reviewerNote,
         })
         .from(projects)
         .where(
@@ -68,24 +74,34 @@ export default async function SellerProjectsPage() {
           {sellerProjects.map((project) => (
             <div
               key={project.id}
-              className="rounded-lg border p-4 flex items-center justify-between gap-4"
+              className="rounded-lg border p-4 flex flex-col gap-3"
             >
-              <div>
-                <p className="font-medium">{project.name}</p>
-                <p className="text-sm text-muted-foreground">
-                  /project/{project.slug} • {project.cityArea}
-                </p>
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="font-medium truncate">{project.name}</p>
+                  <p className="text-xs text-muted-foreground truncate">
+                    /{project.slug} · {project.cityArea}
+                  </p>
+                </div>
+                <PublishStatusBadge status={project.publishStatus} />
               </div>
-              <div className="flex items-center gap-2">
-                <Link
-                  href={`/project/${project.slug}`}
-                  className="inline-flex h-8 items-center justify-center rounded-lg border border-border px-2.5 text-sm hover:bg-muted"
-                >
-                  Voir
-                </Link>
+              <SubmitForReviewButton
+                projectIdOrSlug={project.slug}
+                status={project.publishStatus}
+                reviewerNote={project.reviewerNote}
+              />
+              <div className="flex items-center gap-2 pt-1 border-t">
+                {project.publishStatus === "approved" ? (
+                  <Link
+                    href={`/project/${project.slug}`}
+                    className="inline-flex h-8 items-center justify-center rounded-lg border border-border px-2.5 text-sm hover:bg-muted"
+                  >
+                    {t("viewPublic")}
+                  </Link>
+                ) : null}
                 <Link
                   href={`/seller/projects/${project.slug}/items`}
-                  className="inline-flex h-8 items-center justify-center rounded-lg bg-primary px-2.5 text-sm text-primary-foreground hover:bg-primary/80"
+                  className="ml-auto inline-flex h-8 items-center justify-center rounded-lg bg-primary px-2.5 text-sm text-primary-foreground hover:bg-primary/80"
                 >
                   {t("items")}
                 </Link>

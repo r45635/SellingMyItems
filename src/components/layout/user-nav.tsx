@@ -74,7 +74,11 @@ export function UserNav() {
     window.location.href = "/";
   }
 
-  const messagesHref = user.role === "seller" || user.role === "admin" ? "/seller/messages" : "/messages";
+  // Buyers and sellers share one inbox at /messages now that selling is
+  // open to everyone. Sellers had a separate /seller/messages view that
+  // we keep around for the dashboard, but the avatar dropdown points to
+  // the buyer inbox for everyone — it's the canonical conversation list.
+  const messagesHref = "/messages";
   const hasUnread = unreadCount > 0;
 
   return (
@@ -132,14 +136,16 @@ export function UserNav() {
           </Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        {user.role === "seller" || user.role === "admin" ? (
-          <DropdownMenuItem>
-            <Link href="/seller" className="flex items-center cursor-pointer w-full">
-              <LayoutDashboard className="mr-2 h-4 w-4" />
-              {t("nav.sellerDashboard")}
-            </Link>
-          </DropdownMenuItem>
-        ) : null}
+        {/* "My listings" is now visible to every signed-in user — selling
+            isn't gated by role anymore. The first project they create
+            lazily mints their seller account; admin still validates each
+            project before it goes public. */}
+        <DropdownMenuItem>
+          <Link href="/seller" className="flex items-center cursor-pointer w-full">
+            <LayoutDashboard className="mr-2 h-4 w-4" />
+            {t("nav.myListings")}
+          </Link>
+        </DropdownMenuItem>
         {user.role === "admin" ? (
           <DropdownMenuItem>
             <Link href="/admin" className="flex items-center cursor-pointer w-full">

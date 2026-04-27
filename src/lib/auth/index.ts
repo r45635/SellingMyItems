@@ -47,12 +47,16 @@ export async function requireUser() {
   return user;
 }
 
+/**
+ * Historically gated routes by `role === "seller"`. Selling is now open
+ * to any signed-in user; the public-facing distinction has moved to the
+ * project's `publishStatus` (admin-approved before it goes public). We
+ * keep this name as a thin alias of requireUser so existing call sites
+ * don't need a rename, and so the contract stays clear: "the listings
+ * area requires you to be signed in".
+ */
 export async function requireSeller() {
-  const user = await requireUser();
-  if (user.role !== "seller" && user.role !== "admin") {
-    redirect("/");
-  }
-  return user;
+  return requireUser();
 }
 
 export async function requireAdmin() {

@@ -22,6 +22,7 @@
     "messages": "Messages",
     "account": "Compte",
     "sellerDashboard": "Tableau de bord vendeur",
+    "myListings": "Mes ventes",
     "adminDashboard": "Administration",
     "adminEmails": "Emails",
     "adminEmailsDescription": "Surveiller les envois d'emails et gérer la configuration API Resend",
@@ -313,7 +314,20 @@
     "pdfSelectedCount": "{count, plural, =0 {Aucun article sélectionné} one {# sélectionné} other {# sélectionnés}}",
     "pdfSelectAll": "Tout sélectionner",
     "pdfSelectReserved": "Réservés seulement",
-    "pdfSelectNone": "Effacer"
+    "pdfSelectNone": "Effacer",
+    "viewPublic": "Voir la page publique",
+    "publishStatus": {
+      "draft": "Brouillon",
+      "pending": "En attente",
+      "approved": "Publié",
+      "rejected": "Refusé",
+      "submit": "Soumettre à validation",
+      "resubmit": "Soumettre à nouveau",
+      "approvedHint": "Votre projet est en ligne et visible publiquement.",
+      "pendingHint": "En attente de validation admin — vous serez notifié(e) à l'approbation.",
+      "rejectedReason": "Motif du modérateur",
+      "submittedToast": "Soumis à validation."
+    }
   },
   "reservations": {
     "title": "Mes Réservations",

@@ -42,6 +42,13 @@ export const projectVisibilityEnum = pgEnum("project_visibility", [
   "invitation_only",
 ]);
 
+export const projectPublishStatusEnum = pgEnum("project_publish_status", [
+  "draft",
+  "pending",
+  "approved",
+  "rejected",
+]);
+
 export const invitationStatusEnum = pgEnum("invitation_status", [
   "active",
   "used",
@@ -138,6 +145,12 @@ export const projects = pgTable("projects", {
   description: text("description"),
   isPublic: boolean("is_public").default(true).notNull(),
   visibility: projectVisibilityEnum("visibility").default("public").notNull(),
+  publishStatus: projectPublishStatusEnum("publish_status")
+    .default("draft")
+    .notNull(),
+  reviewerNote: text("reviewer_note"),
+  submittedAt: timestamp("submitted_at", { withTimezone: true }),
+  reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
   isSeoIndexable: boolean("is_seo_indexable").default(false).notNull(), // future
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
