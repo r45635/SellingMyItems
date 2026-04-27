@@ -1,6 +1,7 @@
 import { db } from "@/db";
 import {
   itemImages,
+  itemLinks,
   items,
   profiles,
   sellerAccounts,
@@ -100,6 +101,25 @@ export async function buildRecapPayload(
     imagesByItem.set(img.itemId, list);
   }
 
+  // Resolve link list per item (label + url).
+  const allLinks =
+    itemIds.length > 0
+      ? await db
+          .select({
+            itemId: itemLinks.itemId,
+            url: itemLinks.url,
+            label: itemLinks.label,
+          })
+          .from(itemLinks)
+          .where(inArray(itemLinks.itemId, itemIds))
+      : [];
+  const linksByItem = new Map<string, { url: string; label: string | null }[]>();
+  for (const link of allLinks) {
+    const list = linksByItem.get(link.itemId) ?? [];
+    list.push({ url: link.url, label: link.label });
+    linksByItem.set(link.itemId, list);
+  }
+
   // Resolve buyer display names (reserved / sold) for the badge on each card.
   const buyerIds = new Set<string>();
   for (const r of rows) {
@@ -138,6 +158,7 @@ export async function buildRecapPayload(
     status: r.status,
     coverImageUrl: r.coverImageUrl,
     images: imagesByItem.get(r.id) ?? [],
+    links: linksByItem.get(r.id) ?? [],
     reservedForLabel: r.reservedForUserId
       ? (buyerLabel.get(r.reservedForUserId) ?? null)
       : null,

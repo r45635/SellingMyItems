@@ -2,6 +2,7 @@
 import {
   Document,
   Image,
+  Link,
   Page,
   StyleSheet,
   Text,
@@ -13,6 +14,11 @@ import { loadImageForPdf } from "./load-image";
 export type PdfItemImage = {
   url: string;
   altText?: string | null;
+};
+
+export type PdfItemLink = {
+  url: string;
+  label: string | null;
 };
 
 export type PdfItem = {
@@ -29,6 +35,7 @@ export type PdfItem = {
   status: "available" | "pending" | "reserved" | "sold" | "hidden";
   coverImageUrl: string | null;
   images: PdfItemImage[];
+  links: PdfItemLink[];
   reservedForLabel?: string | null;
   soldToLabel?: string | null;
 };
@@ -214,8 +221,11 @@ const styles = StyleSheet.create({
     textDecoration: "line-through",
   },
   coverImage: {
-    width: "100%",
-    height: 230,
+    // A4 page is 595pt wide; with our 40pt horizontal margins the usable
+    // width is 515pt. Using a fixed pixel width plays better with
+    // @react-pdf/renderer than "100%".
+    width: 515,
+    height: 320,
     objectFit: "contain",
     marginBottom: 10,
     backgroundColor: "#f7f7f7",
@@ -224,15 +234,16 @@ const styles = StyleSheet.create({
   thumbsRow: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 6,
+    gap: 8,
     marginBottom: 14,
   },
   thumb: {
-    width: 90,
-    height: 70,
+    // 2 thumbs per row: (515 - 8 gap) / 2 ≈ 253
+    width: 253,
+    height: 180,
     objectFit: "cover",
     backgroundColor: "#f7f7f7",
-    borderRadius: 3,
+    borderRadius: 4,
   },
   attributesGrid: {
     flexDirection: "row",
@@ -283,6 +294,25 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff7ed",
     borderRadius: 4,
     fontSize: 10,
+  },
+  linksBlock: {
+    marginTop: 12,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+  },
+  linksTitle: {
+    fontSize: 9,
+    color: COLORS.muted,
+    textTransform: "uppercase",
+    letterSpacing: 1,
+    marginBottom: 4,
+  },
+  linkLine: {
+    fontSize: 10,
+    color: "#1d4ed8",
+    textDecoration: "underline",
+    marginBottom: 2,
   },
   pageFooter: {
     position: "absolute",
@@ -387,6 +417,7 @@ function ProjectRecapDocument({
         soldTo: "Vendu à",
         page: "Page",
         of: "sur",
+        referenceLinks: "Liens de référence",
       }
     : {
         cover: "Project recap",
@@ -408,6 +439,7 @@ function ProjectRecapDocument({
         soldTo: "Sold to",
         page: "Page",
         of: "of",
+        referenceLinks: "Reference links",
       };
 
   return (
@@ -474,7 +506,10 @@ function ProjectRecapDocument({
         const cover = item.coverImageUrl
           ? imageData.get(item.coverImageUrl)
           : null;
+        // Skip the cover in the gallery so it isn't rendered twice when it's
+        // also the first item.images entry. Cap at 6 thumbs for layout.
         const thumbs = item.images
+          .filter((img) => img.url !== item.coverImageUrl)
           .map((img) => imageData.get(img.url))
           .filter((b): b is Buffer | string => Boolean(b))
           .slice(0, 6);
@@ -514,9 +549,9 @@ function ProjectRecapDocument({
               <Image src={cover as Buffer} style={styles.coverImage} />
             )}
 
-            {thumbs.length > 1 && (
+            {thumbs.length > 0 && (
               <View style={styles.thumbsRow}>
-                {thumbs.slice(1).map((src, i) => (
+                {thumbs.map((src, i) => (
                   <Image key={i} src={src as Buffer} style={styles.thumb} />
                 ))}
               </View>
@@ -562,6 +597,17 @@ function ProjectRecapDocument({
                   ? `${labels.soldTo}: ${item.soldToLabel}`
                   : `${labels.reservedFor}: ${item.reservedForLabel}`}
               </Text>
+            )}
+
+            {item.links && item.links.length > 0 && (
+              <View style={styles.linksBlock}>
+                <Text style={styles.linksTitle}>{labels.referenceLinks}</Text>
+                {item.links.map((l, i) => (
+                  <Link key={i} src={l.url} style={styles.linkLine}>
+                    {l.label || l.url}
+                  </Link>
+                ))}
+              </View>
             )}
 
             <View style={styles.pageFooter} fixed>

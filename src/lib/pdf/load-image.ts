@@ -1,18 +1,40 @@
 import path from "path";
 import { readFile } from "fs/promises";
+import sharp from "sharp";
 
 /**
- * Load an image referenced by `url` (typically `/uploads/<file>`) into a
- * Buffer that @react-pdf/renderer can embed. Returns null when the file
- * cannot be read so callers can render a placeholder.
+ * Load an image referenced by `url` (typically `/uploads/<file>`) and return
+ * it as a PNG Buffer that @react-pdf/renderer can embed. WebP and other
+ * formats are normalized to PNG via sharp because @react-pdf/renderer's
+ * Image component only reliably handles JPEG/PNG.
+ *
+ * Returns null when the file cannot be read so callers can render a
+ * placeholder.
  */
 export async function loadImageForPdf(
   url: string | null | undefined
 ): Promise<Buffer | null> {
+  const raw = await readRawImage(url);
+  if (!raw) return null;
+  try {
+    // Normalize to PNG. Resize to a sensible max so the PDF stays small —
+    // 1600px on the longest side is plenty for a print-quality A4 page.
+    return await sharp(raw)
+      .rotate() // honor EXIF orientation
+      .resize({ width: 1600, height: 1600, fit: "inside", withoutEnlargement: true })
+      .png({ compressionLevel: 9 })
+      .toBuffer();
+  } catch (err) {
+    console.error("Failed to normalize image for PDF:", err);
+    return null;
+  }
+}
+
+async function readRawImage(
+  url: string | null | undefined
+): Promise<Buffer | null> {
   if (!url) return null;
 
-  // Local upload served by /api/uploads/<path>: read from disk to avoid
-  // round-tripping through the network during PDF generation.
   if (url.startsWith("/uploads/")) {
     const rel = url.slice("/uploads/".length);
     if (rel.includes("..") || rel.includes("~")) return null;
@@ -24,8 +46,6 @@ export async function loadImageForPdf(
     }
   }
 
-  // Absolute URL: fetch with a short timeout. Used for any remote image
-  // (e.g. Supabase storage) the project might add later.
   if (url.startsWith("http://") || url.startsWith("https://")) {
     try {
       const controller = new AbortController();
@@ -33,8 +53,7 @@ export async function loadImageForPdf(
       const res = await fetch(url, { signal: controller.signal });
       clearTimeout(timer);
       if (!res.ok) return null;
-      const buf = Buffer.from(await res.arrayBuffer());
-      return buf;
+      return Buffer.from(await res.arrayBuffer());
     } catch {
       return null;
     }
