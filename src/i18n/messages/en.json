@@ -84,7 +84,13 @@
     "passwordChangedDescription": "Your password has been successfully updated. You can now sign in with your new password.",
     "invalidToken": "This reset link is invalid or has expired.",
     "requestNewLink": "Request a new link",
-    "tooManyRequests": "Too many requests. Please try again later."
+    "tooManyRequests": "Too many requests. Please try again later.",
+    "wrongCurrentPassword": "Current password is incorrect.",
+    "passwordSameAsOld": "Choose a password different from your current one.",
+    "passwordChangeFailed": "Could not change password. Please try again.",
+    "notSignedIn": "You need to sign in first.",
+    "emailTakenSignInCta": "Sign in instead",
+    "emailTakenForgotCta": "Forgot password?"
   },
   "account": {
     "displayName": "Display name",
@@ -98,7 +104,15 @@
     "visibilityHidden": "Hidden (recommended)",
     "visibilityHiddenDesc": "Your email stays private. Conversations happen inside the app; we send you a notification email when there's a new message.",
     "visibilityDirect": "Direct",
-    "visibilityDirectDesc": "Your email is shown to your counterparty when they also chose direct mode."
+    "visibilityDirectDesc": "Your email is shown to your counterparty when they also chose direct mode.",
+    "changePassword": "Change password",
+    "changePasswordDesc": "Pick a strong password you don't use anywhere else.",
+    "currentPassword": "Current password",
+    "newPassword": "New password",
+    "confirmPassword": "Confirm new password",
+    "signOutOtherDevices": "Sign out of other devices",
+    "passwordChanged": "Password changed.",
+    "cancel": "Cancel"
   },
   "project": {
     "title": "Project",

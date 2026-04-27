@@ -1,12 +1,12 @@
 "use server";
 
 import { db } from "@/db";
-import { profiles, sessions, sellerAccounts, passwordResetTokens } from "@/db/schema";
-import { eq, and, gt, isNull } from "drizzle-orm";
+import { profiles, sessions, passwordResetTokens } from "@/db/schema";
+import { eq, and, gt, isNull, ne } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { cookies, headers } from "next/headers";
-import type { UserRole } from "@/lib/auth";
+import { getUser, type UserRole } from "@/lib/auth";
 import { consumeRateLimit } from "@/lib/security/rate-limit";
 import { sendPasswordResetEmail, sendWelcomeEmail } from "@/lib/email";
 import { claimTargetedInvitationsForEmail } from "@/lib/access";
@@ -324,6 +324,88 @@ export async function resetPasswordAction(formData: FormData) {
     .update(passwordResetTokens)
     .set({ usedAt: new Date() })
     .where(eq(passwordResetTokens.id, resetToken.id));
+
+  // Invalidate every active session for this user. A password reset implies
+  // the previous password may have been compromised, so any cookie still in
+  // the wild should stop working immediately. The user will have to sign in
+  // again with the new password on every device, including this one.
+  await db.delete(sessions).where(eq(sessions.userId, resetToken.userId));
+
+  return { ok: true };
+}
+
+const PASSWORD_CHANGE_RATE_LIMIT_MS = 15 * 60 * 1000;
+
+export async function changePasswordAction(formData: FormData) {
+  const user = await getUser();
+  if (!user) {
+    return { error: "notSignedIn" };
+  }
+
+  const currentPassword = String(formData.get("currentPassword") ?? "");
+  const newPassword = String(formData.get("newPassword") ?? "");
+  const confirmPassword = String(formData.get("confirmPassword") ?? "");
+  const signOutOtherDevices = formData.get("signOutOtherDevices") === "on";
+
+  if (!currentPassword || !newPassword) {
+    return { error: "Fields required" };
+  }
+  if (newPassword.length < 6) {
+    return { error: "passwordTooShort" };
+  }
+  if (newPassword !== confirmPassword) {
+    return { error: "passwordMismatch" };
+  }
+  if (newPassword === currentPassword) {
+    return { error: "passwordSameAsOld" };
+  }
+
+  const rate = consumeRateLimit(`auth:change:user:${user.id}`, {
+    windowMs: PASSWORD_CHANGE_RATE_LIMIT_MS,
+    max: 5,
+  });
+  if (!rate.ok) {
+    return { error: "tooManyRequests" };
+  }
+
+  const profile = await db.query.profiles.findFirst({
+    where: eq(profiles.id, user.id),
+    columns: { passwordHash: true },
+  });
+  if (!profile?.passwordHash) {
+    return { error: "wrongCurrentPassword" };
+  }
+
+  const valid = await bcrypt.compare(currentPassword, profile.passwordHash);
+  if (!valid) {
+    return { error: "wrongCurrentPassword" };
+  }
+
+  const passwordHash = await bcrypt.hash(newPassword, 12);
+  await db
+    .update(profiles)
+    .set({ passwordHash, updatedAt: new Date() })
+    .where(eq(profiles.id, user.id));
+
+  // Optionally sign the user out everywhere except the current session. The
+  // current session token lives in the cookie; we keep that one and delete
+  // every other row for this user.
+  if (signOutOtherDevices) {
+    const cookieStore = await cookies();
+    const currentToken = cookieStore.get(SESSION_COOKIE)?.value ?? "";
+    if (currentToken) {
+      await db
+        .delete(sessions)
+        .where(
+          and(
+            eq(sessions.userId, user.id),
+            ne(sessions.token, currentToken)
+          )
+        );
+    } else {
+      await db.delete(sessions).where(eq(sessions.userId, user.id));
+    }
+  }
 
   return { ok: true };
 }

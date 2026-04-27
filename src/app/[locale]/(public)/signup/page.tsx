@@ -22,10 +22,12 @@ export default function SignupPage() {
   const role = "purchaser" as const;
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [errorKey, setErrorKey] = useState<string | null>(null);
 
   async function handleSignUp(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    setErrorKey(null);
     setLoading(true);
 
     const formData = new FormData();
@@ -42,6 +44,7 @@ export default function SignupPage() {
       // Try i18n key first, fallback to raw message
       const msg = t.has(result.error) ? t(result.error) : result.error;
       setError(msg);
+      setErrorKey(result.error);
       return;
     }
 
@@ -49,6 +52,15 @@ export default function SignupPage() {
     const dest = returnTo && returnTo.startsWith("/") ? returnTo : "/";
     window.location.href = dest;
   }
+
+  // When the email is already in use, give the user a clear path forward
+  // instead of just an error message: a "Sign in" link and a "Forgot password"
+  // link, both pre-filled with the email they typed.
+  const emailQuery = email ? `?email=${encodeURIComponent(email)}` : "";
+  const loginHref =
+    returnTo && returnTo.startsWith("/")
+      ? `/login?email=${encodeURIComponent(email)}&returnTo=${encodeURIComponent(returnTo)}`
+      : `/login${emailQuery}`;
 
   return (
     <div className="flex items-center justify-center min-h-[60vh] px-4">
@@ -109,7 +121,27 @@ export default function SignupPage() {
               <span className="text-sm font-medium">{t("rolePurchaser")}</span>
             </div>
 
-            {error ? <p className="text-sm text-destructive">{error}</p> : null}
+            {error ? (
+              <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 space-y-2">
+                <p className="text-sm text-destructive">{error}</p>
+                {errorKey === "emailTaken" && (
+                  <div className="flex flex-wrap gap-2 text-xs">
+                    <Link
+                      href={loginHref}
+                      className="inline-flex h-7 items-center rounded-md bg-primary px-2.5 font-medium text-primary-foreground hover:bg-primary/90"
+                    >
+                      {t("emailTakenSignInCta")}
+                    </Link>
+                    <Link
+                      href={`/forgot-password${emailQuery}`}
+                      className="inline-flex h-7 items-center rounded-md border border-border px-2.5 font-medium hover:bg-muted"
+                    >
+                      {t("emailTakenForgotCta")}
+                    </Link>
+                  </div>
+                )}
+              </div>
+            ) : null}
 
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "..." : t("signUp")}

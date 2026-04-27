@@ -15,7 +15,8 @@ export default function LoginPage() {
   const t = useTranslations("auth");
   const searchParams = useSearchParams();
   const returnTo = searchParams.get("returnTo");
-  const [email, setEmail] = useState("");
+  const initialEmail = searchParams.get("email") ?? "";
+  const [email, setEmail] = useState(initialEmail);
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -80,7 +81,11 @@ export default function LoginPage() {
               />
               <div className="text-right">
                 <Link
-                  href="/forgot-password"
+                  href={
+                    email
+                      ? `/forgot-password?email=${encodeURIComponent(email)}`
+                      : "/forgot-password"
+                  }
                   className="text-xs text-muted-foreground hover:text-primary hover:underline"
                 >
                   {t("forgotPassword")}

@@ -7,6 +7,7 @@ import { revalidatePath } from "next/cache";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Lock, Mail } from "lucide-react";
+import { ChangePasswordForm } from "@/features/account/components/change-password-form";
 
 async function updateProfileAction(formData: FormData) {
   "use server";
@@ -132,6 +133,10 @@ export default async function AccountPage() {
           {tAccount("save")}
         </Button>
       </form>
+
+      <div className="mt-8">
+        <ChangePasswordForm />
+      </div>
     </div>
   );
 }

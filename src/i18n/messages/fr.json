@@ -84,7 +84,13 @@
     "passwordChangedDescription": "Votre mot de passe a été mis à jour avec succès. Vous pouvez maintenant vous connecter avec votre nouveau mot de passe.",
     "invalidToken": "Ce lien de réinitialisation est invalide ou a expiré.",
     "requestNewLink": "Demander un nouveau lien",
-    "tooManyRequests": "Trop de requêtes. Veuillez réessayer plus tard."
+    "tooManyRequests": "Trop de requêtes. Veuillez réessayer plus tard.",
+    "wrongCurrentPassword": "Le mot de passe actuel est incorrect.",
+    "passwordSameAsOld": "Choisissez un mot de passe différent de l'actuel.",
+    "passwordChangeFailed": "Impossible de changer le mot de passe. Veuillez réessayer.",
+    "notSignedIn": "Vous devez être connecté(e).",
+    "emailTakenSignInCta": "Se connecter",
+    "emailTakenForgotCta": "Mot de passe oublié ?"
   },
   "account": {
     "displayName": "Nom affiché",
@@ -98,7 +104,15 @@
     "visibilityHidden": "Masqué (recommandé)",
     "visibilityHiddenDesc": "Votre email reste privé. Les conversations se déroulent dans l'application ; nous vous envoyons une notification par email quand un nouveau message arrive.",
     "visibilityDirect": "Direct",
-    "visibilityDirectDesc": "Votre email est visible par votre interlocuteur uniquement s'il a aussi choisi le mode direct."
+    "visibilityDirectDesc": "Votre email est visible par votre interlocuteur uniquement s'il a aussi choisi le mode direct.",
+    "changePassword": "Changer le mot de passe",
+    "changePasswordDesc": "Choisissez un mot de passe fort que vous n'utilisez nulle part ailleurs.",
+    "currentPassword": "Mot de passe actuel",
+    "newPassword": "Nouveau mot de passe",
+    "confirmPassword": "Confirmer le nouveau mot de passe",
+    "signOutOtherDevices": "Se déconnecter des autres appareils",
+    "passwordChanged": "Mot de passe modifié.",
+    "cancel": "Annuler"
   },
   "project": {
     "title": "Projet",
