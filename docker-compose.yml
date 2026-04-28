@@ -10,9 +10,16 @@ services:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-sellingmyitems}"]
+      # `start_period` gives postgres breathing room on a fresh
+      # `--force-recreate` (cold image, slower disk on the VPS). Without
+      # it the first probe fired ~immediately, which made
+      # `docker compose up -d` abort on the dependency check before
+      # postgres was ready. retries+interval define steady-state
+      # checking once we're past start_period.
+      start_period: 30s
       interval: 5s
-      timeout: 3s
-      retries: 5
+      timeout: 5s
+      retries: 12
 
   app:
     build:
