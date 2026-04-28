@@ -1,16 +1,30 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
-import { profiles, sessions } from "@/db/schema";
+import { profiles, sellerAccounts, sessions } from "@/db/schema";
 import { eq, and, gt } from "drizzle-orm";
-
-export type UserRole = "purchaser" | "seller" | "admin";
 
 export type AppUser = {
   id: string;
   email: string;
-  role: UserRole;
+  isAdmin: boolean;
 };
+
+/**
+ * What a signed-in user is *able* to do, derived from data — not from
+ * a static enum. Everyone signed in is at minimum a buyer; "seller" is
+ * granted by the existence of an active sellerAccounts row (lazily
+ * minted on first project creation); "admin" is the only thing still
+ * gated on the profile itself, via the `is_admin` boolean.
+ */
+export type UserCapabilities = {
+  buyer: true;
+  seller: boolean;
+  admin: boolean;
+  sellerAccountId: string | null;
+};
+
+export type ActiveContext = "buyer" | "seller" | "admin";
 
 const SESSION_COOKIE = "session_token";
 
@@ -28,14 +42,14 @@ export async function getUser(): Promise<AppUser | null> {
 
   const profile = await db.query.profiles.findFirst({
     where: and(eq(profiles.id, session.userId), eq(profiles.isActive, true)),
-    columns: { id: true, email: true, role: true },
+    columns: { id: true, email: true, isAdmin: true },
   });
   if (!profile) return null;
 
   return {
     id: profile.id,
     email: profile.email,
-    role: profile.role,
+    isAdmin: profile.isAdmin,
   } satisfies AppUser;
 }
 
@@ -61,8 +75,27 @@ export async function requireSeller() {
 
 export async function requireAdmin() {
   const user = await requireUser();
-  if (user.role !== "admin") {
+  if (!user.isAdmin) {
     redirect("/");
   }
   return user;
+}
+
+export async function getUserCapabilities(
+  user: AppUser
+): Promise<UserCapabilities> {
+  const sellerAccount = await db.query.sellerAccounts.findFirst({
+    where: and(
+      eq(sellerAccounts.userId, user.id),
+      eq(sellerAccounts.isActive, true)
+    ),
+    columns: { id: true },
+  });
+
+  return {
+    buyer: true,
+    seller: Boolean(sellerAccount),
+    admin: user.isAdmin,
+    sellerAccountId: sellerAccount?.id ?? null,
+  };
 }

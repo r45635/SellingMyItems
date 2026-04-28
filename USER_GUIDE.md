@@ -1,14 +1,16 @@
 # SellingMyItems — User Guide
 
-This guide covers how to use SellingMyItems from each role: **buyer** (purchaser), **seller**, and **admin**.
+This guide covers how to use SellingMyItems from each perspective: **buyer**, **seller**, and **admin**.
 
-> The platform is a marketplace where sellers publish items organized into projects, and buyers discover, wishlist, and express intent to purchase. The actual transaction (payment, pickup) happens offline.
+> The platform is a marketplace where users publish items organized into projects, and others discover, wishlist, and express intent to purchase. The actual transaction (payment, pickup) happens offline.
+>
+> There is no separate "seller" account type. Every signed-in user is a buyer by default, and **selling unlocks automatically the moment you create your first listing** — your project goes through admin review before becoming public.
 
 ---
 
 ## Table of Contents
 
-- [For Buyers (Purchasers)](#for-buyers-purchasers)
+- [For Buyers](#for-buyers)
   - [Getting Started](#getting-started)
   - [Browsing Projects & Items](#browsing-projects--items)
   - [Wishlist](#wishlist)
@@ -37,12 +39,12 @@ This guide covers how to use SellingMyItems from each role: **buyer** (purchaser
 
 ---
 
-## For Buyers (Purchasers)
+## For Buyers
 
 ### Getting Started
 
 1. **Sign up** at `/signup` — enter your email, choose a password (min 6 characters), and optionally a display name.
-2. You are automatically assigned the **purchaser** role.
+2. You can browse, wishlist, and contact sellers right away. If you ever want to sell something yourself, just hit **"Sell"** from the home or the avatar menu — your seller capability unlocks automatically when you submit your first project.
 3. After signing up, you receive a **welcome email** (if email sending is configured).
 
 ### Browsing Projects & Items
@@ -133,9 +135,12 @@ Edit your profile at `/account`:
 
 ### Becoming a Seller
 
-Seller accounts are created **manually** by an admin or via direct database operation. There is no self-service seller registration.
+There is no separate seller signup. Any signed-in user can sell:
 
-Once your profile is set to the `seller` role and a `seller_accounts` record exists, you gain access to the seller dashboard and all seller routes.
+1. From the home, the avatar menu, or the bottom nav, click **"Sell"** (or **"My listings"** once you have one).
+2. The first time you create a project at `/seller/projects/new`, a `seller_accounts` row is minted for you behind the scenes — that's the activation.
+3. Your project starts in **draft**. Hit **"Submit for review"** when it's ready; an admin approves it and only then does it appear on the public homepage. You'll be notified by email.
+4. Once you have at least one listing, a **context switcher** appears in the header so you can hop between the buyer and seller environments.
 
 ### Projects
 

@@ -35,8 +35,6 @@ export const intentStatusEnum = pgEnum("intent_status", [
   "declined",
 ]);
 
-export const userRoleEnum = pgEnum("user_role", ["purchaser", "seller", "admin"]);
-
 export const projectVisibilityEnum = pgEnum("project_visibility", [
   "public",
   "invitation_only",
@@ -88,7 +86,7 @@ export const profiles = pgTable("profiles", {
   id: uuid("id").defaultRandom().primaryKey(),
   email: text("email").notNull().unique(),
   passwordHash: text("password_hash").notNull(),
-  role: userRoleEnum("role").default("purchaser").notNull(),
+  isAdmin: boolean("is_admin").default(false).notNull(),
   isActive: boolean("is_active").default(true).notNull(),
   displayName: text("display_name"),
   avatarUrl: text("avatar_url"),

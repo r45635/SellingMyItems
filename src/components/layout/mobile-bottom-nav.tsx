@@ -19,24 +19,38 @@ type Tab = {
     | "wishlist"
     | "messages"
     | "myListings"
+    | "sell"
     | "account";
   tone: IconTone;
 };
 
+type Capabilities = {
+  buyer: boolean;
+  seller: boolean;
+  admin: boolean;
+};
+
 // 5 tabs: keep the action surface flat. Each tab keeps its own colour
 // identity so the bottom nav reads at a glance even on a small screen.
-const navItems: readonly Tab[] = [
-  { href: "/", icon: Home, labelKey: "home", tone: "brand" },
-  { href: "/wishlist", icon: Heart, labelKey: "wishlist", tone: "rose" },
-  { href: "/messages", icon: MessageCircle, labelKey: "messages", tone: "emerald" },
-  { href: "/seller", icon: Store, labelKey: "myListings", tone: "sky" },
-  { href: "/account", icon: User, labelKey: "account", tone: "violet" },
-];
+// The 4th slot adapts: "Sell" (→ create project) for users without a
+// sellerAccount, "My listings" (→ /seller) once they have one.
+function buildNavItems(hasSellerAccount: boolean): readonly Tab[] {
+  return [
+    { href: "/", icon: Home, labelKey: "home", tone: "brand" },
+    { href: "/wishlist", icon: Heart, labelKey: "wishlist", tone: "rose" },
+    { href: "/messages", icon: MessageCircle, labelKey: "messages", tone: "emerald" },
+    hasSellerAccount
+      ? { href: "/seller", icon: Store, labelKey: "myListings" as const, tone: "sky" as const }
+      : { href: "/seller/projects/new", icon: Store, labelKey: "sell" as const, tone: "sky" as const },
+    { href: "/account", icon: User, labelKey: "account", tone: "violet" },
+  ];
+}
 
 export function MobileBottomNav() {
   const t = useTranslations("nav");
   const pathname = usePathname();
   const [user, setUser] = useState<{ email: string } | null>(null);
+  const [capabilities, setCapabilities] = useState<Capabilities | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
@@ -44,6 +58,7 @@ export function MobileBottomNav() {
       .then((r) => r.json())
       .then((data) => {
         if (data?.user) setUser(data.user);
+        if (data?.capabilities) setCapabilities(data.capabilities);
       })
       .catch(() => {});
   }, []);
@@ -57,6 +72,8 @@ export function MobileBottomNav() {
   }, [user]);
 
   if (!user) return null;
+
+  const navItems = buildNavItems(capabilities?.seller ?? false);
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 flex md:hidden border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/85">

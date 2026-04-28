@@ -23,11 +23,21 @@
     "account": "Account",
     "sellerDashboard": "Seller Dashboard",
     "myListings": "My listings",
+    "sell": "Sell",
     "adminDashboard": "Administration",
     "adminEmails": "Emails",
     "adminEmailsDescription": "Monitor email sending and manage Resend API configuration",
     "reservations": "My Reservations",
     "purchases": "My Purchases"
+  },
+  "context": {
+    "buyer": "Buyer",
+    "seller": "Seller",
+    "admin": "Admin"
+  },
+  "sellerOnboarding": {
+    "firstProjectTitle": "You're about to create your first listing",
+    "firstProjectBody": "Once submitted, your project will be reviewed by our team before going public. You'll be notified by email when it's approved."
   },
   "home": {
     "hero": "Find unique items near you",
@@ -42,6 +52,8 @@
     "heroValueDirectDesc": "No middleman, no fees",
     "browseProjects": "Browse projects",
     "signInPrompt": "Sign in to see full item details, save favorites, and contact sellers",
+    "heroCtaSell": "Sell something",
+    "heroCtaSellHint": "Got items to sell? List them in minutes.",
     "itemsForSale": "{count, plural, one {# item} other {# items}}",
     "availableOfTotal": "{available} available / {total} items",
     "inSelection": "{count} in selection",
@@ -116,6 +128,8 @@
     "role": "Role",
     "seller": "Seller",
     "buyer": "Buyer",
+    "capabilities": "What you can do",
+    "capabilitiesDesc": "Everyone can buy. Selling unlocks the moment you create your first listing — no separate signup.",
     "save": "Save",
     "emailVisibility": "Email visibility",
     "emailVisibilityDesc": "Choose whether other users can see your real email address. Regardless of this setting, you always receive notifications at your registered address.",
@@ -268,7 +282,10 @@
     "withSeller": "With {name}",
     "withBuyer": "With {name}",
     "noThreadsDesc": "Start a conversation from a project page — sellers will see it here.",
-    "noThreadsSellerDesc": "Once a buyer reaches out about one of your projects, their message will appear here."
+    "noThreadsSellerDesc": "Once a buyer reaches out about one of your projects, their message will appear here.",
+    "filterAll": "All",
+    "filterAsBuyer": "As buyer",
+    "filterAsSeller": "As seller"
   },
   "seller": {
     "dashboard": "Seller Dashboard",

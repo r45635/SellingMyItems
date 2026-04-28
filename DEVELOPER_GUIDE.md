@@ -173,10 +173,13 @@ Each route group (except `public`) applies an auth guard in its pages:
 const user = await requireUser();  // Redirects to /login if not authenticated
 
 // (seller) pages call:
-const user = await requireSeller(); // Requires seller or admin role
+const user = await requireSeller(); // Open to any signed-in user — selling
+                                    // is unlocked by creating a project, and
+                                    // public visibility is gated by admin
+                                    // approval of the project's publishStatus.
 
 // (admin) pages call:
-const user = await requireAdmin();  // Requires admin role
+const user = await requireAdmin();  // Requires profiles.is_admin = true
 ```
 
 These guards are called at the **top of each page component** (not in layouts or middleware), ensuring server-side redirect before any rendering.
@@ -214,7 +217,7 @@ Sign Up/In → bcrypt hash/compare → Create session in DB → Set httpOnly coo
 
 ```typescript
 // getUser() — returns null if not authenticated
-export async function getUser(): Promise<{id: string; email: string; role: string} | null> {
+export async function getUser(): Promise<{id: string; email: string; isAdmin: boolean} | null> {
   // 1. Read session_token cookie
   // 2. Query sessions table (JOIN profiles)
   // 3. Check session not expired
@@ -613,8 +616,11 @@ cookies().set('session_token', token, {
 
 Every server action validates:
 1. **Authentication**: user is logged in
-2. **Role**: user has the required role (purchaser/seller/admin)
-3. **Ownership**: user owns the resource they're modifying (e.g., seller owns the project)
+2. **Capability**: the user is allowed to perform this action — admin
+   actions check `profiles.is_admin`; seller actions verify the user
+   owns the target `seller_account` / `project` (lazily minted on first
+   project creation, no separate role)
+3. **Ownership**: the user owns the resource they're modifying
 
 ---
 
@@ -843,12 +849,26 @@ Caddy runs in a separate Docker Compose at `/opt/trystbrief/` and shares the `sh
 6. **i18n**: Add translation keys to both `en.json` and `fr.json`
 7. **Navigation**: Update header/sidebar if needed
 
-### Adding a New Role
+### Adding a New Capability
 
-1. Add value to `user_role` enum in schema: `ALTER TYPE "user_role" ADD VALUE 'newrole';`
-2. Create a guard function in `src/lib/auth/index.ts` (follow `requireSeller` pattern)
-3. Create a route group `(newrole)` under `src/app/[locale]/`
-4. Update middleware and navigation as needed
+There is no `user_role` enum anymore — it was dropped in `0019` after
+buyer/seller unification. Capabilities are derived from data:
+
+- **buyer** — every signed-in user
+- **seller** — has a row in `seller_accounts` (lazily minted on first
+  project creation)
+- **admin** — `profiles.is_admin = true` (set manually via SQL)
+
+To add a new capability:
+
+1. Decide the storage. Prefer a boolean column on `profiles` (like
+   `is_admin`) for platform-wide flags, or a row in a dedicated table
+   (like `seller_accounts`) when you also need scoped data.
+2. Extend `getUserCapabilities()` in `src/lib/auth/index.ts` to surface
+   the new flag.
+3. Add a guard in the same file if the new capability gates a route.
+4. Update `ContextSwitcher` if the capability gets its own environment.
+5. Add an admin SQL note in this guide for how to grant it.
 
 ### Adding a New Email Type
 

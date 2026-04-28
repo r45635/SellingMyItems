@@ -2,24 +2,25 @@
 
 import { Link, usePathname } from "@/i18n/navigation";
 import { cn } from "@/lib/utils";
-import { BarChart3, Users, FolderOpen, Shield, Mail } from "lucide-react";
 import {
-  NavIconBadge,
-  TONE_STYLES,
-  type IconTone,
-} from "@/components/shared/nav-icon-badge";
+  LayoutDashboard,
+  Users,
+  FolderOpen,
+  Mail,
+  Shield,
+} from "lucide-react";
 
-const sidebarItems: readonly {
+const adminNavItems: readonly {
   href: string;
-  icon: typeof BarChart3;
+  icon: typeof LayoutDashboard;
   label: string;
   exact?: boolean;
-  tone: IconTone;
+  color: string;
 }[] = [
-  { href: "/admin", icon: BarChart3, label: "Overview", exact: true, tone: "indigo" },
-  { href: "/admin/accounts", icon: Users, label: "Accounts", tone: "violet" },
-  { href: "/admin/projects", icon: FolderOpen, label: "Projects", tone: "brand" },
-  { href: "/admin/emails", icon: Mail, label: "Emails", tone: "emerald" },
+  { href: "/admin", icon: LayoutDashboard, label: "Overview", exact: true, color: "text-orange-600" },
+  { href: "/admin/accounts", icon: Users, label: "Accounts", color: "text-violet-600" },
+  { href: "/admin/projects", icon: FolderOpen, label: "Projects", color: "text-sky-600" },
+  { href: "/admin/emails", icon: Mail, label: "Emails", color: "text-emerald-600" },
 ];
 
 export function AdminSidebar() {
@@ -29,29 +30,38 @@ export function AdminSidebar() {
     <aside className="hidden md:flex w-64 flex-col border-r bg-muted/30">
       <div className="p-5 border-b">
         <Link href="/admin" className="flex items-center gap-2">
-          <NavIconBadge Icon={Shield} tone="red" />
+          <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-red-100 text-red-600 dark:bg-red-950/50 dark:text-red-400">
+            <Shield className="h-4 w-4" />
+          </span>
           <span className="font-bold text-sm">Admin</span>
         </Link>
-        <p className="text-xs text-muted-foreground mt-1.5 ml-9">Admin dashboard</p>
+        <p className="text-xs text-muted-foreground mt-1.5 ml-9">
+          Admin dashboard
+        </p>
       </div>
       <nav className="flex-1 px-3 py-3 space-y-1">
-        {sidebarItems.map((item) => {
+        {adminNavItems.map((item) => {
           const isActive = item.exact
             ? pathname === item.href || pathname === `${item.href}/`
             : pathname.startsWith(item.href);
-          const tone = TONE_STYLES[item.tone];
+          const Icon = item.icon;
           return (
             <Link
               key={item.href}
               href={item.href}
               className={cn(
-                "flex items-center gap-3 rounded-lg px-2 py-2 text-sm font-medium transition-colors",
+                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors border",
                 isActive
-                  ? `${tone.bgActive} ${tone.iconActive}`
-                  : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                  ? "bg-orange-50 border-orange-200 text-orange-700 dark:bg-orange-950/30 dark:border-orange-900 dark:text-orange-400"
+                  : "border-transparent text-muted-foreground hover:bg-accent hover:text-foreground"
               )}
             >
-              <NavIconBadge Icon={item.icon} tone={item.tone} active={isActive} />
+              <Icon
+                className={cn(
+                  "h-4 w-4",
+                  isActive ? "text-orange-600 dark:text-orange-400" : item.color
+                )}
+              />
               <span>{item.label}</span>
             </Link>
           );

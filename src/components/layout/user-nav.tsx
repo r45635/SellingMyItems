@@ -19,12 +19,18 @@ import { NavIconBadge } from "@/components/shared/nav-icon-badge";
 
 type NavUser = {
   email: string;
-  role: "purchaser" | "seller" | "admin";
+};
+
+type Capabilities = {
+  buyer: boolean;
+  seller: boolean;
+  admin: boolean;
 };
 
 export function UserNav() {
   const t = useTranslations();
   const [user, setUser] = useState<NavUser | null>(null);
+  const [capabilities, setCapabilities] = useState<Capabilities | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
@@ -33,6 +39,9 @@ export function UserNav() {
       .then((data) => {
         if (data?.user) {
           setUser(data.user);
+        }
+        if (data?.capabilities) {
+          setCapabilities(data.capabilities);
         }
       });
   }, []);
@@ -137,17 +146,23 @@ export function UserNav() {
           </Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        {/* "My listings" is now visible to every signed-in user — selling
-            isn't gated by role anymore. The first project they create
-            lazily mints their seller account; admin still validates each
-            project before it goes public. */}
+        {/* "Sell" for users who haven't activated yet — the first project
+            they create lazily mints their seller account and the label
+            flips to "My listings". Selling itself isn't gated by role,
+            only the public visibility (admin still validates each project
+            before it goes public). */}
         <DropdownMenuItem>
-          <Link href="/seller" className="flex items-center gap-2 cursor-pointer w-full">
+          <Link
+            href={capabilities?.seller ? "/seller" : "/seller/projects/new"}
+            className="flex items-center gap-2 cursor-pointer w-full"
+          >
             <NavIconBadge Icon={LayoutDashboard} tone="sky" />
-            <span>{t("nav.myListings")}</span>
+            <span>
+              {capabilities?.seller ? t("nav.myListings") : t("nav.sell")}
+            </span>
           </Link>
         </DropdownMenuItem>
-        {user.role === "admin" ? (
+        {capabilities?.admin ? (
           <DropdownMenuItem>
             <Link href="/admin" className="flex items-center gap-2 cursor-pointer w-full">
               <NavIconBadge Icon={Shield} tone="red" />

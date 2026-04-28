@@ -31,15 +31,17 @@ A responsive cross-device marketplace for publishing items for sale, connecting 
 
 ## Overview
 
-SellingMyItems is a marketplace platform where **sellers** publish items organized into **projects** (e.g. "Moving Sale — Harrison") and **buyers** can browse, wishlist, express purchase intents, and communicate with sellers. The actual transaction (payment, pickup) happens offline.
+SellingMyItems is a marketplace platform where users publish items organized into **projects** (e.g. "Moving Sale — Harrison") and others browse, wishlist, express purchase intents, and communicate with sellers. The actual transaction (payment, pickup) happens offline.
 
-Three user roles govern the platform:
+There is no static role enum — capabilities are derived from data:
 
-| Role | Access | How it's created |
+| Capability | Access | How it's granted |
 |---|---|---|
-| **Purchaser** (buyer) | Browse, wishlist, intents, messaging, reservations, purchases | Self-registration |
-| **Seller** | All buyer capabilities + full CRUD on projects/items, manage intents | Manual role assignment |
-| **Admin** | All capabilities + platform statistics, account management, email monitoring | Manual via SQL |
+| **Buyer** | Browse, wishlist, intents, messaging, reservations, purchases | Any signed-in user |
+| **Seller** | Buyer capabilities + full CRUD on owned projects/items, manage intents | Existence of an active row in `seller_accounts` — lazily minted on first project creation. Public visibility is gated by admin approval of the project's `publish_status`. |
+| **Admin** | All of the above + platform statistics, account management, project review, email monitoring | `profiles.is_admin = true` set manually via SQL |
+
+A user can hold multiple capabilities simultaneously (e.g. a seller is also a buyer on someone else's project). The header **context switcher** lets multi-capability users hop between environments.
 
 ---
 
@@ -66,7 +68,7 @@ Three user roles govern the platform:
 
 ## Features
 
-### Buyer (Purchaser)
+### Buyer
 
 - **Browse projects** — public homepage with search, project cards (price range, available/total counts, location)
 - **View items** — authenticated users see full item details, photos (4:3 carousel), prices, links; mobile floating "Send a message" FAB on project pages
@@ -225,13 +227,13 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
-### 5. Create user roles
+### 5. Grant admin
 
-Selling is open to every signed-in user — the `seller_accounts` row is created on demand the first time a user creates a project, no SQL needed. The only role you may want to flip manually is `admin`:
+Buying and selling are both available to any signed-in user — selling unlocks automatically the first time they submit a project. The only capability you grant manually is **admin**:
 
 ```bash
 docker exec sellingmyitems-db-1 psql -U sellingmyitems -d sellingmyitems \
-  -c "UPDATE profiles SET role = 'admin' WHERE email = 'admin@example.com';"
+  -c "UPDATE profiles SET is_admin = true WHERE email = 'admin@example.com';"
 ```
 
 ### 6. Production deployment
@@ -324,7 +326,7 @@ SellingMyItems/
 |---|---|
 | `/` | Homepage — public project listings with item counts |
 | `/login` | Sign in (email + password), supports `?returnTo=` redirect |
-| `/signup` | Sign up (purchaser role only), supports `?returnTo=` redirect |
+| `/signup` | Sign up — every account can buy; selling unlocks on first listing. Supports `?returnTo=` redirect |
 | `/forgot-password` | Request password reset email |
 | `/reset-password?token=...` | Reset password with valid token |
 | `/project/[slug]` | Project page — guests see blurred items with sign-in CTA; auth users see full grid |
@@ -374,7 +376,6 @@ SellingMyItems/
 
 | Enum | Values |
 |---|---|
-| `user_role` | `purchaser`, `seller`, `admin` (`seller` kept for back-compat, no longer used as a gate) |
 | `item_status` | `available`, `pending`, `reserved`, `sold`, `hidden` |
 | `contact_method` | `email`, `phone`, `app_message` |
 | `intent_status` | `submitted`, `reviewed`, `accepted`, `declined` |
@@ -450,6 +451,7 @@ Numbered SQL files in `src/db/migrations/`. Notable steps:
 | `0016` | Add `email_visibility` enum + `profiles.email_visibility`; thread aliases (later dropped) + `inbound_relay` email type |
 | `0017` | Drop `thread_aliases` (inbound relay rolled back in favor of in-app messaging) |
 | `0018` | Unify roles: drop `seller`-role gating; add `project_publish_status` enum + `publish_status`/`reviewer_note`/`submitted_at`/`reviewed_at` columns; grandfather public projects → `approved` |
+| `0019` | Drop legacy `user_role` enum + `profiles.role` column; replace with `profiles.is_admin` boolean. Buyer/seller capabilities now derived from data (signed-in = buyer; row in `seller_accounts` = seller). |
 
 ---
 
@@ -457,21 +459,22 @@ Numbered SQL files in `src/db/migrations/`. Notable steps:
 
 ### Auth Flow
 
-1. **Sign up**: Email + password (min 6 chars) + confirm password → bcrypt (12 rounds) → `purchaser` role forced; "email already in use" surfaces inline CTAs to sign in or reset
+1. **Sign up**: Email + password (min 6 chars) + confirm password → bcrypt (12 rounds) → profile created with `is_admin = false` (selling unlocks later, on first project creation); "email already in use" surfaces inline CTAs to sign in or reset
 2. **Sign in**: Email + password → bcrypt compare → create session (30-day, `crypto.randomBytes(32)` token); login + signup share a split-screen layout (brand panel + form)
 3. **Session**: `session_token` httpOnly cookie, sameSite: lax, secure in production
 4. **Sign out**: Delete session from DB + clear cookie
 5. **Password reset**: Forgot password → email with 1h token → validate + hash new password → mark token used → **delete every session for that user** (compromised cookies stop working immediately)
 6. **Change password (signed-in)**: From `/account`, requires the current password (bcrypt-compared); rate-limited 5/15min per user; optional "Sign out of other devices" wipes every session row except the current cookie
 
-### Role Guards
+### Auth Guards
 
 | Guard | Behavior |
 |---|---|
-| `getUser()` | Returns `{id, email, role}` or `null` |
+| `getUser()` | Returns `{id, email, isAdmin}` or `null` |
+| `getUserCapabilities(user)` | Returns `{buyer, seller, admin, sellerAccountId}` derived from data |
 | `requireUser()` | Redirects to `/login` if not authenticated |
 | `requireSeller()` | Thin alias of `requireUser()` — selling is open to every signed-in user; the function name is kept for back-compat with existing call sites |
-| `requireAdmin()` | Requires `admin` role, redirects to `/` |
+| `requireAdmin()` | Requires `is_admin = true`, redirects to `/` otherwise |
 
 ### Rate Limiting
 
@@ -681,7 +684,7 @@ Use this checklist when transferring the project to a different VPS or GitHub ac
 | Decision | Rationale |
 |---|---|
 | **No Supabase** | Migrated to self-hosted PostgreSQL + bcryptjs for full control and no vendor lock-in |
-| **Seller signup disabled** | New accounts always get `purchaser` role. Sellers created manually to control marketplace quality |
+| **No separate seller signup** | Every account can buy and sell. Selling unlocks the moment a user submits their first project — at which point a `seller_accounts` row is lazily minted. Quality control happens at the project level via the `publish_status` admin review (draft → pending → approved/rejected), not via a role gate. |
 | **Auth gate on item details** | Guests see project headers but items grid is blurred — must log in to see details and prices |
 | **`returnTo` flow** | Login/signup preserve the intended destination URL for seamless redirect after authentication |
 | **Secret admin** | No visible admin link in navigation — access only by typing `/admin` directly |

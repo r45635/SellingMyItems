@@ -7,6 +7,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Menu } from "lucide-react";
 import { LanguageSwitcher } from "./language-switcher";
 import { UserNav } from "./user-nav";
+import { ContextSwitcher } from "./context-switcher";
 import { SmiLogo } from "@/components/shared/smi-logo";
 import { BuildInfo } from "@/components/shared/build-info";
 
@@ -29,6 +30,7 @@ export function Header() {
         </nav>
 
         <div className="flex flex-1 items-center justify-end space-x-2">
+          <ContextSwitcher />
           <LanguageSwitcher />
           <UserNav />
 

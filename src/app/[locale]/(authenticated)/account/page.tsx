@@ -1,12 +1,12 @@
 import { getTranslations } from "next-intl/server";
-import { requireUser } from "@/lib/auth";
+import { requireUser, getUserCapabilities } from "@/lib/auth";
 import { db } from "@/db";
 import { profiles } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Lock, Mail } from "lucide-react";
+import { Lock, Mail, ShoppingCart, Tag, Shield } from "lucide-react";
 import { ChangePasswordForm } from "@/features/account/components/change-password-form";
 
 async function updateProfileAction(formData: FormData) {
@@ -35,12 +35,14 @@ async function updateProfileAction(formData: FormData) {
 export default async function AccountPage() {
   const t = await getTranslations("nav");
   const tAccount = await getTranslations("account");
+  const tContext = await getTranslations("context");
   const user = await requireUser();
 
   const profile = await db.query.profiles.findFirst({
     where: eq(profiles.id, user.id),
   });
   const currentVisibility = profile?.emailVisibility ?? "hidden";
+  const capabilities = await getUserCapabilities(user);
 
   return (
     <div className="container px-4 md:px-6 py-8 max-w-2xl">
@@ -125,8 +127,29 @@ export default async function AccountPage() {
           </label>
         </fieldset>
 
-        <div className="text-sm text-muted-foreground">
-          {tAccount("role")}: {user.role === "seller" ? tAccount("seller") : tAccount("buyer")}
+        <div className="rounded-xl border p-4">
+          <p className="text-sm font-semibold mb-2">{tAccount("capabilities")}</p>
+          <p className="text-xs text-muted-foreground mb-3">
+            {tAccount("capabilitiesDesc")}
+          </p>
+          <ul className="flex flex-wrap gap-2">
+            <li className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-300 dark:ring-emerald-900/50">
+              <ShoppingCart className="h-3 w-3" />
+              {tContext("buyer")}
+            </li>
+            {capabilities.seller && (
+              <li className="inline-flex items-center gap-1.5 rounded-full bg-orange-50 px-2.5 py-1 text-xs font-semibold text-orange-700 ring-1 ring-orange-200 dark:bg-orange-950/30 dark:text-orange-300 dark:ring-orange-900/50">
+                <Tag className="h-3 w-3" />
+                {tContext("seller")}
+              </li>
+            )}
+            {capabilities.admin && (
+              <li className="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-700 ring-1 ring-red-200 dark:bg-red-950/30 dark:text-red-300 dark:ring-red-900/50">
+                <Shield className="h-3 w-3" />
+                {tContext("admin")}
+              </li>
+            )}
+          </ul>
         </div>
 
         <Button type="submit" size="lg">

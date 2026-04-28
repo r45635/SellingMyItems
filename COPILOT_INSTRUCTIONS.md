@@ -5,10 +5,10 @@ Maintain and extend the production application **SellingMyItems**.
 ## Product mission
 SellingMyItems is a responsive cross-device marketplace optimized for web, smartphone, tablet, and desktop.
 
-The application supports:
-- **Purchasers**: browse projects, view items (after login), wishlist, purchase intents, messaging
-- **Sellers**: full CRUD on projects/items, manage intents and messages
-- **Admins**: platform-wide dashboard with stats, account management, project management
+The application supports three capability layers (a single account can hold all three):
+- **Buyer**: every signed-in user. Browse projects, view items, wishlist, purchase intents, messaging.
+- **Seller**: any user who has created at least one project (lazily mints `seller_accounts`). Full CRUD on owned projects/items, manage intents and messages. Project public visibility is gated by admin approval (`publish_status`).
+- **Admin**: `profiles.is_admin = true`. Platform-wide dashboard with stats, account management, project review.
 
 This is NOT an online payment platform. Transactions happen offline/in person.
 
@@ -26,13 +26,18 @@ This is NOT an online payment platform. Transactions happen offline/in person.
 
 ## Core product rules
 
-### Roles and access model
+### Capability model
 
-| Role | Description |
+There is no static role enum. Capabilities are derived from data:
+
+| Capability | How it's granted |
 |---|---|
-| `purchaser` | Default on signup. Browse, wishlist, intent, message. |
-| `seller` | Created manually. Full CRUD on owned projects/items. Signup disabled. |
-| `admin` | Created manually via SQL. Platform stats + toggle accounts/projects. Secret `/admin` URL. |
+| **Buyer** | Any signed-in user. Browse, wishlist, intent, message. |
+| **Seller** | Existence of a row in `seller_accounts`. Lazily minted on first project creation — no separate signup. Public visibility of a seller's project is gated by `publish_status = approved` (admin review). |
+| **Admin** | `profiles.is_admin = true`. Set manually via SQL. Platform stats, accounts moderation, project review. |
+
+A user can have multiple capabilities at once (typical case: a seller is
+also a buyer on someone else's project).
 
 ### Route groups and guards
 
@@ -40,8 +45,8 @@ This is NOT an online payment platform. Transactions happen offline/in person.
 |---|---|---|
 | `(public)` | None | Homepage, login, signup, project/item pages |
 | `(authenticated)` | `requireUser()` | Account, wishlist, messages |
-| `(seller)` | `requireSeller()` | Seller dashboard |
-| `(admin)` | `requireAdmin()` | Admin dashboard (no nav link) |
+| `(seller)` | `requireSeller()` | Listings dashboard. Now an alias for `requireUser()` — anyone signed in can manage their own listings. |
+| `(admin)` | `requireAdmin()` | Admin dashboard. Checks `is_admin`. |
 
 ### Authentication
 - Email + password (bcryptjs hashing)

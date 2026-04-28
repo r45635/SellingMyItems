@@ -3,10 +3,10 @@ import { Link } from "@/i18n/navigation";
 import { db } from "@/db";
 import { profiles, projects, sellerAccounts, items, buyerWishlists, buyerWishlistItems } from "@/db/schema";
 import { and, count, desc, eq, isNull, isNotNull, max, min, ne, inArray, ilike } from "drizzle-orm";
-import { MapPin, Package, Heart, MapPinned, HandCoins } from "lucide-react";
+import { MapPin, Package, Heart, MapPinned, HandCoins, Tag } from "lucide-react";
 import { SearchBar } from "@/components/shared/search-bar";
 import { EmptyState } from "@/components/shared/empty-state";
-import { getUser } from "@/lib/auth";
+import { getUser, getUserCapabilities } from "@/lib/auth";
 
 function formatCurrency(value: number, currency: string = "USD") {
   try {
@@ -114,6 +114,7 @@ export default async function HomePage({
   const priceRangeMap = new Map(priceRanges.map((r) => [r.projectId, r]));
 
   let wishlistCountMap = new Map<string, number>();
+  let canShowSellPrompt = false;
   if (user) {
     const wishlistCounts = await db
       .select({
@@ -126,6 +127,12 @@ export default async function HomePage({
       .groupBy(buyerWishlists.projectId);
 
     wishlistCountMap = new Map(wishlistCounts.map((r) => [r.projectId, r.count]));
+
+    // The "Sell something" prompt is for buyers who haven't yet activated
+    // selling. Once they create their first project a sellerAccount is
+    // minted and the prompt disappears — natural, low-friction graduation.
+    const caps = await getUserCapabilities(user);
+    canShowSellPrompt = !caps.seller;
   }
 
   const valueProps = [
@@ -175,6 +182,19 @@ export default async function HomePage({
               </Link>
               <span className="mx-1.5">·</span>
               {t("signInPrompt")}
+            </p>
+          )}
+          {canShowSellPrompt && (
+            <p className="mt-3 text-xs text-muted-foreground">
+              <Link
+                href="/seller/projects/new"
+                className="inline-flex items-center gap-1.5 font-semibold text-orange-600 dark:text-orange-400 hover:underline"
+              >
+                <Tag className="h-3 w-3" />
+                {t("heroCtaSell")}
+              </Link>
+              <span className="mx-1.5">·</span>
+              {t("heroCtaSellHint")}
             </p>
           )}
         </div>

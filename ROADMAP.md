@@ -4,35 +4,23 @@ Fonctionnalités et améliorations prévues pour les futures versions.
 
 ---
 
-## Multi-rôle par utilisateur
+## Multi-capacités par utilisateur — ✅ Livré
 
-**Priorité** : Moyenne
-**Complexité** : Moyenne
+**Statut** : implémenté (migrations 0018 + 0019)
 
-### Contexte
-L'architecture actuelle ne permet qu'un seul rôle par utilisateur (`profiles.role` = enum scalar). Un utilisateur ne peut pas être à la fois seller et admin, ou purchaser et seller.
+L'ancienne architecture mono-rôle (`profiles.role` enum scalaire) a été
+remplacée par un modèle de **capacités dérivées des données** :
 
-### Objectif
-Permettre à un même compte (même email) de cumuler plusieurs rôles : `purchaser`, `seller`, `admin`.
+- **buyer** : tout utilisateur connecté
+- **seller** : présence d'une ligne dans `seller_accounts` (créée automatiquement à la première création de projet)
+- **admin** : `profiles.is_admin = true` (positionné manuellement en SQL)
 
-### Approche recommandée
-Remplacer le champ `role userRoleEnum` par un champ `roles text[]` dans la table `profiles` :
+Un même compte cumule désormais buyer + seller + admin sans contrainte.
+Un sélecteur de contexte dans le header permet aux utilisateurs multi-capacités
+de basculer entre les environnements (buyer / seller / admin), avec routing
+automatique des messages vers le bon côté.
 
-- Migration : `ALTER TABLE profiles ADD COLUMN roles text[] DEFAULT '{purchaser}'; UPDATE profiles SET roles = ARRAY[role::text]; ALTER TABLE profiles DROP COLUMN role;`
-- Modifier `AppUser.role` → `AppUser.roles: string[]`
-- Guards : `requireSeller()` → `if (!user.roles.includes("seller"))`, idem pour `requireAdmin()`
-- `signUpAction` : créer avec `roles: ['purchaser']`
-- Nav : afficher les liens seller dashboard et/ou admin selon les rôles présents
-- Admin accounts page : afficher/éditer les rôles multiples
-
-### Fichiers impactés
-- `src/db/schema/index.ts` — champ `roles` remplace `role`
-- `src/db/migrations/` — nouvelle migration
-- `src/lib/auth/index.ts` — `AppUser`, `getUser()`, `requireSeller()`, `requireAdmin()`
-- `src/lib/auth/actions.ts` — `signUpAction()`
-- `src/components/layout/user-nav.tsx` — liens conditionnels multi-rôle
-- `src/features/admin-dashboard/actions.ts` — gestion des rôles
-- `src/app/[locale]/(admin)/admin/accounts/page.tsx` — affichage multi-rôle
+Voir `getUserCapabilities()` dans `src/lib/auth/index.ts`.
 
 ---
 

@@ -12,10 +12,10 @@ export async function toggleProfileActiveAction(profileId: string) {
 
   const profile = await db.query.profiles.findFirst({
     where: eq(profiles.id, profileId),
-    columns: { id: true, isActive: true, role: true },
+    columns: { id: true, isActive: true, isAdmin: true },
   });
 
-  if (!profile || profile.role === "admin") {
+  if (!profile || profile.isAdmin) {
     return { error: "Profile not found or not editable" };
   }
 

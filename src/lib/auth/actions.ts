@@ -6,7 +6,7 @@ import { eq, and, gt, isNull, ne } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { cookies, headers } from "next/headers";
-import { getUser, type UserRole } from "@/lib/auth";
+import { getUser } from "@/lib/auth";
 import { consumeRateLimit } from "@/lib/security/rate-limit";
 import { sendPasswordResetEmail, sendWelcomeEmail } from "@/lib/email";
 import { claimTargetedInvitationsForEmail } from "@/lib/access";
@@ -35,8 +35,6 @@ export async function signUpAction(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const password = String(formData.get("password") ?? "");
   const confirmPassword = String(formData.get("confirmPassword") ?? "");
-  // Seller registration is disabled for now — force purchaser role
-  const role: UserRole = "purchaser";
 
   // Validate
   if (!email || !password) {
@@ -82,7 +80,6 @@ export async function signUpAction(formData: FormData) {
     .values({
       email,
       passwordHash,
-      role,
       displayName: email.split("@")[0],
     })
     .returning({ id: profiles.id });
@@ -125,7 +122,7 @@ export async function signUpAction(formData: FormData) {
     maxAge: SESSION_MAX_AGE,
   });
 
-  return { ok: true, role };
+  return { ok: true };
 }
 
 export async function signInAction(formData: FormData) {
@@ -155,7 +152,7 @@ export async function signInAction(formData: FormData) {
 
   const profile = await db.query.profiles.findFirst({
     where: eq(profiles.email, email),
-    columns: { id: true, passwordHash: true, role: true, isActive: true },
+    columns: { id: true, passwordHash: true, isActive: true },
   });
 
   if (!profile || !profile.passwordHash) {
@@ -197,7 +194,7 @@ export async function signInAction(formData: FormData) {
     maxAge: SESSION_MAX_AGE,
   });
 
-  return { ok: true, role: profile.role };
+  return { ok: true };
 }
 
 export async function signOutAction() {

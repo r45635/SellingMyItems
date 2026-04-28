@@ -23,11 +23,21 @@
     "account": "Compte",
     "sellerDashboard": "Tableau de bord vendeur",
     "myListings": "Mes ventes",
+    "sell": "Vendre",
     "adminDashboard": "Administration",
     "adminEmails": "Emails",
     "adminEmailsDescription": "Surveiller les envois d'emails et gérer la configuration API Resend",
     "reservations": "Mes Réservations",
     "purchases": "Mes Achats"
+  },
+  "context": {
+    "buyer": "Acheteur",
+    "seller": "Vendeur",
+    "admin": "Admin"
+  },
+  "sellerOnboarding": {
+    "firstProjectTitle": "Vous êtes sur le point de créer votre première annonce",
+    "firstProjectBody": "Une fois soumis, votre projet sera examiné par notre équipe avant d'être visible publiquement. Vous serez notifié(e) par email lorsqu'il sera approuvé."
   },
   "home": {
     "hero": "Trouvez des articles uniques près de chez vous",
@@ -42,6 +52,8 @@
     "heroValueDirectDesc": "Sans intermédiaire ni frais",
     "browseProjects": "Parcourir les projets",
     "signInPrompt": "Connectez-vous pour voir les détails, sauvegarder vos favoris et contacter les vendeurs",
+    "heroCtaSell": "Vendre quelque chose",
+    "heroCtaSellHint": "Des articles à revendre ? Mettez-les en ligne en quelques minutes.",
     "itemsForSale": "{count, plural, one {# article} other {# articles}}",
     "availableOfTotal": "{available} dispo / {total} articles",
     "inSelection": "{count} dans la sélection",
@@ -116,6 +128,8 @@
     "role": "Rôle",
     "seller": "Vendeur",
     "buyer": "Acheteur",
+    "capabilities": "Ce que vous pouvez faire",
+    "capabilitiesDesc": "Tout le monde peut acheter. La vente s'active dès que vous créez votre première annonce — pas d'inscription séparée.",
     "save": "Enregistrer",
     "emailVisibility": "Visibilité de l'email",
     "emailVisibilityDesc": "Choisissez si les autres utilisateurs peuvent voir votre adresse email réelle. Vous recevez toujours les notifications sur l'adresse enregistrée.",
@@ -268,7 +282,10 @@
     "withSeller": "Avec {name}",
     "withBuyer": "Avec {name}",
     "noThreadsDesc": "Commencez une conversation depuis une page projet — les vendeurs la verront apparaître ici.",
-    "noThreadsSellerDesc": "Dès qu'un acheteur contactera l'un de vos projets, son message s'affichera ici."
+    "noThreadsSellerDesc": "Dès qu'un acheteur contactera l'un de vos projets, son message s'affichera ici.",
+    "filterAll": "Tous",
+    "filterAsBuyer": "En tant qu'acheteur",
+    "filterAsSeller": "En tant que vendeur"
   },
   "seller": {
     "dashboard": "Tableau de bord vendeur",

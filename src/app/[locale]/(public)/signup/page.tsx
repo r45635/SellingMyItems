@@ -9,7 +9,6 @@ import { useSearchParams } from "next/navigation";
 import { Link } from "@/i18n/navigation";
 import { SmiLogo } from "@/components/shared/smi-logo";
 import { signUpAction } from "@/lib/auth/actions";
-import { ShoppingBag } from "lucide-react";
 import { AuthSplitPanel } from "@/features/auth/components/auth-split-panel";
 
 export default function SignupPage() {
@@ -19,7 +18,6 @@ export default function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const role = "purchaser" as const;
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -35,7 +33,6 @@ export default function SignupPage() {
     formData.set("email", email);
     formData.set("password", password);
     formData.set("confirmPassword", confirmPassword);
-    formData.set("role", role);
 
     const result = await signUpAction(formData);
 
@@ -125,12 +122,6 @@ export default function SignupPage() {
                 minLength={6}
                 autoComplete="new-password"
               />
-            </div>
-
-            <input type="hidden" name="role" value="purchaser" />
-            <div className="flex items-center gap-2 rounded-xl border-2 border-primary bg-primary/5 p-3">
-              <ShoppingBag className="h-5 w-5 text-primary" />
-              <span className="text-sm font-medium">{t("rolePurchaser")}</span>
             </div>
 
             {error ? (

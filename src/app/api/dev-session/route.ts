@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getUser } from "@/lib/auth";
+import { getUser, getUserCapabilities } from "@/lib/auth";
 
 export async function GET() {
   const user = await getUser();
@@ -8,10 +8,16 @@ export async function GET() {
     return NextResponse.json({ user: null });
   }
 
+  const capabilities = await getUserCapabilities(user);
+
   return NextResponse.json({
     user: {
       email: user.email,
-      role: user.role,
+    },
+    capabilities: {
+      buyer: capabilities.buyer,
+      seller: capabilities.seller,
+      admin: capabilities.admin,
     },
   });
 }
