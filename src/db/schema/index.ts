@@ -9,6 +9,8 @@ import {
   jsonb,
   uniqueIndex,
   index,
+  doublePrecision,
+  primaryKey,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
@@ -106,6 +108,14 @@ export const profiles = pgTable("profiles", {
   defaultCurrency: currencyCodeEnum("default_currency")
     .default("USD")
     .notNull(),
+  // Approximate location for matching, never exact GPS. Country +
+  // postal code is what the user enters; lat/lng are the centroid
+  // resolved by Nominatim and stored only for radius queries.
+  countryCode: text("country_code"),
+  postalCode: text("postal_code"),
+  latitude: doublePrecision("latitude"),
+  longitude: doublePrecision("longitude"),
+  locationUpdatedAt: timestamp("location_updated_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),
@@ -161,6 +171,15 @@ export const projects = pgTable("projects", {
   reviewerNote: text("reviewer_note"),
   submittedAt: timestamp("submitted_at", { withTimezone: true }),
   reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+  // Project pickup location. The seller picks country + postal code;
+  // we resolve to centroid coords for radius queries. radiusKm is
+  // optional — NULL means "anyone can see this", otherwise the project
+  // is only listed for buyers within that distance from the centroid.
+  countryCode: text("country_code"),
+  postalCode: text("postal_code"),
+  latitude: doublePrecision("latitude"),
+  longitude: doublePrecision("longitude"),
+  radiusKm: integer("radius_km"),
   isSeoIndexable: boolean("is_seo_indexable").default(false).notNull(), // future
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
@@ -564,6 +583,32 @@ export const notifications = pgTable(
   },
   (table) => [
     index("notifications_user_read_idx").on(table.userId, table.readAt),
+  ]
+);
+
+// ─── Geocoded Locations (cache) ─────────────────────────────────────────────
+
+/**
+ * On-disk cache of (country, postal) → (lat, lng, city) results from
+ * Nominatim. Avoids re-querying the same code on every project save and
+ * keeps us well below Nominatim's 1 req/s policy. A NULL latitude row
+ * means "we tried, no match" — caller should re-attempt after the
+ * resolved_at TTL (~24h) elapses, otherwise treat as a real miss.
+ */
+export const geocodedLocations = pgTable(
+  "geocoded_locations",
+  {
+    countryCode: text("country_code").notNull(),
+    postalCode: text("postal_code").notNull(),
+    latitude: doublePrecision("latitude"),
+    longitude: doublePrecision("longitude"),
+    city: text("city"),
+    resolvedAt: timestamp("resolved_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.countryCode, table.postalCode] }),
   ]
 );
 

@@ -8,6 +8,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { findSellerProject } from "@/lib/seller-accounts";
+import { geocode } from "@/lib/geocoding";
 
 async function getSellerAccount(userId: string) {
   const sellerAccount = await db.query.sellerAccounts.findFirst({
@@ -31,6 +32,32 @@ async function ensureSellerAccount(userId: string) {
   return created;
 }
 
+/**
+ * Resolve country + postal code to centroid coords. Returns null on
+ * any failure path so the project save still goes through with text-
+ * only location — the seller can re-save later and we'll re-geocode.
+ */
+async function resolveProjectCoords(
+  countryCode: string | undefined,
+  postalCode: string | undefined
+) {
+  if (!countryCode || !postalCode) {
+    return { latitude: null, longitude: null };
+  }
+  const result = await geocode({ countryCode, postalCode });
+  return {
+    latitude: result?.latitude ?? null,
+    longitude: result?.longitude ?? null,
+  };
+}
+
+function readRadiusKm(formData: FormData): number | undefined {
+  const raw = formData.get("radiusKm");
+  if (raw == null || raw === "") return undefined;
+  const n = Number(raw);
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : undefined;
+}
+
 export async function createProjectAction(formData: FormData) {
   const user = await requireSeller();
 
@@ -40,6 +67,9 @@ export async function createProjectAction(formData: FormData) {
     cityArea: formData.get("cityArea"),
     description: formData.get("description") || undefined,
     visibility: formData.get("visibility") || undefined,
+    countryCode: formData.get("countryCode") || undefined,
+    postalCode: formData.get("postalCode") || undefined,
+    radiusKm: readRadiusKm(formData),
   };
 
   const validated = projectFormSchema.safeParse(rawData);
@@ -51,6 +81,11 @@ export async function createProjectAction(formData: FormData) {
   if (!sellerAccount) {
     return { error: { form: ["Could not initialize selling account"] } };
   }
+
+  const coords = await resolveProjectCoords(
+    validated.data.countryCode,
+    validated.data.postalCode
+  );
 
   try {
     // New projects start in `draft`. The user has to explicitly submit them
@@ -65,6 +100,11 @@ export async function createProjectAction(formData: FormData) {
       visibility: validated.data.visibility ?? "public",
       publishStatus: "draft",
       isPublic: false,
+      countryCode: validated.data.countryCode ?? null,
+      postalCode: validated.data.postalCode ?? null,
+      latitude: coords.latitude,
+      longitude: coords.longitude,
+      radiusKm: validated.data.radiusKm ?? null,
     });
   } catch {
     return { error: { form: ["Unable to create project (slug already in use?)"] } };
@@ -83,6 +123,9 @@ export async function updateProjectAction(formData: FormData) {
     cityArea: formData.get("cityArea"),
     description: formData.get("description") || undefined,
     // Note: visibility edits go through setProjectVisibilityAction (triggers reset)
+    countryCode: formData.get("countryCode") || undefined,
+    postalCode: formData.get("postalCode") || undefined,
+    radiusKm: readRadiusKm(formData),
   };
 
   const validated = projectFormSchema.safeParse(rawData);
@@ -100,6 +143,21 @@ export async function updateProjectAction(formData: FormData) {
     return { error: { form: ["Project not found or unauthorized"] } };
   }
 
+  // Only re-geocode when the (country, postal) pair actually changed,
+  // to avoid hammering Nominatim on every project edit.
+  const locationChanged =
+    (validated.data.countryCode ?? null) !== ownedProject.countryCode ||
+    (validated.data.postalCode ?? null) !== ownedProject.postalCode;
+  const coords = locationChanged
+    ? await resolveProjectCoords(
+        validated.data.countryCode,
+        validated.data.postalCode
+      )
+    : {
+        latitude: ownedProject.latitude,
+        longitude: ownedProject.longitude,
+      };
+
   try {
     await db
       .update(projects)
@@ -108,6 +166,11 @@ export async function updateProjectAction(formData: FormData) {
         slug: validated.data.slug,
         cityArea: validated.data.cityArea,
         description: validated.data.description,
+        countryCode: validated.data.countryCode ?? null,
+        postalCode: validated.data.postalCode ?? null,
+        latitude: coords.latitude,
+        longitude: coords.longitude,
+        radiusKm: validated.data.radiusKm ?? null,
         updatedAt: new Date(),
       })
       .where(eq(projects.id, ownedProject.id));

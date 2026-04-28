@@ -6,9 +6,24 @@ import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
 import { isCurrencyCode, type CurrencyCode } from "@/lib/currency";
+import { geocode } from "@/lib/geocoding";
 
 const SUPPORTED_LOCALES = ["en", "fr"] as const;
 const SUPPORTED_DISTANCE_UNITS = ["km", "mi"] as const;
+const SUPPORTED_COUNTRIES = ["US", "CA", "FR"] as const;
+type CountryCode = (typeof SUPPORTED_COUNTRIES)[number];
+
+function clampCountry(value: unknown): CountryCode | null {
+  return SUPPORTED_COUNTRIES.includes(value as CountryCode)
+    ? (value as CountryCode)
+    : null;
+}
+
+const COUNTRY_DEFAULT_DISTANCE_UNIT: Record<CountryCode, "km" | "mi"> = {
+  US: "mi",
+  CA: "km",
+  FR: "km",
+};
 
 type AppLocale = (typeof SUPPORTED_LOCALES)[number];
 type DistanceUnit = (typeof SUPPORTED_DISTANCE_UNITS)[number];
@@ -56,4 +71,74 @@ export async function updateAccountPreferencesAction(formData: FormData) {
     .where(eq(profiles.id, user.id));
 
   revalidatePath("/account");
+}
+
+/**
+ * Persist (and geocode) the user's approximate location. Postal code +
+ * country only — never browser GPS — so we never need to ask for the
+ * Geolocation permission. The Nominatim call may fail (rate limit,
+ * unknown postal); we still persist the country + postal text so the
+ * user can re-save later and we'll re-geocode then. lat/lng are nulled
+ * out in that case so radius queries silently skip this user.
+ */
+export async function updateLocationAction(formData: FormData) {
+  const user = await requireUser();
+
+  const country = clampCountry(formData.get("countryCode"));
+  const postal = String(formData.get("postalCode") ?? "").trim();
+
+  // Both blank → user cleared their location. Wipe coords too.
+  if (!country || !postal) {
+    await db
+      .update(profiles)
+      .set({
+        countryCode: null,
+        postalCode: null,
+        latitude: null,
+        longitude: null,
+        locationUpdatedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(profiles.id, user.id));
+    revalidatePath("/account");
+    return;
+  }
+
+  const resolved = await geocode({ countryCode: country, postalCode: postal });
+
+  // If the user hasn't set distance_unit explicitly to something
+  // different from the country default, auto-align it. We don't know
+  // for sure they "haven't" — but switching the default to mi for a
+  // US user who never touched the toggle is the right behavior.
+  const profile = await db.query.profiles.findFirst({
+    where: eq(profiles.id, user.id),
+    columns: { distanceUnit: true, countryCode: true },
+  });
+  const previousCountry = profile?.countryCode ?? null;
+  const expectedUnitForPrevious = previousCountry
+    ? COUNTRY_DEFAULT_DISTANCE_UNIT[previousCountry as CountryCode]
+    : null;
+  const userTouchedUnit =
+    profile?.distanceUnit != null &&
+    expectedUnitForPrevious != null &&
+    profile.distanceUnit !== expectedUnitForPrevious;
+  const distanceUnit = userTouchedUnit
+    ? profile?.distanceUnit
+    : COUNTRY_DEFAULT_DISTANCE_UNIT[country];
+
+  await db
+    .update(profiles)
+    .set({
+      countryCode: country,
+      postalCode: postal,
+      latitude: resolved?.latitude ?? null,
+      longitude: resolved?.longitude ?? null,
+      distanceUnit,
+      locationUpdatedAt: new Date(),
+      updatedAt: new Date(),
+    })
+    .where(eq(profiles.id, user.id));
+
+  revalidatePath("/account");
+  revalidatePath("/");
 }

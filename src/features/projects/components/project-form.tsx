@@ -25,6 +25,9 @@ export function ProjectForm({ defaultValues, projectId }: ProjectFormProps) {
     defaultValues?.visibility ?? "public"
   );
   const isEdit = !!projectId;
+  const [restrict, setRestrict] = useState<boolean>(
+    Boolean(defaultValues?.radiusKm)
+  );
   const {
     register,
     handleSubmit,
@@ -36,6 +39,9 @@ export function ProjectForm({ defaultValues, projectId }: ProjectFormProps) {
       slug: "",
       cityArea: "",
       description: "",
+      countryCode: undefined,
+      postalCode: "",
+      radiusKm: undefined,
       ...defaultValues,
     },
   });
@@ -43,8 +49,14 @@ export function ProjectForm({ defaultValues, projectId }: ProjectFormProps) {
   async function onSubmit(data: ProjectFormValues) {
     setServerError("");
     const formData = new FormData();
-    Object.entries(data).forEach(([key, value]) => {
-      if (value !== undefined && value !== null) {
+    // The "Restrict to my area" checkbox is local UI state — when off
+    // we omit the radius entirely so the server treats it as cleared.
+    const payload = {
+      ...data,
+      radiusKm: restrict ? data.radiusKm : undefined,
+    };
+    Object.entries(payload).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== "") {
         formData.set(key, String(value));
       }
     });
@@ -97,6 +109,72 @@ export function ProjectForm({ defaultValues, projectId }: ProjectFormProps) {
                 {errors.cityArea.message}
               </p>
             )}
+          </div>
+
+          {/* Pickup location — drives buyer-side radius matching. The
+              cityArea above is the human-readable label; country +
+              postal code is what we geocode for distance queries. */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="countryCode">{t("seller.projectCountry")}</Label>
+              <select
+                id="countryCode"
+                {...register("countryCode")}
+                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              >
+                <option value="">—</option>
+                <option value="US">United States</option>
+                <option value="CA">Canada</option>
+                <option value="FR">France</option>
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="postalCode">{t("seller.projectPostal")}</Label>
+              <Input
+                id="postalCode"
+                {...register("postalCode")}
+                placeholder="75001"
+                autoComplete="postal-code"
+              />
+            </div>
+          </div>
+
+          <div className="rounded-lg border bg-muted/20 p-3 space-y-2">
+            <label className="flex items-center gap-2 text-sm font-medium cursor-pointer">
+              <input
+                type="checkbox"
+                checked={restrict}
+                onChange={(e) => setRestrict(e.target.checked)}
+                className="rounded"
+              />
+              {t("seller.projectRestrict")}
+            </label>
+            {restrict && (
+              <div className="flex items-center gap-2 pl-6">
+                <Input
+                  type="number"
+                  min={1}
+                  max={500}
+                  step={5}
+                  placeholder="50"
+                  {...register("radiusKm", {
+                    setValueAs: (v: string) => {
+                      if (v === "" || v === undefined || v === null)
+                        return undefined;
+                      const n = parseInt(v, 10);
+                      return Number.isNaN(n) ? undefined : n;
+                    },
+                  })}
+                  className="w-24"
+                />
+                <span className="text-sm text-muted-foreground">
+                  {t("seller.projectRestrictUnit")}
+                </span>
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground">
+              {t("seller.projectRestrictHint")}
+            </p>
           </div>
 
           <div className="space-y-2">

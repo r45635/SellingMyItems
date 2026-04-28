@@ -12,6 +12,12 @@ export const projectFormSchema = z.object({
   cityArea: z.string().min(2).max(100),
   description: z.string().max(500).optional(),
   visibility: z.enum(["public", "invitation_only"]).optional(),
+  // Approximate location for radius matching. countryCode + postalCode
+  // are user-entered and resolved server-side via Nominatim. radiusKm
+  // is optional — empty/null means "no seller-side restriction".
+  countryCode: z.enum(["US", "CA", "FR"]).optional(),
+  postalCode: z.string().max(20).optional(),
+  radiusKm: z.number().int().min(1).max(500).optional(),
 });
 
 export type ProjectFormValues = z.infer<typeof projectFormSchema>;

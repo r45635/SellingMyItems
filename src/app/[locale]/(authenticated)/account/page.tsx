@@ -6,9 +6,9 @@ import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Lock, Mail, ShoppingCart, Tag, Shield, Globe, Ruler, Coins } from "lucide-react";
+import { Lock, Mail, ShoppingCart, Tag, Shield, Globe, Ruler, Coins, MapPin } from "lucide-react";
 import { ChangePasswordForm } from "@/features/account/components/change-password-form";
-import { updateAccountPreferencesAction } from "@/features/account/actions";
+import { updateAccountPreferencesAction, updateLocationAction } from "@/features/account/actions";
 import { CURRENCY_CODES } from "@/lib/currency";
 
 async function updateProfileAction(formData: FormData) {
@@ -224,6 +224,68 @@ export default async function AccountPage() {
             </select>
           </div>
         </div>
+
+        <Button type="submit" size="sm">
+          {tAccount("save")}
+        </Button>
+      </form>
+
+      {/* Location — postal-code-grain only. Drives radius matching on
+          the public homepage. We never store browser GPS. */}
+      <form
+        action={updateLocationAction}
+        className="mt-8 space-y-3 rounded-xl border p-4"
+      >
+        <div className="flex items-center gap-1.5">
+          <MapPin className="h-4 w-4 text-orange-500" />
+          <p className="text-sm font-semibold">{tAccount("locationTitle")}</p>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          {tAccount("locationPrivacy")}
+        </p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label htmlFor="countryCode" className="block text-sm font-medium mb-1">
+              {tAccount("country")}
+            </label>
+            <select
+              id="countryCode"
+              name="countryCode"
+              defaultValue={profile?.countryCode ?? ""}
+              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+            >
+              <option value="">—</option>
+              <option value="US">United States</option>
+              <option value="CA">Canada</option>
+              <option value="FR">France</option>
+            </select>
+          </div>
+
+          <div>
+            <label htmlFor="postalCode" className="block text-sm font-medium mb-1">
+              {tAccount("postalCode")}
+            </label>
+            <Input
+              id="postalCode"
+              name="postalCode"
+              type="text"
+              defaultValue={profile?.postalCode ?? ""}
+              placeholder="75001"
+              autoComplete="postal-code"
+            />
+          </div>
+        </div>
+
+        {profile?.latitude != null && profile?.longitude != null ? (
+          <p className="text-xs text-emerald-700 dark:text-emerald-300">
+            ✓ {tAccount("locationResolved")}
+          </p>
+        ) : profile?.postalCode ? (
+          <p className="text-xs text-amber-700 dark:text-amber-300">
+            ⚠ {tAccount("locationUnresolved")}
+          </p>
+        ) : null}
 
         <Button type="submit" size="sm">
           {tAccount("save")}
