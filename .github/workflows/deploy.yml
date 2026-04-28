@@ -67,17 +67,30 @@ jobs:
             docker compose config -q
             docker compose build --pull
             docker compose up -d --force-recreate --remove-orphans
-            
-            # Wait for app to be ready
+
+            # Wait for db + app to be ready
             echo "==> Waiting for app to be ready..."
             sleep 3
 
-            # Verify connectivity
-            echo "==> Verifying app is reachable..."
-            if curl -sf http://localhost:5050 -o /dev/null; then
-              echo "✅ App healthy"
+            # Apply any new SQL migrations BEFORE declaring the deploy
+            # healthy. Idempotent — first run bootstraps the tracking
+            # table from existing files; subsequent runs only apply
+            # what's new. See scripts/run-migrations.sh.
+            echo "==> Running DB migrations..."
+            chmod +x scripts/run-migrations.sh
+            ./scripts/run-migrations.sh
+
+            # Verify connectivity AND that the DB schema matches the
+            # code we just deployed. /api/health does a SELECT on
+            # profiles, so a missing column or enum drift fails this
+            # curl with 503 — the previous root-page check would have
+            # missed that.
+            echo "==> Verifying app + DB schema..."
+            if curl -sf http://localhost:5050/api/health -o /dev/null; then
+              echo "✅ App + DB healthy"
             else
-              echo "❌ App not responding on :5050"
+              echo "❌ App or DB schema unhealthy at /api/health"
+              docker compose logs --tail=50 app || true
               exit 1
             fi
 

@@ -606,15 +606,21 @@ docker exec sellingmyitems-db-1 pg_dump -U sellingmyitems sellingmyitems > backu
 
 ### Admin operations
 
-#### Apply a new Drizzle schema change
+#### Apply a new schema change
 
-The deploy workflow pulls code and rebuilds the container but does **not** run migrations. Whenever `src/db/schema/index.ts` adds a column, enum value, or table, run:
+The deploy workflow runs [`scripts/run-migrations.sh`](scripts/run-migrations.sh) automatically between `docker compose up` and the `/api/health` curl. To add a new schema change:
 
+1. Edit `src/db/schema/index.ts`.
+2. Add a hand-rolled SQL file in `src/db/migrations/` (next sequential prefix, e.g. `0020_add_X.sql`).
+3. Use `IF NOT EXISTS` / `IF EXISTS` guards so a second run is a no-op.
+4. Push to `main`. The next deploy applies it inside a single transaction (`psql -1 -v ON_ERROR_STOP=1`); a failure rolls back and fails the deploy.
+
+Tracking lives in a `_applied_migrations` table inside the same DB. The first run on an existing DB bootstraps the table by marking all current migration files as already applied (since the schema is already up to date) — no SQL is re-run on bootstrap.
+
+To run migrations manually outside a deploy:
 ```bash
-ssh root@VPS_IP "cd /root/sellingmyitems && docker compose exec -T app npx drizzle-kit push"
+ssh root@VPS_IP "cd /root/sellingmyitems && ./scripts/run-migrations.sh"
 ```
-
-Confirm the proposed changes when prompted. If the command offers to create or alter a column, check it matches the latest SQL file in `src/db/migrations/`.
 
 ### Deploy On Another VPS / Another Account
 
