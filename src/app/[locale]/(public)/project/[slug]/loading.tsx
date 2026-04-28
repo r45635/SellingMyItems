@@ -48,10 +48,11 @@ export default function ProjectLoading() {
           <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
             {Array.from({ length: 8 }).map((_, i) => (
               <div key={i} className="rounded-xl border bg-card overflow-hidden">
-                <Skeleton className="aspect-square w-full rounded-none" />
-                <div className="p-2.5 space-y-2">
+                <div className="aspect-[4/3] rounded-lg bg-muted animate-pulse" />
+                <div className="p-2.5 space-y-1">
                   <Skeleton className="h-4 w-3/4" />
-                  <Skeleton className="h-3 w-1/3" />
+                  <div className="h-4 w-16 rounded bg-muted animate-pulse mt-1" />
+                  <Skeleton className="h-3 w-1/3 mt-1" />
                 </div>
               </div>
             ))}

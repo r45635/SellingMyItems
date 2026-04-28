@@ -16,6 +16,8 @@ interface ItemTeaserCardProps {
   viewCount?: number;
   wishlistButton?: React.ReactNode;
   isReservedForCurrentUser?: boolean;
+  price?: number | null;
+  currency?: string;
 }
 
 export function ItemTeaserCard({
@@ -29,6 +31,8 @@ export function ItemTeaserCard({
   viewCount,
   wishlistButton,
   isReservedForCurrentUser,
+  price,
+  currency,
 }: ItemTeaserCardProps) {
   const t = useTranslations("item");
 
@@ -42,7 +46,7 @@ export function ItemTeaserCard({
 
   const content = (
     <Card className="overflow-hidden transition-all hover:shadow-lg group border-0 shadow-sm">
-      <div className="aspect-square relative bg-muted">
+      <div className="aspect-[4/3] relative bg-muted">
         {coverImageUrl ? (
           <Image
             src={coverImageUrl}
@@ -83,6 +87,15 @@ export function ItemTeaserCard({
       </div>
       <CardContent className="p-2.5">
         <h3 className="font-medium text-sm line-clamp-2 group-hover:text-orange-600 transition-colors">{title}</h3>
+        {price != null && (
+          <p className="text-sm font-bold text-orange-600 dark:text-orange-400 mt-1">
+            {new Intl.NumberFormat(undefined, {
+              style: "currency",
+              currency: currency ?? "USD",
+              maximumFractionDigits: 0,
+            }).format(price)}
+          </p>
+        )}
         <div className="mt-1 flex items-center justify-between gap-2">
           {formattedDate ? (
             <p className="text-xs text-muted-foreground">{formattedDate}</p>

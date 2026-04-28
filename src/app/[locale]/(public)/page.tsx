@@ -2,11 +2,23 @@ import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { db } from "@/db";
 import { profiles, projects, sellerAccounts, items, buyerWishlists, buyerWishlistItems } from "@/db/schema";
-import { and, count, desc, eq, isNull, ne, inArray, ilike } from "drizzle-orm";
+import { and, count, desc, eq, isNull, isNotNull, max, min, ne, inArray, ilike } from "drizzle-orm";
 import { MapPin, Package, Heart, MapPinned, HandCoins } from "lucide-react";
 import { SearchBar } from "@/components/shared/search-bar";
 import { EmptyState } from "@/components/shared/empty-state";
 import { getUser } from "@/lib/auth";
+
+function formatCurrency(value: number, currency: string = "USD") {
+  try {
+    return new Intl.NumberFormat(undefined, {
+      style: "currency",
+      currency,
+      maximumFractionDigits: 0,
+    }).format(value);
+  } catch {
+    return `${value} ${currency}`;
+  }
+}
 
 export default async function HomePage({
   searchParams,
@@ -65,6 +77,42 @@ export default async function HomePage({
 
   const itemCountMap = new Map(itemCounts.map((r) => [r.projectId, r.count]));
 
+  // Available-only count per project for the "X available / Y items" line.
+  const availableCounts = await db
+    .select({
+      projectId: items.projectId,
+      count: count(),
+    })
+    .from(items)
+    .where(and(isNull(items.deletedAt), eq(items.status, "available")))
+    .groupBy(items.projectId);
+
+  const availableCountMap = new Map(
+    availableCounts.map((r) => [r.projectId, r.count])
+  );
+
+  // Price range per project (min/max) — drives the "from … to …" line on
+  // each card. Currency is grabbed from the same group; we assume a project
+  // sticks to a single currency, which is the case for everything we ship.
+  const priceRanges = await db
+    .select({
+      projectId: items.projectId,
+      min: min(items.price),
+      max: max(items.price),
+      currency: max(items.currency),
+    })
+    .from(items)
+    .where(
+      and(
+        isNull(items.deletedAt),
+        ne(items.status, "hidden"),
+        isNotNull(items.price)
+      )
+    )
+    .groupBy(items.projectId);
+
+  const priceRangeMap = new Map(priceRanges.map((r) => [r.projectId, r]));
+
   let wishlistCountMap = new Map<string, number>();
   if (user) {
     const wishlistCounts = await db
@@ -99,11 +147,14 @@ export default async function HomePage({
   ];
 
   return (
-    <div className="flex flex-col">
+    // Subtle dot pattern as a fixed full-page backdrop. Section-level
+    // backgrounds sit on top, so the dots only show through where the
+    // sections are transparent (mostly between hero and the projects list).
+    <div className="flex flex-col bg-dot-pattern bg-fixed">
       {/* Hero — compact, search-first. On mobile: ~150px tall vs the
           previous ~700px. The SearchBar replaces the two stacked CTAs as
           the primary action; the auth nudge is a single inline line. */}
-      <section className="border-b bg-gradient-to-b from-orange-50/60 to-background dark:from-orange-950/15">
+      <section className="border-b bg-[oklch(0.985_0.006_75)]">
         <div className="container px-4 py-5 md:px-6 md:py-12 mx-auto max-w-3xl text-center animate-fade-up">
           <h1 className="text-2xl sm:text-4xl md:text-display font-extrabold tracking-tight bg-gradient-to-br from-foreground to-orange-600 bg-clip-text text-transparent dark:to-orange-400">
             {t("hero")}
@@ -169,7 +220,9 @@ export default async function HomePage({
             <ul className="grid gap-2.5 sm:gap-4 sm:grid-cols-2 lg:grid-cols-3 stagger-fade-in">
               {publicProjects.map((project) => {
                 const wishlistCount = wishlistCountMap.get(project.id) ?? 0;
-                const itemCount = itemCountMap.get(project.id) ?? 0;
+                const totalItems = itemCountMap.get(project.id) ?? 0;
+                const availableItems = availableCountMap.get(project.id) ?? 0;
+                const priceRange = priceRangeMap.get(project.id);
                 return (
                   <li key={project.id}>
                     <Link
@@ -195,8 +248,24 @@ export default async function HomePage({
                           </span>
                         )}
                         <span className="text-muted-foreground/40">·</span>
-                        <span>{t("itemsForSale", { count: itemCount })}</span>
+                        <span>
+                          {t("availableOfTotal", {
+                            available: availableItems,
+                            total: totalItems,
+                          })}
+                        </span>
                       </div>
+                      {priceRange?.min != null && (
+                        <p className="text-xs font-semibold text-foreground mt-1">
+                          {formatCurrency(
+                            priceRange.min,
+                            priceRange.currency ?? "USD"
+                          )}
+                          {priceRange.max != null && priceRange.max !== priceRange.min
+                            ? ` – ${formatCurrency(priceRange.max, priceRange.currency ?? "USD")}`
+                            : ""}
+                        </p>
+                      )}
                       {/* Description shown only on tablet+ to keep mobile cards
                           compact and scannable. */}
                       {project.description && (

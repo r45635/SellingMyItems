@@ -9,6 +9,7 @@ import {
   FolderOpen,
   ArrowRight,
   Plus,
+  DollarSign,
 } from "lucide-react";
 import { requireSeller } from "@/lib/auth";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -26,11 +27,25 @@ import {
   and,
   inArray,
   isNull,
+  isNotNull,
   count,
   sum,
+  min,
   sql,
 } from "drizzle-orm";
 import { getSellerAccountIdsForUser } from "@/lib/seller-accounts";
+
+function formatCurrency(value: number, currency: string = "USD") {
+  try {
+    return new Intl.NumberFormat(undefined, {
+      style: "currency",
+      currency,
+      maximumFractionDigits: 0,
+    }).format(value);
+  } catch {
+    return `${value} ${currency}`;
+  }
+}
 
 export default async function SellerDashboardPage() {
   const t = await getTranslations("seller");
@@ -97,12 +112,14 @@ export default async function SellerDashboardPage() {
   // Parallel queries for stats
   const [
     itemStats,
+    perProjectStatusStats,
+    listedValueResult,
     totalViewsResult,
     wishlistCountResult,
     intentCountResult,
     threadCountResult,
   ] = await Promise.all([
-    // Items by status
+    // Items by status (aggregate)
     db
       .select({
         status: items.status,
@@ -113,6 +130,35 @@ export default async function SellerDashboardPage() {
         and(inArray(items.projectId, projectIds), isNull(items.deletedAt))
       )
       .groupBy(items.status),
+
+    // Items by (project, status) — drives the per-project status bar.
+    db
+      .select({
+        projectId: items.projectId,
+        status: items.status,
+        count: count(),
+      })
+      .from(items)
+      .where(
+        and(inArray(items.projectId, projectIds), isNull(items.deletedAt))
+      )
+      .groupBy(items.projectId, items.status),
+
+    // Total listed value across all currently-available items.
+    db
+      .select({
+        total: sum(items.price),
+        currency: min(items.currency),
+      })
+      .from(items)
+      .where(
+        and(
+          inArray(items.projectId, projectIds),
+          isNull(items.deletedAt),
+          eq(items.status, "available"),
+          isNotNull(items.price)
+        )
+      ),
 
     // Total views
     db
@@ -161,44 +207,80 @@ export default async function SellerDashboardPage() {
   const wishlistCount = wishlistCountResult[0]?.count ?? 0;
   const intentCount = intentCountResult[0]?.count ?? 0;
   const threadCount = threadCountResult[0]?.count ?? 0;
+  const listedValue = Number(listedValueResult[0]?.total ?? 0);
+  const listedCurrency = listedValueResult[0]?.currency ?? "USD";
+
+  // Per-project status counts → drives the inline health bar on each card.
+  type ProjectHealth = {
+    available: number;
+    reserved: number;
+    sold: number;
+    pending: number;
+    total: number;
+  };
+  const projectHealth = new Map<string, ProjectHealth>();
+  for (const row of perProjectStatusStats) {
+    const entry =
+      projectHealth.get(row.projectId) ?? {
+        available: 0,
+        reserved: 0,
+        sold: 0,
+        pending: 0,
+        total: 0,
+      };
+    if (row.status === "available") entry.available += row.count;
+    else if (row.status === "reserved") entry.reserved += row.count;
+    else if (row.status === "sold") entry.sold += row.count;
+    else if (row.status === "pending") entry.pending += row.count;
+    // Hidden items don't contribute to the visible health bar.
+    if (row.status !== "hidden") entry.total += row.count;
+    projectHealth.set(row.projectId, entry);
+  }
 
   // Aligned with the shared NavIconBadge tone palette so the dashboard
   // stat cards use the same colour identity as the menus.
   const statCards = [
     {
+      label: t("dashboardListedValue"),
+      value: formatCurrency(listedValue, listedCurrency),
+      icon: DollarSign,
+      color: "text-emerald-600 dark:text-emerald-300",
+      bg: "bg-emerald-100/70 dark:bg-emerald-950/30",
+    },
+    {
       label: t("dashboardTotalItems"),
-      value: totalItems,
+      value: totalItems.toLocaleString(),
       icon: Package,
       color: "text-orange-600 dark:text-orange-300",
       bg: "bg-orange-100/70 dark:bg-orange-950/30",
     },
     {
       label: t("dashboardTotalViews"),
-      value: totalViews,
+      value: totalViews.toLocaleString(),
       icon: Eye,
       color: "text-indigo-600 dark:text-indigo-300",
       bg: "bg-indigo-100/70 dark:bg-indigo-950/30",
     },
     {
       label: t("dashboardWishlisted"),
-      value: wishlistCount,
+      value: wishlistCount.toLocaleString(),
       icon: Heart,
       color: "text-rose-600 dark:text-rose-300",
       bg: "bg-rose-100/70 dark:bg-rose-950/30",
     },
     {
       label: t("dashboardIntents"),
-      value: intentCount,
+      value: intentCount.toLocaleString(),
       icon: ShoppingCart,
       color: "text-amber-600 dark:text-amber-300",
       bg: "bg-amber-100/70 dark:bg-amber-950/30",
     },
     {
       label: t("dashboardConversations"),
-      value: threadCount,
+      value: threadCount.toLocaleString(),
       icon: MessageSquare,
-      color: "text-emerald-600 dark:text-emerald-300",
-      bg: "bg-emerald-100/70 dark:bg-emerald-950/30",
+      color: "text-sky-600 dark:text-sky-300",
+      bg: "bg-sky-100/70 dark:bg-sky-950/30",
     },
   ];
 
@@ -206,8 +288,32 @@ export default async function SellerDashboardPage() {
     <div>
       <h1 className="text-heading-2 mb-6">{t("dashboard")}</h1>
 
+      {/* Quick actions — primary "+ create project", secondary
+          "intents" with live count badge */}
+      <div className="flex flex-wrap gap-2 mb-6">
+        <Link
+          href="/seller/projects/new"
+          className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-primary px-3.5 text-sm font-medium text-primary-foreground transition-all hover:bg-primary/90"
+        >
+          <Plus className="h-4 w-4" />
+          {t("createProject")}
+        </Link>
+        <Link
+          href="/seller/intents"
+          className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-border bg-card px-3.5 text-sm font-medium transition-all hover:bg-muted"
+        >
+          <ShoppingCart className="h-4 w-4 text-amber-600 dark:text-amber-300" />
+          {t("dashboardIntents")}
+          {intentCount > 0 && (
+            <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-100 px-1.5 text-[11px] font-semibold text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
+              {intentCount}
+            </span>
+          )}
+        </Link>
+      </div>
+
       {/* Stat cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-8 stagger-fade-in">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-8 stagger-fade-in">
         {statCards.map((card) => (
           <div
             key={card.label}
@@ -217,7 +323,7 @@ export default async function SellerDashboardPage() {
               <card.icon className={`h-4 w-4 ${card.color}`} />
             </div>
             <p className="text-2xl font-bold tabular-nums tracking-tight">
-              {card.value.toLocaleString()}
+              {card.value}
             </p>
             <p className="text-xs font-medium text-muted-foreground">{card.label}</p>
           </div>
@@ -244,7 +350,9 @@ export default async function SellerDashboardPage() {
         </div>
       </div>
 
-      {/* Projects list */}
+      {/* Projects list — health cards. Each project shows a thin status
+          bar (available/reserved/sold proportions) so the seller can see
+          inventory state at a glance without opening the project. */}
       <div className="rounded-xl border bg-card p-5">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-sm font-semibold">{t("projects")}</h2>
@@ -256,17 +364,100 @@ export default async function SellerDashboardPage() {
             <ArrowRight className="h-3 w-3" />
           </Link>
         </div>
-        <div className="space-y-2">
-          {sellerProjects.map((project) => (
-            <Link
-              key={project.id}
-              href={`/seller/projects/${project.slug}`}
-              className="flex items-center gap-3 rounded-lg p-3 hover:bg-muted transition-colors"
-            >
-              <FolderOpen className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm font-medium">{project.name}</span>
-            </Link>
-          ))}
+        <div className="grid gap-3 sm:grid-cols-2">
+          {sellerProjects.map((project) => {
+            const h = projectHealth.get(project.id) ?? {
+              available: 0,
+              reserved: 0,
+              sold: 0,
+              pending: 0,
+              total: 0,
+            };
+            const denom = h.total || 1;
+            const availPct = (h.available / denom) * 100;
+            const reservedPct = (h.reserved / denom) * 100;
+            const soldPct = (h.sold / denom) * 100;
+            const pendingPct = (h.pending / denom) * 100;
+
+            return (
+              <Link
+                key={project.id}
+                href={`/seller/projects/${project.slug}/items`}
+                className="block rounded-lg border bg-background p-3.5 transition-all hover:-translate-y-0.5 hover:shadow-sm hover:border-orange-200 dark:hover:border-orange-900"
+              >
+                <div className="flex items-center gap-3">
+                  <FolderOpen className="h-4 w-4 text-orange-500 shrink-0" />
+                  <span className="text-sm font-semibold truncate flex-1">
+                    {project.name}
+                  </span>
+                  <span className="text-[11px] text-muted-foreground tabular-nums shrink-0">
+                    {h.total}
+                  </span>
+                </div>
+
+                {h.total > 0 ? (
+                  <>
+                    <div className="flex h-1.5 rounded-full overflow-hidden mt-2 bg-muted">
+                      {availPct > 0 && (
+                        <div
+                          className="bg-emerald-500"
+                          style={{ width: `${availPct}%` }}
+                        />
+                      )}
+                      {pendingPct > 0 && (
+                        <div
+                          className="bg-amber-500"
+                          style={{ width: `${pendingPct}%` }}
+                        />
+                      )}
+                      {reservedPct > 0 && (
+                        <div
+                          className="bg-red-500"
+                          style={{ width: `${reservedPct}%` }}
+                        />
+                      )}
+                      {soldPct > 0 && (
+                        <div
+                          className="bg-gray-400"
+                          style={{ width: `${soldPct}%` }}
+                        />
+                      )}
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground">
+                      {h.available > 0 && (
+                        <span>
+                          <span className="font-semibold text-emerald-700 dark:text-emerald-400">
+                            {h.available}
+                          </span>{" "}
+                          {t("status.available").toLowerCase()}
+                        </span>
+                      )}
+                      {h.reserved > 0 && (
+                        <span>
+                          <span className="font-semibold text-red-700 dark:text-red-400">
+                            {h.reserved}
+                          </span>{" "}
+                          {t("status.reserved").toLowerCase()}
+                        </span>
+                      )}
+                      {h.sold > 0 && (
+                        <span>
+                          <span className="font-semibold text-foreground">
+                            {h.sold}
+                          </span>{" "}
+                          {t("status.sold").toLowerCase()}
+                        </span>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <p className="mt-2 text-[11px] text-muted-foreground">
+                    {t("noItems")}
+                  </p>
+                )}
+              </Link>
+            );
+          })}
         </div>
       </div>
     </div>

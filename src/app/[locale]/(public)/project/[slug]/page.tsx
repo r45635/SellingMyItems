@@ -65,9 +65,13 @@ export default async function ProjectPage({
       updatedAt: items.updatedAt,
       viewCount: items.viewCount,
       price: items.price,
+      currency: items.currency,
+      categoryId: items.categoryId,
+      categoryName: projectCategories.name,
       reservedForUserId: items.reservedForUserId,
     })
     .from(items)
+    .leftJoin(projectCategories, eq(items.categoryId, projectCategories.id))
     .where(and(eq(items.projectId, project.id), isNull(items.deletedAt), ne(items.status, "hidden")))
     .orderBy(asc(items.sortOrder), asc(items.createdAt));
 
@@ -299,12 +303,14 @@ export default async function ProjectPage({
                           status={item.status}
                           updatedAt={item.updatedAt}
                           viewCount={item.viewCount}
+                          price={item.price}
+                          currency={item.currency}
                         />
                       ))
                     : Array.from({ length: 4 }).map((_, i) => (
                         <div
                           key={`placeholder-${i}`}
-                          className="aspect-square rounded-xl bg-gradient-to-br from-orange-100 to-amber-50 dark:from-orange-950/40 dark:to-amber-950/30"
+                          className="aspect-[4/3] rounded-xl bg-gradient-to-br from-orange-100 to-amber-50 dark:from-orange-950/40 dark:to-amber-950/30"
                         />
                       ))}
                 </div>
@@ -331,6 +337,20 @@ export default async function ProjectPage({
           )}
         </div>
       </section>
+
+      {/* Floating "Send a message" FAB — mobile only, visible only when the
+          user is signed in and the project is unlocked. Sits above the
+          MobileBottomNav (which is ~56px tall) and stays out of the way of
+          the items grid. */}
+      {user && !isLocked && (
+        <Link
+          href={`/messages/new?projectId=${project.id}`}
+          aria-label={t("sendMessageCta")}
+          className="md:hidden fixed bottom-20 right-4 z-40 inline-flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg ring-1 ring-black/5 transition-transform active:scale-95"
+        >
+          <MessageCircle className="h-5 w-5" />
+        </Link>
+      )}
     </div>
   );
 }

@@ -68,49 +68,57 @@ Three user roles govern the platform:
 
 ### Buyer (Purchaser)
 
-- **Browse projects** — public homepage with project cards, item counts, location
-- **View items** — authenticated users see full item details, photos (carousel), prices, links
+- **Browse projects** — public homepage with search, project cards (price range, available/total counts, location)
+- **View items** — authenticated users see full item details, photos (4:3 carousel), prices, links; mobile floating "Send a message" FAB on project pages
 - **Guest preview** — unauthenticated users see blurred item grids with sign-in CTA
-- **Wishlist** — save items across projects, view selection summary with pricing/savings, remove items
+- **Wishlist** — save items across projects, view selection summary with pricing/savings, remove items, optimistic toggle from item detail page
 - **Purchase intents** — submit a purchase intent for wishlisted items in a project (phone, contact method, pickup notes)
 - **Intent limits** — max 1 active intent per buyer per project
-- **Reservations** — view items reserved for you (auto-linked from accepted intents)
+- **Reservations** — view items reserved for you (auto-linked from accepted intents); per-project "Contact seller" CTA
 - **Purchases** — view purchase history (items sold to you), grouped by project
-- **Messaging** — threaded conversations with sellers per project, unread indicator
-- **Account** — edit display name and phone number
-- **Password management** — forgot password + email-based reset flow
+- **Messaging** — threaded conversations per project, modern chat UI with avatars and emerald send button, unread indicator
+- **Account** — edit display name + phone, change password (with optional sign-out of other devices), email visibility toggle (`hidden` default / `direct`)
+- **Password management** — forgot password (1h token), reset, change-from-account; password reset invalidates all sessions
 
-### Seller
+### Seller (now open to every signed-in user)
 
-- **Project management** — create/edit/soft-delete projects with name, slug, city/area, description
-- **Category management** — custom categories per project with sort order
+> Selling isn't gated by a separate role anymore. Any signed-in account can hit `/seller` and create a project; the `seller_accounts` row is lazily minted on first project creation. Public visibility is gated by an admin approval workflow instead.
+
+- **Project management** — create/edit/soft-delete projects (name, slug, city/area, description, visibility public/invitation-only)
+- **Publication workflow** — every project starts as `draft`; user submits for review → `pending` → admin **Approve** / **Reject (with reason)** → `approved` (live) or `rejected` (with reviewer note shown back to the seller)
+- **Category management** — custom categories per project with sort order; chip-row filter on the public project page
 - **Item management** — full CRUD: title, brand, description, condition (6 levels), age, price, original price, currency (USD/EUR/CAD), notes, status, cover image
 - **Multi-image upload** — up to 10 images per item, drag-reorder, auto-convert to WebP
-- **External links** — reference URLs per item
+- **External links** — reference URLs per item (rendered in the PDF recap too)
 - **Status management** — inline status select: available → pending → reserved → sold → hidden
 - **Purchase intents** — view, accept/decline buyer intents with item-level detail
 - **Reserve from intents** — select specific items to reserve for a buyer from their intent
 - **Manual buyer linking** — search buyers by email to link reservation or mark item as sold with buyer traceability
 - **Sold with traceability** — when marking a reserved item as sold, the reserved buyer is auto-carried to sold-to
-- **Messaging** — reply to buyer threads, email notifications (throttled)
+- **Reservation recap** — send a recap email to a specific buyer; the recap is also posted as a regular seller message into the in-app conversation thread; optional PDF attachment
+- **PDF export** — checkbox-select items on the items page (or quick "All / Reserved only" filters), then **Download** or **Email PDF** to any address. Cover page + per-item page (image, gallery 2-up, attributes, description, links). Uses `@react-pdf/renderer` server-side; WebP uploads are normalized to PNG via sharp before embedding.
+- **Messaging** — reply to buyer threads, email notifications (throttled 5 min)
+- **Dashboard** — listed-value stat (total available items at price), 6 stat cards (listed value / items / views / wishlisted / intents / conversations), per-project health bar (proportional segments for available/pending/reserved/sold)
 - **View tracking** — see how many views each item has received
 
 ### Admin
 
 - **Platform overview** — stats cards: total users, projects, items by status, total value by currency, intents, conversation threads
 - **Account management** — list all profiles, toggle active/inactive (admin accounts protected)
-- **Project management** — list all projects with item counts, toggle public/private visibility
+- **Project moderation** — `/admin/projects` re-sorted with pending → rejected → draft → approved (newest first within group); pending count chip; **Approve** / **Reject (with reviewer note ≤ 500 chars)** controls; emergency Unpublish/Republish for already-approved projects
 - **Email dashboard** — today's email stats by type, failure monitoring, 30-day daily breakdown chart, last 50 email logs, Resend API key management
 - **Secret access** — admin pages at `/admin` with no navigation link
 
 ### Cross-cutting
 
-- **Responsive design** — optimized for phone, tablet, and desktop
+- **Responsive design** — optimized for phone, tablet, and desktop; mobile bottom nav with 5 colour-coded tabs (Home / Wishlist / Messages / My listings / Account); shared `NavIconBadge` system across menus, dropdown, sidebars
+- **Visual identity** — Syne (display) + DM Sans (body) Google Fonts via next/font; oklch-based color tokens; subtle dotted backdrop pattern; per-section colour palette (orange / rose / emerald / sky / violet / amber / indigo / red)
+- **Email privacy** — per-user `email_visibility` (hidden default / direct) masks real addresses across public + seller surfaces; "Contact seller" routes through in-app messaging
 - **i18n** — full English and French translations
-- **Dark mode** — system-preference-based theming
+- **Dark mode** — system-preference-based theming, orange accent preserved in dark
 - **Image optimization** — auto-resize to 1920px max, WebP conversion, quality 75, EXIF stripping
-- **Rate limiting** — in-memory rate limiting on auth actions, uploads, messages, intents
-- **Email notifications** — welcome, message notification (throttled 1/5min), intent received, intent status change, message copy, password reset
+- **Rate limiting** — in-memory rate limiting on auth actions (sign up/in/forgot/reset/change), uploads, messages, intents
+- **Email notifications** — welcome, message notification (throttled 1/5min), intent received, intent status change, message copy, password reset, reservation recap, project invitation/access events
 
 ---
 
@@ -140,7 +148,7 @@ All services run in Docker on a single VPS, connected via the `shared-proxy` Doc
 |---|---|---|
 | `(public)` | None | Homepage, login, signup, project/item pages, password reset |
 | `(authenticated)` | `requireUser()` | Account, wishlist, messages, reservations, purchases |
-| `(seller)` | `requireSeller()` | Seller dashboard + project/item/intent management |
+| `(seller)` | `requireSeller()` (alias of `requireUser()`) | Listings area — open to every signed-in user; `seller_accounts` row is auto-created on first project creation |
 | `(admin)` | `requireAdmin()` | Admin dashboard (secret — no nav link) |
 
 ### Data Flow: Purchase Lifecycle
@@ -219,16 +227,9 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ### 5. Create user roles
 
+Selling is open to every signed-in user — the `seller_accounts` row is created on demand the first time a user creates a project, no SQL needed. The only role you may want to flip manually is `admin`:
+
 ```bash
-# After a user signs up as purchaser, promote to seller:
-docker exec sellingmyitems-db-1 psql -U sellingmyitems -d sellingmyitems \
-  -c "UPDATE profiles SET role = 'seller' WHERE email = 'seller@example.com';"
-
-# Also create a seller_account record:
-docker exec sellingmyitems-db-1 psql -U sellingmyitems -d sellingmyitems \
-  -c "INSERT INTO seller_accounts (id, user_id, is_active) SELECT gen_random_uuid(), id, true FROM profiles WHERE email = 'seller@example.com';"
-
-# Promote to admin:
 docker exec sellingmyitems-db-1 psql -U sellingmyitems -d sellingmyitems \
   -c "UPDATE profiles SET role = 'admin' WHERE email = 'admin@example.com';"
 ```
@@ -283,13 +284,14 @@ SellingMyItems/
 │   │   └── admin-dashboard/    # Admin actions + sidebar (actions + components)
 │   ├── db/
 │   │   ├── index.ts            # Drizzle client initialization
-│   │   ├── schema/index.ts     # Complete Drizzle schema (17 tables, 6 enums)
-│   │   └── migrations/         # SQL migrations (0000–0013)
+│   │   ├── schema/index.ts     # Complete Drizzle schema (22 tables, 13 enums)
+│   │   └── migrations/         # SQL migrations (0000–0018)
 │   ├── lib/
 │   │   ├── auth/               # Authentication
 │   │   │   ├── index.ts        # Session management, role guards
 │   │   │   └── actions.ts      # Sign up, sign in, sign out, password reset
-│   │   ├── email.ts            # Resend email service (6 email types, localized)
+│   │   ├── email.ts            # Resend email service (~13 email types, localized)
+│   │   ├── pdf/                # @react-pdf/renderer recap document + sharp normalization
 │   │   ├── seller-accounts.ts  # Seller account helper
 │   │   ├── validations.ts      # Zod schemas for all forms
 │   │   ├── utils.ts            # Tailwind merge utility
@@ -372,39 +374,64 @@ SellingMyItems/
 
 | Enum | Values |
 |---|---|
-| `user_role` | `purchaser`, `seller`, `admin` |
+| `user_role` | `purchaser`, `seller`, `admin` (`seller` kept for back-compat, no longer used as a gate) |
 | `item_status` | `available`, `pending`, `reserved`, `sold`, `hidden` |
 | `contact_method` | `email`, `phone`, `app_message` |
 | `intent_status` | `submitted`, `reviewed`, `accepted`, `declined` |
-| `email_type` | `welcome`, `message_notification`, `message_copy`, `intent_received`, `intent_status`, `password_reset` |
+| `project_visibility` | `public`, `invitation_only` |
+| `project_publish_status` | `draft`, `pending`, `approved`, `rejected` |
+| `invitation_status` | `active`, `used`, `expired`, `revoked` |
+| `access_request_status` | `pending`, `approved`, `declined`, `cancelled` |
+| `access_grant_source` | `targeted_invitation`, `generic_request`, `seller_manual` |
+| `notification_type` | `invitation_received`, `access_granted`, `access_declined`, `access_revoked`, `access_requested` |
+| `email_visibility` | `hidden`, `direct` |
+| `email_type` | `welcome`, `message_notification`, `message_copy`, `intent_received`, `intent_status`, `password_reset`, `reservation_recap`, `invitation_sent`, `access_granted`, `access_declined`, `access_revoked`, `access_requested`, `inbound_relay` (kept, unused) |
 | `email_status` | `sent`, `failed` |
 
-### Tables (17)
+### Tables (22)
+
+Core domain:
 
 | Table | Key Columns | Description |
 |---|---|---|
-| `profiles` | email (unique), passwordHash, role, isActive, displayName, phone | User accounts |
+| `profiles` | email (unique), passwordHash, role, isActive, displayName, phone, **emailVisibility** | User accounts |
 | `sessions` | token (unique), userId, expiresAt | Auth sessions (30-day TTL) |
 | `password_reset_tokens` | token (unique), userId, expiresAt, usedAt | Password reset tokens (1h TTL) |
-| `seller_accounts` | userId, isActive | Seller profile records |
-| `projects` | sellerId, name, slug (unique), cityArea, description, isPublic, deletedAt | Seller projects |
+| `seller_accounts` | userId, isActive | Lazy-minted on first project creation |
+| `projects` | sellerId, name, slug (unique), cityArea, description, isPublic, visibility, **publishStatus**, **reviewerNote**, **submittedAt**, **reviewedAt**, deletedAt | Seller projects |
 | `project_categories` | projectId, name, sortOrder | Custom categories per project |
-| `items` | projectId, title, price, status, coverImageUrl, reservedForUserId, soldToUserId, reservedAt, soldAt, viewCount, deletedAt | Items for sale |
+| `items` | projectId, title, price, originalPrice, currency, status, coverImageUrl, reservedForUserId, soldToUserId, reservedAt, soldAt, viewCount, deletedAt | Items for sale |
 | `item_images` | itemId, url, altText, sortOrder | Additional item images |
 | `item_files` | itemId, url, fileName, mimeType, sizeBytes | Attached files |
 | `item_links` | itemId, url, label | External reference links |
+
+Buyer flow:
+
+| Table | Key Columns | Description |
+|---|---|---|
 | `buyer_wishlists` | userId, projectId | Wishlist per user per project |
 | `buyer_wishlist_items` | wishlistId, itemId | Items in wishlists |
 | `buyer_intents` | userId, projectId, phone, contactMethod, pickupNotes, status | Purchase intent submissions |
 | `buyer_intent_items` | intentId, itemId | Items in purchase intents |
-| `conversation_threads` | projectId, buyerId, buyerLastReadAt, sellerLastReadAt | Message threads |
+
+Messaging + invitations + admin:
+
+| Table | Key Columns | Description |
+|---|---|---|
+| `conversation_threads` | projectId, buyerId, buyerLastReadAt, sellerLastReadAt | Message threads (1 per buyer, project) |
 | `conversation_messages` | threadId, senderId, body | Individual messages |
+| `project_invitations` | projectId, code, email, status, expiresAt, usedByUserId, usedAt | Generic + targeted invitation codes |
+| `project_access_grants` | projectId, userId, source, invitationId | Granted access to invitation-only projects |
+| `project_access_requests` | projectId, userId, status, codeUsed, message, invitationId | Pending requests to join an invitation-only project |
+| `notifications` | userId, type, title, body, linkUrl, projectId, readAt | In-app notifications (access events) |
 | `email_logs` | toEmail, subject, type, status, errorMessage, resendId | Email sending logs |
 | `app_settings` | key (unique), value, updatedBy | Admin-managed settings (e.g. Resend API key) |
 
-### Migrations (14 files)
+### Migrations (20 files)
 
-| Migration | Description |
+Numbered SQL files in `src/db/migrations/`. Notable steps:
+
+| Range | Description |
 |---|---|
 | `0000` – `0002` | Initial schema and early adjustments |
 | `0003` | Add `user_role` enum to profiles |
@@ -417,7 +444,12 @@ SellingMyItems/
 | `0010` | Email logging table |
 | `0011` | App settings table |
 | `0012` | Add `message_copy` email type |
-| `0013` | Item reservation + sold tracking (reservedForUserId, soldToUserId, reservedAt, soldAt) |
+| `0013` | Item reservation + sold tracking (reservedForUserId, soldToUserId, reservedAt, soldAt); reservation recap email type |
+| `0014` | Project invitations + access grants + access requests + notifications |
+| `0015` | Add invitation-related email types |
+| `0016` | Add `email_visibility` enum + `profiles.email_visibility`; thread aliases (later dropped) + `inbound_relay` email type |
+| `0017` | Drop `thread_aliases` (inbound relay rolled back in favor of in-app messaging) |
+| `0018` | Unify roles: drop `seller`-role gating; add `project_publish_status` enum + `publish_status`/`reviewer_note`/`submitted_at`/`reviewed_at` columns; grandfather public projects → `approved` |
 
 ---
 
@@ -425,11 +457,12 @@ SellingMyItems/
 
 ### Auth Flow
 
-1. **Sign up**: Email + password (min 6 chars) + confirm password → bcrypt (12 rounds) → `purchaser` role forced
-2. **Sign in**: Email + password → bcrypt compare → create session (30-day, `crypto.randomBytes(32)` token)
+1. **Sign up**: Email + password (min 6 chars) + confirm password → bcrypt (12 rounds) → `purchaser` role forced; "email already in use" surfaces inline CTAs to sign in or reset
+2. **Sign in**: Email + password → bcrypt compare → create session (30-day, `crypto.randomBytes(32)` token); login + signup share a split-screen layout (brand panel + form)
 3. **Session**: `session_token` httpOnly cookie, sameSite: lax, secure in production
 4. **Sign out**: Delete session from DB + clear cookie
-5. **Password reset**: Forgot password → email with 1h token → validate + hash new password → mark token used
+5. **Password reset**: Forgot password → email with 1h token → validate + hash new password → mark token used → **delete every session for that user** (compromised cookies stop working immediately)
+6. **Change password (signed-in)**: From `/account`, requires the current password (bcrypt-compared); rate-limited 5/15min per user; optional "Sign out of other devices" wipes every session row except the current cookie
 
 ### Role Guards
 
@@ -437,7 +470,7 @@ SellingMyItems/
 |---|---|
 | `getUser()` | Returns `{id, email, role}` or `null` |
 | `requireUser()` | Redirects to `/login` if not authenticated |
-| `requireSeller()` | Requires `seller` or `admin` role, redirects to `/` |
+| `requireSeller()` | Thin alias of `requireUser()` — selling is open to every signed-in user; the function name is kept for back-compat with existing call sites |
 | `requireAdmin()` | Requires `admin` role, redirects to `/` |
 
 ### Rate Limiting
@@ -513,7 +546,7 @@ Outbound notifications fire as usual (new message, intent received, reservation 
 - **Default locale**: English
 - **Translation files**: `src/i18n/messages/en.json`, `src/i18n/messages/fr.json`
 - **Coverage**: All UI labels, form fields, status labels, error messages, email templates
-- **Sections**: `common`, `nav`, `home`, `auth`, `project`, `item`, `wishlist`, `intent`, `messages`, `seller`, `reservations`, `purchases`, `validation`
+- **Sections**: `common`, `nav`, `home`, `auth`, `account`, `project`, `item`, `wishlist`, `intent`, `messages`, `seller`, `reservations`, `purchases`, `invitations`, `myProjects`, `validation`
 
 ---
 
@@ -556,13 +589,8 @@ GitHub Actions (deploy.yml)
 # Run a migration on VPS
 docker exec -i sellingmyitems-db-1 psql -U sellingmyitems -d sellingmyitems < migration.sql
 
-# Promote user to seller
-docker exec sellingmyitems-db-1 psql -U sellingmyitems -d sellingmyitems \
-  -c "UPDATE profiles SET role = 'seller' WHERE email = 'user@example.com';"
-docker exec sellingmyitems-db-1 psql -U sellingmyitems -d sellingmyitems \
-  -c "INSERT INTO seller_accounts (id, user_id, is_active) SELECT gen_random_uuid(), id, true FROM profiles WHERE email = 'user@example.com';"
-
-# Promote user to admin
+# Promote user to admin (the only role flip that still requires SQL —
+# selling is open to every signed-in user, no seller flip needed)
 docker exec sellingmyitems-db-1 psql -U sellingmyitems -d sellingmyitems \
   -c "UPDATE profiles SET role = 'admin' WHERE email = 'admin@example.com';"
 

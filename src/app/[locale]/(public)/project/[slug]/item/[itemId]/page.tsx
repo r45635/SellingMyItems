@@ -6,20 +6,19 @@ import { ImageCarousel } from "@/components/shared/image-carousel";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Link } from "@/i18n/navigation";
+import { cn } from "@/lib/utils";
 import {
   ArrowLeft,
   Lock,
   ShoppingCart,
   User,
   Mail,
-  AlertTriangle,
-  Ban,
   ExternalLink,
   Clock,
   Eye,
-  Heart,
   MessageCircle,
 } from "lucide-react";
+import { ItemDetailWishlistButton } from "@/features/wishlist/components/item-detail-wishlist-button";
 import { db } from "@/db";
 import {
   buyerWishlistItems,
@@ -32,10 +31,6 @@ import {
 } from "@/db/schema";
 import { and, eq, isNull, sql } from "drizzle-orm";
 import { notFound } from "next/navigation";
-import {
-  addWishlistItemAction,
-  removeWishlistItemAction,
-} from "@/features/wishlist/actions";
 import { getTranslations } from "next-intl/server";
 import { ITEM_CONDITIONS } from "@/lib/validations";
 
@@ -186,6 +181,13 @@ export default async function ItemPage({
   const isReservedForCurrentUser =
     item.status === "reserved" && item.reservedForUserId === profileId;
 
+  const discountPct =
+    item.originalPrice != null &&
+    item.price != null &&
+    item.originalPrice > item.price
+      ? Math.round((1 - item.price / item.originalPrice) * 100)
+      : 0;
+
   return (
     <div className="container px-4 md:px-6 py-6 md:py-8 max-w-6xl">
       <Link
@@ -197,107 +199,81 @@ export default async function ItemPage({
       </Link>
 
       {user ? (
-        <div className="grid gap-6 md:grid-cols-5 md:gap-8 animate-fade-up">
-          {/* Left: gallery */}
-          <div className="md:col-span-3">
-            <Card className="overflow-hidden md:sticky md:top-4">
-              <ImageCarousel images={allImages} title={item.title} />
-            </Card>
+        <div className="md:grid md:grid-cols-[58%_42%] min-h-screen animate-fade-up">
+          {/* Left: gallery, sticky on md+ */}
+          <div className="md:sticky md:top-14 md:self-start">
+            <ImageCarousel images={allImages} title={item.title} />
           </div>
 
-          {/* Right: details */}
-          <div className="md:col-span-2 space-y-5">
-            {/* Status alerts */}
-            {item.status === "reserved" && (
-              <div className="rounded-lg border border-red-300 bg-red-50 dark:border-red-900 dark:bg-red-950/30 p-3 flex items-center gap-3">
-                <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400 shrink-0" />
-                <p className="text-sm font-semibold text-red-800 dark:text-red-200">
-                  {isReservedForCurrentUser
-                    ? tItem("reservedForYouAlert")
-                    : tItem("reservedAlert")}
-                </p>
-              </div>
+          {/* Right: details. The slim coloured top border replaces the
+              previous full alert banners — status badge inline with the
+              title still carries the explicit label. */}
+          <div
+            className={cn(
+              "p-6 space-y-6 md:border-l",
+              item.status === "reserved" && "border-t-4 border-t-red-500",
+              item.status === "sold" && "border-t-4 border-t-gray-400"
             )}
-            {item.status === "sold" && (
-              <div className="rounded-lg border border-gray-300 bg-gray-100 dark:border-gray-700 dark:bg-gray-800 p-3 flex items-center gap-3">
-                <Ban className="h-5 w-5 text-gray-600 dark:text-gray-400 shrink-0" />
-                <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">
-                  {tItem("soldAlert")}
-                </p>
-              </div>
-            )}
-
-            {/* Title + status */}
-            <div className="space-y-3">
-              <div className="flex items-start justify-between gap-3">
-                <h1 className="text-heading-3 flex-1">{item.title}</h1>
-                <Badge
-                  variant={
-                    item.status === "sold"
-                      ? "destructive"
-                      : item.status === "pending" || item.status === "reserved"
-                        ? "secondary"
-                        : "default"
-                  }
-                  className={`shrink-0 ${
-                    item.status === "reserved"
-                      ? "bg-red-600 text-white border-red-600 hover:bg-red-600 font-bold px-3 py-1 text-sm"
-                      : item.status === "sold"
-                        ? "bg-gray-900 text-white border-gray-900 hover:bg-gray-900 font-bold px-3 py-1 text-sm"
-                        : ""
-                  }`}
-                >
-                  {isReservedForCurrentUser && item.status === "reserved"
-                    ? tItem("reservedForYou")
-                    : statusLabel}
-                </Badge>
-              </div>
-
-              {(formattedPrice || formattedOriginalPrice) && (
-                <div className="flex items-baseline gap-2">
-                  {formattedPrice && (
-                    <p className="text-3xl font-bold text-primary tracking-tight">
-                      {formattedPrice}
-                    </p>
-                  )}
-                  {formattedOriginalPrice && (
-                    <p className="text-lg text-muted-foreground line-through">
-                      {formattedOriginalPrice}
-                    </p>
-                  )}
-                </div>
-              )}
+          >
+            {/* Title + status badge */}
+            <div className="flex items-start justify-between gap-3">
+              <h1 className="text-heading-3 flex-1">{item.title}</h1>
+              <Badge
+                variant={
+                  item.status === "sold"
+                    ? "destructive"
+                    : item.status === "pending" || item.status === "reserved"
+                      ? "secondary"
+                      : "default"
+                }
+                className={cn(
+                  "shrink-0",
+                  item.status === "reserved" &&
+                    "bg-red-600 text-white border-red-600 hover:bg-red-600 font-bold px-3 py-1 text-sm",
+                  item.status === "sold" &&
+                    "bg-gray-900 text-white border-gray-900 hover:bg-gray-900 font-bold px-3 py-1 text-sm"
+                )}
+              >
+                {isReservedForCurrentUser && item.status === "reserved"
+                  ? tItem("reservedForYou")
+                  : statusLabel}
+              </Badge>
             </div>
 
-            {/* Wishlist action */}
+            {/* Price block — first thing under the title, with optional
+                discount badge when an originalPrice is set and lower
+                than today's price was. */}
+            {(formattedPrice || formattedOriginalPrice) && (
+              <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                {formattedPrice && (
+                  <p className="text-3xl font-bold text-primary tracking-tight">
+                    {formattedPrice}
+                  </p>
+                )}
+                {formattedOriginalPrice && (
+                  <p className="text-lg text-muted-foreground line-through">
+                    {formattedOriginalPrice}
+                  </p>
+                )}
+                {discountPct > 0 && (
+                  <Badge className="bg-green-100 text-green-700 border-green-200 hover:bg-green-100 dark:bg-green-950/40 dark:text-green-300 dark:border-green-900">
+                    {discountPct}% off
+                  </Badge>
+                )}
+              </div>
+            )}
+
+            {/* Wishlist toggle — client component, optimistic */}
             {item.status === "available" && (
-              <form
-                action={
-                  isWishlisted ? removeWishlistItemAction : addWishlistItemAction
-                }
-              >
-                <input type="hidden" name="itemId" value={item.id} />
-                <input
-                  type="hidden"
-                  name="returnPath"
-                  value={`/project/${slug}/item/${item.id}`}
-                />
-                <button
-                  type="submit"
-                  className={`inline-flex w-full sm:w-auto h-11 items-center justify-center gap-2 rounded-lg border px-5 text-sm font-semibold transition-all ${
-                    isWishlisted
-                      ? "border-orange-300 bg-orange-50 text-orange-700 hover:bg-orange-100 dark:border-orange-900 dark:bg-orange-950/30 dark:text-orange-400"
-                      : "border-border bg-card hover:bg-muted hover:border-orange-200 dark:hover:border-orange-900"
-                  }`}
-                >
-                  <Heart
-                    className={`h-4 w-4 ${isWishlisted ? "fill-current" : ""}`}
-                  />
-                  {isWishlisted
-                    ? tItem("removeFromSelection")
-                    : tItem("addToSelection")}
-                </button>
-              </form>
+              <ItemDetailWishlistButton
+                itemId={item.id}
+                initialIsWishlisted={isWishlisted}
+                returnPath={`/project/${slug}/item/${item.id}`}
+                addLabel={tItem("addToSelection")}
+                removeLabel={tItem("removeFromSelection")}
+                addedToast={tItem("addToSelection")}
+                removedToast={tItem("removeFromSelection")}
+              />
             )}
 
             {isWishlisted && item.status === "available" && (
@@ -320,6 +296,16 @@ export default async function ItemPage({
                     })}
                   </p>
                 </div>
+              </div>
+            )}
+
+            {/* Description / notes */}
+            {(item.description || item.notes) && (
+              <div className="space-y-3 text-sm leading-relaxed">
+                {item.description && <p>{item.description}</p>}
+                {item.notes && (
+                  <p className="text-muted-foreground italic">{item.notes}</p>
+                )}
               </div>
             )}
 
@@ -358,16 +344,6 @@ export default async function ItemPage({
                   )}
                 </CardContent>
               </Card>
-            )}
-
-            {/* Description / notes */}
-            {(item.description || item.notes) && (
-              <div className="space-y-3 text-sm leading-relaxed">
-                {item.description && <p>{item.description}</p>}
-                {item.notes && (
-                  <p className="text-muted-foreground italic">{item.notes}</p>
-                )}
-              </div>
             )}
 
             {/* Links */}
@@ -457,6 +433,8 @@ export default async function ItemPage({
             status={item.status}
             updatedAt={item.updatedAt}
             viewCount={currentViewCount}
+            price={item.price}
+            currency={item.currency}
           />
           <div className="rounded-2xl border bg-gradient-to-b from-orange-50/60 to-card p-8 text-center space-y-4 dark:from-orange-950/20">
             <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-orange-100 text-orange-600 ring-8 ring-orange-50/60 dark:bg-orange-950/50 dark:text-orange-400 dark:ring-orange-950/20">
