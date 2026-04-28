@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { User, LogOut, LayoutDashboard, Heart, MessageSquare, Shield, Package, ShoppingBag, FolderKanban, Bell } from "lucide-react";
+import { User, LogOut, LayoutDashboard, Heart, MessageSquare, Shield, Package, ShoppingBag, FolderKanban, Bell, ClipboardList } from "lucide-react";
 import { useEffect, useState } from "react";
 import { signOutAction } from "@/lib/auth/actions";
 import { Badge } from "@/components/ui/badge";
@@ -124,6 +124,12 @@ export function UserNav() {
           <Link href="/wishlist" className="flex items-center gap-2 cursor-pointer w-full">
             <NavIconBadge Icon={Heart} tone="rose" />
             <span>{t("nav.wishlist")}</span>
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem>
+          <Link href="/my-intents" className="flex items-center gap-2 cursor-pointer w-full">
+            <NavIconBadge Icon={ClipboardList} tone="amber" />
+            <span>{t("nav.myIntents")}</span>
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem>

@@ -33,6 +33,7 @@ export const intentStatusEnum = pgEnum("intent_status", [
   "reviewed",
   "accepted",
   "declined",
+  "cancelled",
 ]);
 
 export const projectVisibilityEnum = pgEnum("project_visibility", [
@@ -288,28 +289,43 @@ export const buyerWishlistItems = pgTable("buyer_wishlist_items", {
 
 // ─── Buyer Intents ──────────────────────────────────────────────────────────
 
-export const buyerIntents = pgTable("buyer_intents", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  userId: uuid("user_id")
-    .notNull()
-    .references(() => profiles.id, { onDelete: "cascade" }),
-  projectId: uuid("project_id")
-    .notNull()
-    .references(() => projects.id, { onDelete: "cascade" }),
-  phone: text("phone"),
-  contactMethod: contactMethodEnum("contact_method")
-    .default("email")
-    .notNull(),
-  pickupNotes: text("pickup_notes"),
-  status: intentStatusEnum("status").default("submitted").notNull(),
-  metadata: jsonb("metadata"), // future extension point
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-});
+export const buyerIntents = pgTable(
+  "buyer_intents",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => profiles.id, { onDelete: "cascade" }),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    phone: text("phone"),
+    contactMethod: contactMethodEnum("contact_method")
+      .default("email")
+      .notNull(),
+    pickupNotes: text("pickup_notes"),
+    status: intentStatusEnum("status").default("submitted").notNull(),
+    reviewerNote: text("reviewer_note"),
+    archivedAt: timestamp("archived_at", { withTimezone: true }),
+    archivedBy: uuid("archived_by").references(() => profiles.id, {
+      onDelete: "set null",
+    }),
+    metadata: jsonb("metadata"), // future extension point
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index("buyer_intents_user_status_idx").on(table.userId, table.status),
+    index("buyer_intents_project_status_idx").on(
+      table.projectId,
+      table.status
+    ),
+  ]
+);
 
 export const buyerIntentItems = pgTable("buyer_intent_items", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -331,6 +347,12 @@ export const conversationThreads = pgTable("conversation_threads", {
   buyerId: uuid("buyer_id")
     .notNull()
     .references(() => profiles.id, { onDelete: "cascade" }),
+  // Optional back-reference to the intent that originally created this
+  // thread. Lets the seller's intents list deep-link to the existing
+  // conversation without re-joining (projectId, buyerId) every time.
+  intentId: uuid("intent_id").references(() => buyerIntents.id, {
+    onDelete: "set null",
+  }),
   buyerLastReadAt: timestamp("buyer_last_read_at", { withTimezone: true }),
   sellerLastReadAt: timestamp("seller_last_read_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true })
@@ -774,6 +796,10 @@ export const conversationThreadsRelations = relations(
     buyer: one(profiles, {
       fields: [conversationThreads.buyerId],
       references: [profiles.id],
+    }),
+    intent: one(buyerIntents, {
+      fields: [conversationThreads.intentId],
+      references: [buyerIntents.id],
     }),
     messages: many(conversationMessages),
   })
