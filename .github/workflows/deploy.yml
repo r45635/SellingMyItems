@@ -38,14 +38,26 @@ jobs:
 
             AVAIL=$(df / | tail -1 | awk '{print $4}')
             # Keep Docker cache for faster builds unless space is critically low.
+            # Builder cache is the big one on a Next.js multi-stage build —
+            # easily several GB. Prune in escalating stages: images first
+            # (cheap), stopped containers, then the builder cache only when
+            # we're still below the headroom we want.
             if [ "$AVAIL" -lt 3145728 ]; then
-              echo "==> Low disk space detected (${AVAIL} KB), pruning unused Docker images..."
+              echo "==> Low disk space detected (${AVAIL} KB), pruning Docker images..."
               docker image prune -af 2>/dev/null || true
+              docker container prune -f 2>/dev/null || true
               AVAIL=$(df / | tail -1 | awk '{print $4}')
+              if [ "$AVAIL" -lt 2097152 ]; then
+                echo "==> Still low (${AVAIL} KB), pruning Docker builder cache..."
+                docker builder prune -af 2>/dev/null || true
+                AVAIL=$(df / | tail -1 | awk '{print $4}')
+              fi
             fi
 
             if [ "$AVAIL" -lt 1048576 ]; then
               echo "❌ Less than 1GB free disk space after cleanup (${AVAIL} KB). Aborting deploy."
+              echo "==> Top space hogs under /var/lib/docker:"
+              du -sh /var/lib/docker/* 2>/dev/null | sort -rh | head -5 || true
               exit 1
             fi
 
