@@ -28,6 +28,8 @@ interface ItemFormProps {
   categories?: { id: string; name: string }[];
   existingImages?: { url: string; altText?: string | null }[];
   existingLinks?: { url: string; label?: string | null }[];
+  /** Defaults to the seller's profile-level preference; falls back to USD. */
+  fallbackCurrency?: "USD" | "EUR" | "CAD";
 }
 
 export function ItemForm({
@@ -37,6 +39,7 @@ export function ItemForm({
   categories = [],
   existingImages = [],
   existingLinks = [],
+  fallbackCurrency = "USD",
 }: ItemFormProps) {
   const t = useTranslations();
   const [serverError, setServerError] = useState("");
@@ -64,7 +67,7 @@ export function ItemForm({
       approximateAge: "",
       price: undefined,
       originalPrice: undefined,
-      currency: "USD",
+      currency: fallbackCurrency,
       notes: "",
       status: "available",
       ...defaultValues,

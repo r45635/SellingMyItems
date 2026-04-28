@@ -81,6 +81,8 @@ export const emailVisibilityEnum = pgEnum("email_visibility", [
   "direct",
 ]);
 
+export const currencyCodeEnum = pgEnum("currency_code", ["USD", "EUR", "CAD"]);
+
 // ─── Users / Profiles ───────────────────────────────────────────────────────
 
 export const profiles = pgTable("profiles", {
@@ -94,6 +96,15 @@ export const profiles = pgTable("profiles", {
   phone: text("phone"),
   emailVisibility: emailVisibilityEnum("email_visibility")
     .default("hidden")
+    .notNull(),
+  // Per-user communication preferences. Drive the locale of outgoing
+  // emails, the unit shown on distance labels, and the default currency
+  // in the item creation form. All three are user-overridable from the
+  // account page; sane defaults so existing rows backfill cleanly.
+  preferredLocale: text("preferred_locale").default("en").notNull(),
+  distanceUnit: text("distance_unit").default("km").notNull(),
+  defaultCurrency: currencyCodeEnum("default_currency")
+    .default("USD")
     .notNull(),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
@@ -191,7 +202,7 @@ export const items = pgTable("items", {
   approximateAge: text("approximate_age"),
   price: integer("price"),
   originalPrice: integer("original_price"),
-  currency: text("currency").default("USD").notNull(),
+  currency: currencyCodeEnum("currency").default("USD").notNull(),
   notes: text("notes"),
   status: itemStatusEnum("status").default("available").notNull(),
   coverImageUrl: text("cover_image_url"),

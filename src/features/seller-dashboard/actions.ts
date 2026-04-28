@@ -111,11 +111,21 @@ export async function sendReservationRecapAction(
 
   const buyer = await db.query.profiles.findFirst({
     where: eq(profiles.id, buyerUserId),
-    columns: { id: true, email: true, displayName: true },
+    columns: {
+      id: true,
+      email: true,
+      displayName: true,
+      preferredLocale: true,
+    },
   });
   if (!buyer) {
     return { error: "Buyer not found" };
   }
+  // The recap email goes to the buyer — render and address it in
+  // their preferred locale, not the seller's URL locale. The seller's
+  // `locale` argument is still used for the in-thread message body so
+  // it shows up consistently in the seller's UI.
+  const buyerLocale = buyer.preferredLocale;
 
   const sellerProfile = await db.query.profiles.findFirst({
     where: eq(profiles.id, user.id),
@@ -192,9 +202,9 @@ export async function sendReservationRecapAction(
   const buyerName = buyer.displayName || buyer.email;
   const sellerName =
     sellerProfile?.displayName || sellerProfile?.email || "Seller";
-  const projectUrl = `${siteConfig.url}/${locale}/project/${project.slug}`;
-  const threadUrl = `${siteConfig.url}/${locale}/messages/${thread.id}`;
-  const reservationsUrl = `${siteConfig.url}/${locale}/reservations`;
+  const projectUrl = `${siteConfig.url}/${buyerLocale}/project/${project.slug}`;
+  const threadUrl = `${siteConfig.url}/${buyerLocale}/messages/${thread.id}`;
+  const reservationsUrl = `${siteConfig.url}/${buyerLocale}/reservations`;
 
   // Optionally render the buyer-scoped PDF and attach it. Filter to this
   // buyer's reserved items only so the recipient receives a recap of what's
@@ -217,9 +227,9 @@ export async function sendReservationRecapAction(
       if (itemIds.length > 0) {
         const payload = await buildRecapPayload(project, {
           itemIds,
-          locale,
+          locale: buyerLocale,
           subtitle:
-            locale === "fr"
+            buyerLocale === "fr"
               ? `Réservation pour ${buyerName}`
               : `Reservation for ${buyerName}`,
         });
@@ -252,7 +262,7 @@ export async function sendReservationRecapAction(
     projectUrl,
     threadUrl,
     reservationsUrl,
-    locale,
+    buyerLocale,
     attachment ? { attachment } : undefined
   );
 

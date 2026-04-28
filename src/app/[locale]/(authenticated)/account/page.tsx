@@ -6,8 +6,10 @@ import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Lock, Mail, ShoppingCart, Tag, Shield } from "lucide-react";
+import { Lock, Mail, ShoppingCart, Tag, Shield, Globe, Ruler, Coins } from "lucide-react";
 import { ChangePasswordForm } from "@/features/account/components/change-password-form";
+import { updateAccountPreferencesAction } from "@/features/account/actions";
+import { CURRENCY_CODES } from "@/lib/currency";
 
 async function updateProfileAction(formData: FormData) {
   "use server";
@@ -153,6 +155,77 @@ export default async function AccountPage() {
         </div>
 
         <Button type="submit" size="lg">
+          {tAccount("save")}
+        </Button>
+      </form>
+
+      {/* Communication preferences — these drive outgoing email locale,
+          distance unit, and the default currency in the item form. They
+          live in their own form so a single field change doesn't bundle
+          unrelated profile updates. */}
+      <form
+        action={updateAccountPreferencesAction}
+        className="mt-8 space-y-4 rounded-xl border p-4"
+      >
+        <p className="text-sm font-semibold">{tAccount("preferencesTitle")}</p>
+        <p className="text-xs text-muted-foreground">
+          {tAccount("preferencesDesc")}
+        </p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label htmlFor="preferredLocale" className="flex items-center gap-1.5 text-sm font-medium mb-1">
+              <Globe className="h-3.5 w-3.5" />
+              {tAccount("preferredLocale")}
+            </label>
+            <select
+              id="preferredLocale"
+              name="preferredLocale"
+              defaultValue={profile?.preferredLocale ?? "en"}
+              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+            >
+              <option value="en">English</option>
+              <option value="fr">Français</option>
+            </select>
+          </div>
+
+          <div>
+            <label htmlFor="distanceUnit" className="flex items-center gap-1.5 text-sm font-medium mb-1">
+              <Ruler className="h-3.5 w-3.5" />
+              {tAccount("distanceUnit")}
+            </label>
+            <select
+              id="distanceUnit"
+              name="distanceUnit"
+              defaultValue={profile?.distanceUnit ?? "km"}
+              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+            >
+              <option value="km">km</option>
+              <option value="mi">mi</option>
+            </select>
+          </div>
+
+          <div>
+            <label htmlFor="defaultCurrency" className="flex items-center gap-1.5 text-sm font-medium mb-1">
+              <Coins className="h-3.5 w-3.5" />
+              {tAccount("defaultCurrency")}
+            </label>
+            <select
+              id="defaultCurrency"
+              name="defaultCurrency"
+              defaultValue={profile?.defaultCurrency ?? "USD"}
+              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+            >
+              {CURRENCY_CODES.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <Button type="submit" size="sm">
           {tAccount("save")}
         </Button>
       </form>

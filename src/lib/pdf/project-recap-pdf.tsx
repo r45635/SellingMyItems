@@ -382,19 +382,36 @@ function ProjectRecapDocument({
   subtitle?: string;
 }) {
   const fr = locale === "fr";
-  const totals = items.reduce(
-    (acc, it) => {
-      acc.total += it.price ?? 0;
-      acc.byStatus[it.status] = (acc.byStatus[it.status] ?? 0) + 1;
-      return acc;
-    },
-    {
-      total: 0,
-      byStatus: {} as Record<PdfItem["status"], number>,
+  // Group totals by currency. Most projects are single-currency, but
+  // we don't want to silently sum EUR + USD into a meaningless number
+  // — render the largest as the headline and append the others as a
+  // "+ X CAD" suffix when present.
+  const totalsByCurrency = new Map<string, number>();
+  const byStatus: Record<PdfItem["status"], number> = {} as Record<
+    PdfItem["status"],
+    number
+  >;
+  for (const it of items) {
+    if (it.price != null) {
+      totalsByCurrency.set(
+        it.currency,
+        (totalsByCurrency.get(it.currency) ?? 0) + it.price
+      );
     }
-  );
-  const currency = items.find((i) => i.price != null)?.currency ?? "USD";
+    byStatus[it.status] = (byStatus[it.status] ?? 0) + 1;
+  }
+  const sortedTotals = [...totalsByCurrency.entries()]
+    .map(([currency, total]) => ({ currency, total }))
+    .sort((a, b) => b.total - a.total);
+  const headline = sortedTotals[0] ?? { currency: "USD", total: 0 };
+  const totals = { total: headline.total, byStatus };
+  const currency = headline.currency;
   const formattedTotal = formatPrice(totals.total, currency, locale) ?? "";
+  const otherTotals = sortedTotals.slice(1);
+  const formattedOtherTotals = otherTotals
+    .map((row) => formatPrice(row.total, row.currency, locale))
+    .filter(Boolean)
+    .join(" · ");
 
   const labels = fr
     ? {
@@ -483,6 +500,9 @@ function ProjectRecapDocument({
           <View style={styles.statCard}>
             <Text style={styles.statLabel}>{labels.totalValue}</Text>
             <Text style={styles.statValue}>{formattedTotal}</Text>
+            {formattedOtherTotals ? (
+              <Text style={styles.statLabel}>{`+ ${formattedOtherTotals}`}</Text>
+            ) : null}
           </View>
         </View>
 

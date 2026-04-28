@@ -30,7 +30,6 @@ import {
   isNotNull,
   count,
   sum,
-  min,
   sql,
 } from "drizzle-orm";
 import { getSellerAccountIdsForUser } from "@/lib/seller-accounts";
@@ -144,11 +143,14 @@ export default async function SellerDashboardPage() {
       )
       .groupBy(items.projectId, items.status),
 
-    // Total listed value across all currently-available items.
+    // Total listed value across all currently-available items, broken
+    // down by currency. Sellers can mix USD/EUR/CAD across projects, so
+    // we surface one row per currency rather than the previous
+    // `min(currency)` shortcut that displayed an arbitrary single one.
     db
       .select({
+        currency: items.currency,
         total: sum(items.price),
-        currency: min(items.currency),
       })
       .from(items)
       .where(
@@ -158,7 +160,8 @@ export default async function SellerDashboardPage() {
           eq(items.status, "available"),
           isNotNull(items.price)
         )
-      ),
+      )
+      .groupBy(items.currency),
 
     // Total views
     db
@@ -207,8 +210,22 @@ export default async function SellerDashboardPage() {
   const wishlistCount = wishlistCountResult[0]?.count ?? 0;
   const intentCount = intentCountResult[0]?.count ?? 0;
   const threadCount = threadCountResult[0]?.count ?? 0;
-  const listedValue = Number(listedValueResult[0]?.total ?? 0);
-  const listedCurrency = listedValueResult[0]?.currency ?? "USD";
+  // Listed value broken down by currency. We render the largest single
+  // currency as the headline number, then surface any extras as a
+  // small chip row underneath so a EUR/CAD seller doesn't see a stale
+  // USD$0 because the previous code picked alphabetically.
+  const listedTotalsByCurrency = (
+    listedValueResult as Array<{ currency: string; total: string | number }>
+  )
+    .map((row) => ({
+      currency: row.currency,
+      total: Number(row.total ?? 0),
+    }))
+    .filter((row) => row.total > 0)
+    .sort((a, b) => b.total - a.total);
+  const listedValue = listedTotalsByCurrency[0]?.total ?? 0;
+  const listedCurrency = listedTotalsByCurrency[0]?.currency ?? "USD";
+  const otherListedTotals = listedTotalsByCurrency.slice(1);
 
   // Per-project status counts → drives the inline health bar on each card.
   type ProjectHealth = {
@@ -313,7 +330,7 @@ export default async function SellerDashboardPage() {
       </div>
 
       {/* Stat cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-8 stagger-fade-in">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-2 stagger-fade-in">
         {statCards.map((card) => (
           <div
             key={card.label}
@@ -329,6 +346,20 @@ export default async function SellerDashboardPage() {
           </div>
         ))}
       </div>
+      {otherListedTotals.length > 0 && (
+        <div className="mb-8 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+          <span>+</span>
+          {otherListedTotals.map((row) => (
+            <span
+              key={row.currency}
+              className="inline-flex items-center rounded-full bg-muted/50 px-2 py-0.5 text-[11px] font-medium tabular-nums"
+            >
+              {formatCurrency(row.total, row.currency)}
+            </span>
+          ))}
+        </div>
+      )}
+      {otherListedTotals.length === 0 && <div className="mb-8" />}
 
       {/* Item status breakdown */}
       <div className="rounded-xl border bg-card p-5 mb-8">

@@ -341,8 +341,10 @@ async function notifyMessageRecipient(
   });
   if (!sender) return;
 
-  // Determine recipient (the *other* party)
+  // Determine recipient (the *other* party) and pick the URL + email
+  // locale from THEIR profile preference — not the sender's.
   let recipientEmail: string | undefined;
+  let recipientLocale = "en";
   let threadUrl: string;
 
   if (senderRole === "buyer") {
@@ -353,17 +355,19 @@ async function notifyMessageRecipient(
     if (!sellerAccount) return;
     const sellerProfile = await db.query.profiles.findFirst({
       where: eq(profiles.id, sellerAccount.userId),
-      columns: { email: true },
+      columns: { email: true, preferredLocale: true },
     });
     recipientEmail = sellerProfile?.email;
-    threadUrl = `${siteConfig.url}/fr/seller/messages/${threadId}`;
+    recipientLocale = sellerProfile?.preferredLocale ?? "en";
+    threadUrl = `${siteConfig.url}/${recipientLocale}/seller/messages/${threadId}`;
   } else {
     const buyerProfile = await db.query.profiles.findFirst({
       where: eq(profiles.id, buyerId),
-      columns: { email: true },
+      columns: { email: true, preferredLocale: true },
     });
     recipientEmail = buyerProfile?.email;
-    threadUrl = `${siteConfig.url}/fr/messages/${threadId}`;
+    recipientLocale = buyerProfile?.preferredLocale ?? "en";
+    threadUrl = `${siteConfig.url}/${recipientLocale}/messages/${threadId}`;
   }
 
   if (!recipientEmail) return;
@@ -374,7 +378,7 @@ async function notifyMessageRecipient(
     project.name,
     messageBody,
     threadUrl,
-    "fr"
+    recipientLocale
   );
 }
 
@@ -389,9 +393,10 @@ async function sendCopyToSender(
 ) {
   const senderProfile = await db.query.profiles.findFirst({
     where: eq(profiles.id, senderId),
-    columns: { email: true },
+    columns: { email: true, preferredLocale: true },
   });
   if (!senderProfile?.email) return;
+  const senderLocale = senderProfile.preferredLocale;
 
   const project = await db.query.projects.findFirst({
     where: eq(projects.id, projectId),
@@ -429,8 +434,8 @@ async function sendCopyToSender(
   }
 
   const threadUrl = senderRole === "buyer"
-    ? `${siteConfig.url}/fr/messages/${threadId}`
-    : `${siteConfig.url}/fr/seller/messages/${threadId}`;
+    ? `${siteConfig.url}/${senderLocale}/messages/${threadId}`
+    : `${siteConfig.url}/${senderLocale}/seller/messages/${threadId}`;
 
   await sendMessageCopyEmail(
     senderProfile.email,
@@ -438,6 +443,6 @@ async function sendCopyToSender(
     project.name,
     messageBody,
     threadUrl,
-    "fr"
+    senderLocale
   );
 }

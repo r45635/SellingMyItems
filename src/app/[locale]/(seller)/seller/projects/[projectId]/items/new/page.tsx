@@ -4,7 +4,7 @@ import { Link } from "@/i18n/navigation";
 import { ArrowLeft } from "lucide-react";
 import { requireSeller } from "@/lib/auth";
 import { db } from "@/db";
-import { projectCategories, sellerAccounts } from "@/db/schema";
+import { profiles, projectCategories, sellerAccounts } from "@/db/schema";
 import { asc, eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { findSellerProject } from "@/lib/seller-accounts";
@@ -38,6 +38,13 @@ export default async function NewItemPage({
     .where(eq(projectCategories.projectId, ownedProject.id))
     .orderBy(asc(projectCategories.sortOrder), asc(projectCategories.name));
 
+  // Pre-fill the currency dropdown with the seller's saved preference;
+  // they can still override per item from the form.
+  const sellerProfile = await db.query.profiles.findFirst({
+    where: eq(profiles.id, user.id),
+    columns: { defaultCurrency: true },
+  });
+
   return (
     <div className="max-w-2xl">
       <Link
@@ -48,7 +55,11 @@ export default async function NewItemPage({
         {t("items")}
       </Link>
       <h1 className="text-2xl font-bold mb-6">{t("createItem")}</h1>
-      <ItemForm projectId={ownedProject.id} categories={categories} />
+      <ItemForm
+        projectId={ownedProject.id}
+        categories={categories}
+        fallbackCurrency={sellerProfile?.defaultCurrency ?? "USD"}
+      />
     </div>
   );
 }

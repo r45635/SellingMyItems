@@ -199,20 +199,21 @@ export async function submitIntentAction(formData: FormData) {
       if (sellerAccount) {
         const sellerProfile = await db.query.profiles.findFirst({
           where: eq(profiles.id, sellerAccount.userId),
-          columns: { email: true },
+          columns: { email: true, preferredLocale: true },
         });
         const buyerProfile = await db.query.profiles.findFirst({
           where: eq(profiles.id, profileId),
           columns: { displayName: true, email: true },
         });
         if (sellerProfile && buyerProfile) {
+          const sellerLocale = sellerProfile.preferredLocale;
           await sendIntentReceivedEmail(
             sellerProfile.email,
             buyerProfile.displayName ?? buyerProfile.email,
             projectForEmail.name,
             selectedItems.map((i) => i.title),
-            `${siteConfig.url}/fr/seller/intents`,
-            "fr"
+            `${siteConfig.url}/${sellerLocale}/seller/intents`,
+            sellerLocale
           );
         }
       }
@@ -310,14 +311,14 @@ export async function updateIntentStatusAction(
     try {
       const buyerProfile = await db.query.profiles.findFirst({
         where: eq(profiles.id, intent.userId),
-        columns: { email: true },
+        columns: { email: true, preferredLocale: true },
       });
       if (buyerProfile) {
         await sendIntentStatusEmail(
           buyerProfile.email,
           status,
           project.name,
-          "fr"
+          buyerProfile.preferredLocale
         );
       }
     } catch {
@@ -423,14 +424,14 @@ export async function reserveItemsFromIntentAction(
   try {
     const buyerProfile = await db.query.profiles.findFirst({
       where: eq(profiles.id, intent.userId),
-      columns: { email: true },
+      columns: { email: true, preferredLocale: true },
     });
     if (buyerProfile) {
       await sendIntentStatusEmail(
         buyerProfile.email,
         "accepted",
         project.name,
-        "fr"
+        buyerProfile.preferredLocale
       );
     }
   } catch {
