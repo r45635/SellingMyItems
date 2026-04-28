@@ -162,41 +162,43 @@ export default async function SellerDashboardPage() {
   const intentCount = intentCountResult[0]?.count ?? 0;
   const threadCount = threadCountResult[0]?.count ?? 0;
 
+  // Aligned with the shared NavIconBadge tone palette so the dashboard
+  // stat cards use the same colour identity as the menus.
   const statCards = [
     {
       label: t("dashboardTotalItems"),
       value: totalItems,
       icon: Package,
-      color: "text-blue-600",
-      bg: "bg-blue-50 dark:bg-blue-950",
+      color: "text-orange-600 dark:text-orange-300",
+      bg: "bg-orange-100/70 dark:bg-orange-950/30",
     },
     {
       label: t("dashboardTotalViews"),
       value: totalViews,
       icon: Eye,
-      color: "text-purple-600",
-      bg: "bg-purple-50 dark:bg-purple-950",
+      color: "text-indigo-600 dark:text-indigo-300",
+      bg: "bg-indigo-100/70 dark:bg-indigo-950/30",
     },
     {
       label: t("dashboardWishlisted"),
       value: wishlistCount,
       icon: Heart,
-      color: "text-pink-600",
-      bg: "bg-pink-50 dark:bg-pink-950",
+      color: "text-rose-600 dark:text-rose-300",
+      bg: "bg-rose-100/70 dark:bg-rose-950/30",
     },
     {
       label: t("dashboardIntents"),
       value: intentCount,
       icon: ShoppingCart,
-      color: "text-green-600",
-      bg: "bg-green-50 dark:bg-green-950",
+      color: "text-amber-600 dark:text-amber-300",
+      bg: "bg-amber-100/70 dark:bg-amber-950/30",
     },
     {
       label: t("dashboardConversations"),
       value: threadCount,
       icon: MessageSquare,
-      color: "text-orange-600",
-      bg: "bg-orange-50 dark:bg-orange-950",
+      color: "text-emerald-600 dark:text-emerald-300",
+      bg: "bg-emerald-100/70 dark:bg-emerald-950/30",
     },
   ];
 
@@ -227,10 +229,10 @@ export default async function SellerDashboardPage() {
         <h2 className="text-sm font-semibold mb-4">{t("dashboardItemStatus")}</h2>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {[
-            { label: t("status.available"), count: availableCount, dot: "bg-green-500" },
-            { label: t("status.pending"), count: pendingCount, dot: "bg-yellow-500" },
-            { label: t("status.reserved"), count: reservedCount, dot: "bg-blue-500" },
-            { label: t("status.sold"), count: soldCount, dot: "bg-gray-400" },
+            { label: t("status.available"), count: availableCount, dot: "bg-emerald-500" },
+            { label: t("status.pending"), count: pendingCount, dot: "bg-amber-500" },
+            { label: t("status.reserved"), count: reservedCount, dot: "bg-red-500" },
+            { label: t("status.sold"), count: soldCount, dot: "bg-gray-700 dark:bg-gray-400" },
           ].map((s) => (
             <div key={s.label} className="flex items-center gap-2">
               <span className={`w-2.5 h-2.5 rounded-full ${s.dot}`} />

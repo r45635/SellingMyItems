@@ -14,13 +14,23 @@ import {
   Settings,
 } from "lucide-react";
 import { SmiLogo } from "@/components/shared/smi-logo";
+import {
+  NavIconBadge,
+  TONE_STYLES,
+  type IconTone,
+} from "@/components/shared/nav-icon-badge";
 
-const sidebarItems = [
-  { href: "/seller/projects", icon: FolderOpen, labelKey: "projects" },
-  { href: "/seller/intents", icon: ShoppingCart, labelKey: "intents" },
-  { href: "/seller/messages", icon: MessageSquare, labelKey: "messages" },
-  { href: "/seller/settings", icon: Settings, labelKey: "settings" },
-] as const;
+const sidebarItems: ReadonlyArray<{
+  href: string;
+  icon: typeof FolderOpen;
+  labelKey: "projects" | "intents" | "messages" | "settings";
+  tone: IconTone;
+}> = [
+  { href: "/seller/projects", icon: FolderOpen, labelKey: "projects", tone: "brand" },
+  { href: "/seller/intents", icon: ShoppingCart, labelKey: "intents", tone: "amber" },
+  { href: "/seller/messages", icon: MessageSquare, labelKey: "messages", tone: "emerald" },
+  { href: "/seller/settings", icon: Settings, labelKey: "settings", tone: "violet" },
+];
 
 export function SellerMobileNav() {
   const t = useTranslations("seller");
@@ -50,20 +60,21 @@ export function SellerMobileNav() {
           <nav className="px-3 py-3 space-y-1">
             {sidebarItems.map((item) => {
               const isActive = pathname.startsWith(item.href);
+              const tone = TONE_STYLES[item.tone];
               return (
                 <Link
                   key={item.href}
                   href={item.href}
                   onClick={() => setOpen(false)}
                   className={cn(
-                    "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                    "flex items-center gap-3 rounded-lg px-2 py-2 text-sm font-medium transition-colors",
                     isActive
-                      ? "bg-foreground text-background shadow-sm"
-                      : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                      ? `${tone.bgActive} ${tone.iconActive}`
+                      : "text-muted-foreground hover:bg-accent hover:text-foreground"
                   )}
                 >
-                  <item.icon className="h-4 w-4" />
-                  {t(item.labelKey)}
+                  <NavIconBadge Icon={item.icon} tone={item.tone} active={isActive} />
+                  <span>{t(item.labelKey)}</span>
                 </Link>
               );
             })}

@@ -15,6 +15,7 @@ import { User, LogOut, LayoutDashboard, Heart, MessageSquare, Shield, Package, S
 import { useEffect, useState } from "react";
 import { signOutAction } from "@/lib/auth/actions";
 import { Badge } from "@/components/ui/badge";
+import { NavIconBadge } from "@/components/shared/nav-icon-badge";
 
 type NavUser = {
   email: string;
@@ -99,38 +100,38 @@ export function UserNav() {
         </div>
         <DropdownMenuSeparator />
         <DropdownMenuItem>
-          <Link href="/my-projects" className="flex items-center cursor-pointer w-full">
-            <FolderKanban className="mr-2 h-4 w-4" />
-            {t("myProjects.title")}
+          <Link href="/my-projects" className="flex items-center gap-2 cursor-pointer w-full">
+            <NavIconBadge Icon={FolderKanban} tone="brand" />
+            <span>{t("myProjects.title")}</span>
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem>
-          <Link href="/notifications" className="flex items-center cursor-pointer w-full">
-            <Bell className="mr-2 h-4 w-4" />
-            Notifications
+          <Link href="/notifications" className="flex items-center gap-2 cursor-pointer w-full">
+            <NavIconBadge Icon={Bell} tone="amber" />
+            <span>Notifications</span>
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem>
-          <Link href="/wishlist" className="flex items-center cursor-pointer w-full">
-            <Heart className="mr-2 h-4 w-4" />
-            {t("nav.wishlist")}
+          <Link href="/wishlist" className="flex items-center gap-2 cursor-pointer w-full">
+            <NavIconBadge Icon={Heart} tone="rose" />
+            <span>{t("nav.wishlist")}</span>
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem>
-          <Link href="/reservations" className="flex items-center cursor-pointer w-full">
-            <Package className="mr-2 h-4 w-4" />
-            {t("nav.reservations")}
+          <Link href="/reservations" className="flex items-center gap-2 cursor-pointer w-full">
+            <NavIconBadge Icon={Package} tone="amber" />
+            <span>{t("nav.reservations")}</span>
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem>
-          <Link href="/purchases" className="flex items-center cursor-pointer w-full">
-            <ShoppingBag className="mr-2 h-4 w-4" />
-            {t("nav.purchases")}
+          <Link href="/purchases" className="flex items-center gap-2 cursor-pointer w-full">
+            <NavIconBadge Icon={ShoppingBag} tone="emerald" />
+            <span>{t("nav.purchases")}</span>
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem>
-          <Link href={messagesHref} className="flex items-center justify-between cursor-pointer w-full gap-2">
-            <MessageSquare className="mr-2 h-4 w-4" />
+          <Link href={messagesHref} className="flex items-center gap-2 cursor-pointer w-full">
+            <NavIconBadge Icon={MessageSquare} tone="emerald" />
             <span className="flex-1">{t("nav.messages")}</span>
             {hasUnread ? <Badge variant="destructive">{t("messages.new")}</Badge> : null}
           </Link>
@@ -141,29 +142,29 @@ export function UserNav() {
             lazily mints their seller account; admin still validates each
             project before it goes public. */}
         <DropdownMenuItem>
-          <Link href="/seller" className="flex items-center cursor-pointer w-full">
-            <LayoutDashboard className="mr-2 h-4 w-4" />
-            {t("nav.myListings")}
+          <Link href="/seller" className="flex items-center gap-2 cursor-pointer w-full">
+            <NavIconBadge Icon={LayoutDashboard} tone="sky" />
+            <span>{t("nav.myListings")}</span>
           </Link>
         </DropdownMenuItem>
         {user.role === "admin" ? (
           <DropdownMenuItem>
-            <Link href="/admin" className="flex items-center cursor-pointer w-full">
-              <Shield className="mr-2 h-4 w-4" />
-              {t("nav.adminDashboard")}
+            <Link href="/admin" className="flex items-center gap-2 cursor-pointer w-full">
+              <NavIconBadge Icon={Shield} tone="red" />
+              <span>{t("nav.adminDashboard")}</span>
             </Link>
           </DropdownMenuItem>
         ) : null}
         <DropdownMenuSeparator />
         <DropdownMenuItem>
-          <Link href="/account" className="flex items-center cursor-pointer w-full">
-            <User className="mr-2 h-4 w-4" />
-            {t("nav.account")}
+          <Link href="/account" className="flex items-center gap-2 cursor-pointer w-full">
+            <NavIconBadge Icon={User} tone="violet" />
+            <span>{t("nav.account")}</span>
           </Link>
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer">
-          <LogOut className="mr-2 h-4 w-4" />
-          {t("common.signOut")}
+        <DropdownMenuItem onClick={handleSignOut} className="flex items-center gap-2 cursor-pointer">
+          <NavIconBadge Icon={LogOut} tone="neutral" />
+          <span>{t("common.signOut")}</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

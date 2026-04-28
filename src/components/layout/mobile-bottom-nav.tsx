@@ -5,17 +5,33 @@ import { Link, usePathname } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { Home, Heart, MessageCircle, Store, User } from "lucide-react";
+import {
+  NavIconBadge,
+  TONE_STYLES,
+  type IconTone,
+} from "@/components/shared/nav-icon-badge";
 
-// 5 tabs: keep the action surface flat. "My listings" is the new tab —
-// selling is open to every signed-in user, so it deserves a top-level
-// slot rather than living buried in the avatar dropdown.
-const navItems = [
-  { href: "/", icon: Home, labelKey: "home" },
-  { href: "/wishlist", icon: Heart, labelKey: "wishlist" },
-  { href: "/messages", icon: MessageCircle, labelKey: "messages" },
-  { href: "/seller", icon: Store, labelKey: "myListings" },
-  { href: "/account", icon: User, labelKey: "account" },
-] as const;
+type Tab = {
+  href: string;
+  icon: typeof Home;
+  labelKey:
+    | "home"
+    | "wishlist"
+    | "messages"
+    | "myListings"
+    | "account";
+  tone: IconTone;
+};
+
+// 5 tabs: keep the action surface flat. Each tab keeps its own colour
+// identity so the bottom nav reads at a glance even on a small screen.
+const navItems: readonly Tab[] = [
+  { href: "/", icon: Home, labelKey: "home", tone: "brand" },
+  { href: "/wishlist", icon: Heart, labelKey: "wishlist", tone: "rose" },
+  { href: "/messages", icon: MessageCircle, labelKey: "messages", tone: "emerald" },
+  { href: "/seller", icon: Store, labelKey: "myListings", tone: "sky" },
+  { href: "/account", icon: User, labelKey: "account", tone: "violet" },
+];
 
 export function MobileBottomNav() {
   const t = useTranslations("nav");
@@ -43,32 +59,31 @@ export function MobileBottomNav() {
   if (!user) return null;
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 flex md:hidden border-t bg-background">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 flex md:hidden border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/85">
       {navItems.map((item) => {
         const isActive =
           item.href === "/"
             ? pathname === "/" || pathname === ""
             : pathname.startsWith(item.href);
+        const tone = TONE_STYLES[item.tone];
 
         return (
           <Link
             key={item.href}
             href={item.href}
             className={cn(
-              "flex flex-1 flex-col items-center gap-0.5 py-2 text-[10px] font-medium transition-colors",
-              isActive
-                ? "text-primary"
-                : "text-muted-foreground"
+              "flex flex-1 flex-col items-center gap-0.5 py-1.5 text-[10px] font-medium transition-colors",
+              isActive ? tone.iconActive : "text-muted-foreground"
             )}
           >
-            <div className="relative">
-              <item.icon className="h-5 w-5" />
+            <span className="relative">
+              <NavIconBadge Icon={item.icon} tone={item.tone} active={isActive} />
               {item.labelKey === "messages" && unreadCount > 0 && (
-                <span className="absolute -top-1.5 -right-2.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white">
+                <span className="absolute -top-1 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white ring-2 ring-background">
                   {unreadCount > 99 ? "99+" : unreadCount}
                 </span>
               )}
-            </div>
+            </span>
             <span>{t(item.labelKey)}</span>
           </Link>
         );
