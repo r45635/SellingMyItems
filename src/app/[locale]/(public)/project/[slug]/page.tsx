@@ -122,32 +122,41 @@ export default async function ProjectPage({
         />
 
         <div className="container relative px-4 py-6 md:px-6 md:py-10">
-          <Link
-            href="/"
-            className="inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-sm text-muted-foreground transition-all hover:bg-muted hover:text-foreground"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            {t("backToProjects")}
-          </Link>
+          {/* Back link + city pill on a single row at the top of the
+              hero. The invitation-only chip stays grouped with the
+              other meta below the title since it conveys access state
+              rather than location. */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <Link
+              href="/"
+              className="inline-flex items-center gap-1.5 h-7 px-3 rounded-full border border-border bg-white shadow-sm text-xs font-semibold text-foreground hover:border-orange-300 hover:shadow-md transition-all"
+            >
+              <ArrowLeft className="h-3 w-3" />
+              {t("backToProjects")}
+            </Link>
+            {project.cityArea && (
+              <>
+                <span className="text-border text-sm">·</span>
+                <span className="inline-flex items-center gap-1.5 h-7 px-3 rounded-full border border-border bg-white/70 text-xs font-medium">
+                  <MapPin className="h-3 w-3 text-orange-500 fill-orange-500" />
+                  {project.cityArea}
+                </span>
+              </>
+            )}
+          </div>
 
           <div className="mt-6 grid gap-6 md:grid-cols-3 md:gap-8 animate-fade-up">
             <div className="md:col-span-2 space-y-4">
-              <div className="flex flex-wrap items-center gap-2">
-                {project.cityArea && (
-                  <span className="inline-flex items-center gap-1.5 rounded-full border bg-card/80 px-2.5 py-1 text-xs font-medium backdrop-blur">
-                    <MapPin className="h-3.5 w-3.5 text-orange-500" />
-                    {project.cityArea}
-                  </span>
-                )}
-                {isInvitationOnly && (
+              {isInvitationOnly && (
+                <div className="flex flex-wrap items-center gap-2">
                   <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-300 bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700 dark:bg-amber-950/30 dark:text-amber-400">
                     <Lock className="h-3.5 w-3.5" />
                     {tInv("visibilityInvitation")}
                   </span>
-                )}
-              </div>
+                </div>
+              )}
 
-              <h1 className="text-heading-1 bg-gradient-to-br from-foreground via-foreground to-orange-600 bg-clip-text text-transparent dark:to-orange-400">
+              <h1 className="text-4xl font-extrabold tracking-tight bg-gradient-to-br from-foreground to-orange-600 bg-clip-text text-transparent dark:to-orange-400">
                 {project.name}
               </h1>
 
@@ -166,22 +175,25 @@ export default async function ProjectPage({
               )}
 
               {projectItems.length > 0 && !isLocked && (
-                <div className="flex items-center gap-4 pt-2 text-sm">
-                  <div className="flex items-center gap-1.5 text-muted-foreground">
-                    <Package className="h-4 w-4" />
-                    <span>
-                      <span className="font-semibold text-foreground tabular-nums">
-                        {projectItems.length}
-                      </span>{" "}
+                <div className="flex items-center gap-2 pt-2 flex-wrap">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg border border-border bg-white/70 text-sm">
+                    <Package className="h-3.5 w-3.5 text-muted-foreground" />
+                    <span className="font-semibold tabular-nums">
+                      {projectItems.length}
+                    </span>
+                    <span className="text-muted-foreground">
                       {t("itemCount", { count: projectItems.length })}
                     </span>
-                  </div>
-                  {availableCount < projectItems.length && (
-                    <span className="text-muted-foreground">
-                      <span className="font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums">
+                  </span>
+                  {availableCount > 0 && (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg border border-green-200 bg-green-50 text-sm dark:border-green-900 dark:bg-green-950/30">
+                      <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block" />
+                      <span className="font-bold tabular-nums text-green-700 dark:text-green-400">
                         {availableCount}
-                      </span>{" "}
-                      {t("filterAvailable").toLowerCase()}
+                      </span>
+                      <span className="text-green-700/70 dark:text-green-400/70">
+                        {t("filterAvailable").toLowerCase()}
+                      </span>
                     </span>
                   )}
                 </div>
@@ -217,7 +229,7 @@ export default async function ProjectPage({
                   </div>
                   <Link
                     href={`/messages/new?projectId=${project.id}`}
-                    className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-lg bg-primary px-3.5 text-sm font-semibold text-primary-foreground transition-all hover:bg-primary/90"
+                    className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-lg bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 px-3.5 text-sm font-semibold text-white shadow-sm hover:shadow-orange-200 transition-all"
                   >
                     <MessageCircle className="h-4 w-4" />
                     {t("sendMessageCta")}

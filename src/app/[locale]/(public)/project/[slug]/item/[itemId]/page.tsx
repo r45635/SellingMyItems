@@ -19,6 +19,7 @@ import {
   MessageCircle,
 } from "lucide-react";
 import { ItemDetailWishlistButton } from "@/features/wishlist/components/item-detail-wishlist-button";
+import { ExpandableText } from "@/components/shared/expandable-text";
 import { db } from "@/db";
 import {
   buyerWishlistItems,
@@ -154,6 +155,7 @@ export default async function ItemPage({
       ? new Intl.NumberFormat(undefined, {
           style: "currency",
           currency: item.currency ?? "USD",
+          maximumFractionDigits: item.price % 1 === 0 ? 0 : 2,
         }).format(item.price)
       : null;
 
@@ -162,6 +164,7 @@ export default async function ItemPage({
       ? new Intl.NumberFormat(undefined, {
           style: "currency",
           currency: item.currency ?? "USD",
+          maximumFractionDigits: item.originalPrice % 1 === 0 ? 0 : 2,
         }).format(item.originalPrice)
       : null;
 
@@ -189,12 +192,12 @@ export default async function ItemPage({
       : 0;
 
   return (
-    <div className="container px-4 md:px-6 py-6 md:py-8 max-w-6xl">
+    <div className="container px-4 md:px-6 pt-6 md:pt-8 pb-28 md:pb-8 max-w-6xl">
       <Link
         href={`/project/${slug}`}
-        className="mb-6 inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-sm text-muted-foreground transition-all hover:bg-muted hover:text-foreground"
+        className="mb-6 inline-flex items-center gap-1.5 h-7 px-3 rounded-full border border-border bg-white shadow-sm text-xs font-semibold text-foreground hover:border-orange-300 transition-all"
       >
-        <ArrowLeft className="h-4 w-4" />
+        <ArrowLeft className="h-3 w-3" />
         {tProject("backToProject")}
       </Link>
 
@@ -215,30 +218,32 @@ export default async function ItemPage({
               item.status === "sold" && "border-t-4 border-t-gray-400"
             )}
           >
-            {/* Title + status badge */}
-            <div className="flex items-start justify-between gap-3">
-              <h1 className="text-heading-3 flex-1">{item.title}</h1>
+            {/* Status pill above title, on its own line */}
+            <div className="flex items-center gap-2">
               <Badge
-                variant={
-                  item.status === "sold"
-                    ? "destructive"
-                    : item.status === "pending" || item.status === "reserved"
-                      ? "secondary"
-                      : "default"
-                }
                 className={cn(
-                  "shrink-0",
-                  item.status === "reserved" &&
-                    "bg-red-600 text-white border-red-600 hover:bg-red-600 font-bold px-3 py-1 text-sm",
-                  item.status === "sold" &&
-                    "bg-gray-900 text-white border-gray-900 hover:bg-gray-900 font-bold px-3 py-1 text-sm"
+                  "rounded-full px-3 py-1 text-xs font-bold",
+                  item.status === "reserved"
+                    ? "bg-red-100 text-red-700 border-red-200 hover:bg-red-100"
+                    : item.status === "sold"
+                      ? "bg-gray-100 text-gray-600 border-gray-200 hover:bg-gray-100"
+                      : "bg-green-100 text-green-700 border-green-200 hover:bg-green-100"
                 )}
               >
+                <span className="w-1.5 h-1.5 rounded-full bg-current inline-block mr-1.5" />
                 {isReservedForCurrentUser && item.status === "reserved"
                   ? tItem("reservedForYou")
                   : statusLabel}
               </Badge>
+              {item.status === "reserved" && (
+                <span className="text-xs text-muted-foreground">
+                  · {tItem("reservedSubtle")}
+                </span>
+              )}
             </div>
+            <h1 className="text-xl md:text-2xl font-extrabold tracking-tight -mt-4">
+              {item.title}
+            </h1>
 
             {/* Price block — first thing under the title, with optional
                 discount badge when an originalPrice is set and lower
@@ -246,7 +251,7 @@ export default async function ItemPage({
             {(formattedPrice || formattedOriginalPrice) && (
               <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
                 {formattedPrice && (
-                  <p className="text-3xl font-bold text-primary tracking-tight">
+                  <p className="text-3xl font-extrabold text-orange-600">
                     {formattedPrice}
                   </p>
                 )}
@@ -263,18 +268,29 @@ export default async function ItemPage({
               </div>
             )}
 
-            {/* Wishlist toggle — client component, optimistic */}
-            {item.status === "available" && (
-              <ItemDetailWishlistButton
-                itemId={item.id}
-                initialIsWishlisted={isWishlisted}
-                returnPath={`/project/${slug}/item/${item.id}`}
-                addLabel={tItem("addToSelection")}
-                removeLabel={tItem("removeFromSelection")}
-                addedToast={tItem("addToSelection")}
-                removedToast={tItem("removeFromSelection")}
-              />
-            )}
+            {/* Primary CTA block — stacked Message + Wishlist, full width.
+                Sits between price block and description for prominence. */}
+            <div className="flex flex-col gap-2 mt-4">
+              <Link
+                href={`/messages/new?projectId=${project.id}`}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-bold py-3 px-4 text-sm shadow-sm shadow-orange-200 transition-all"
+              >
+                <MessageCircle className="h-4 w-4" />
+                {tProject("sendMessageCta")}
+              </Link>
+              {item.status === "available" && (
+                <ItemDetailWishlistButton
+                  itemId={item.id}
+                  initialIsWishlisted={isWishlisted}
+                  returnPath={`/project/${slug}/item/${item.id}`}
+                  addLabel={tItem("addToSelection")}
+                  removeLabel={tItem("removeFromSelection")}
+                  addedToast={tItem("addToSelection")}
+                  removedToast={tItem("removeFromSelection")}
+                  className="w-full py-3 font-semibold"
+                />
+              )}
+            </div>
 
             {isWishlisted && item.status === "available" && (
               <div className="rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950/30 p-3.5 flex items-start gap-3">
@@ -301,10 +317,19 @@ export default async function ItemPage({
 
             {/* Description / notes */}
             {(item.description || item.notes) && (
-              <div className="space-y-3 text-sm leading-relaxed">
-                {item.description && <p>{item.description}</p>}
+              <div className="space-y-3">
+                {item.description && (
+                  <ExpandableText
+                    text={item.description}
+                    maxLines={4}
+                    expandLabel={tItem("readMore")}
+                    collapseLabel={tItem("showLess")}
+                  />
+                )}
                 {item.notes && (
-                  <p className="text-muted-foreground italic">{item.notes}</p>
+                  <div className="bg-orange-50 border-l-2 border-orange-400 rounded-r-lg px-3 py-2 text-xs text-orange-900 italic leading-relaxed dark:bg-orange-950/30 dark:text-orange-200 dark:border-orange-600">
+                    📌 {item.notes}
+                  </div>
                 )}
               </div>
             )}
@@ -387,9 +412,9 @@ export default async function ItemPage({
               </div>
             )}
 
-            {/* Seller contact */}
+            {/* Seller info — message CTA lives in the primary CTA block above */}
             {sellerInfo && (
-              <div className="rounded-xl border bg-muted/30 p-4 space-y-3">
+              <div className="rounded-xl border bg-muted/30 p-4">
                 <div className="flex items-center gap-4">
                   <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-orange-100 text-orange-600 dark:bg-orange-950/50 dark:text-orange-400">
                     <User className="h-5 w-5" />
@@ -413,15 +438,33 @@ export default async function ItemPage({
                     )}
                   </div>
                 </div>
-                <Link
-                  href={`/messages/new?projectId=${project.id}`}
-                  className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-lg bg-primary px-3.5 text-sm font-semibold text-primary-foreground transition-all hover:bg-primary/90"
-                >
-                  <MessageCircle className="h-4 w-4" />
-                  {tProject("sendMessageCta")}
-                </Link>
               </div>
             )}
+          </div>
+          {/* Mobile sticky bottom action bar — sits above the global mobile
+              bottom nav (h-14). Hidden on md+. */}
+          <div className="fixed bottom-14 left-0 right-0 z-50 md:hidden bg-white/95 backdrop-blur border-t border-border px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] dark:bg-neutral-900/95">
+            <div className="flex gap-3">
+              {item.status === "available" && (
+                <ItemDetailWishlistButton
+                  itemId={item.id}
+                  initialIsWishlisted={isWishlisted}
+                  returnPath={`/project/${slug}/item/${item.id}`}
+                  addLabel={tItem("addToSelection")}
+                  removeLabel={tItem("removeFromSelection")}
+                  addedToast={tItem("addToSelection")}
+                  removedToast={tItem("removeFromSelection")}
+                  className="flex-1 border border-border rounded-xl py-3 font-semibold"
+                />
+              )}
+              <Link
+                href={`/messages/new?projectId=${project.id}`}
+                className="flex-[2] inline-flex items-center justify-center gap-2 bg-gradient-to-r from-orange-500 to-orange-600 text-white font-bold text-sm rounded-xl py-3"
+              >
+                <MessageCircle className="h-4 w-4" />
+                {tItem("messageSeller")}
+              </Link>
+            </div>
           </div>
         </div>
       ) : (

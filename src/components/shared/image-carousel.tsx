@@ -65,7 +65,7 @@ export function ImageCarousel({ images, title }: ImageCarouselProps) {
   };
 
   return (
-    <div className="space-y-2">
+    <div>
       {/* Main image with navigation */}
       <div
         className="aspect-video relative bg-muted group select-none cursor-pointer"
@@ -86,11 +86,11 @@ export function ImageCarousel({ images, title }: ImageCarouselProps) {
           blurDataURL={BLUR_PLACEHOLDER}
         />
 
-        {/* Counter badge */}
+        {/* Counter badge — overlay on image, bottom-right */}
         {images.length > 1 && (
-          <div className="absolute top-2 left-2 bg-black/60 text-white text-xs px-2 py-1 rounded-full">
+          <span className="absolute bottom-3 right-3 bg-black/50 text-white text-xs font-semibold px-2.5 py-1 rounded-full">
             {current + 1} / {images.length}
-          </div>
+          </span>
         )}
 
         {/* Prev / Next arrows (visible on hover or always on touch) */}
@@ -136,27 +136,26 @@ export function ImageCarousel({ images, title }: ImageCarouselProps) {
         )}
       </div>
 
-      {/* Thumbnail strip */}
+      {/* Thumbnail strip — flush 4-col grid, no padding/gap */}
       {images.length > 1 && (
-        <div className="flex gap-1 px-1 pb-1 overflow-x-auto scrollbar-hide">
+        <div className="grid grid-cols-4 gap-px bg-border">
           {images.map((img, idx) => (
             <button
               key={idx}
               type="button"
               onClick={() => goTo(idx)}
               className={cn(
-                "relative shrink-0 w-14 h-14 sm:w-16 sm:h-16 rounded overflow-hidden border-2 transition-all",
-                idx === current
-                  ? "border-primary ring-1 ring-primary"
-                  : "border-transparent opacity-70 hover:opacity-100"
+                "relative aspect-square overflow-hidden",
+                idx === current && "ring-2 ring-orange-500 ring-inset"
               )}
+              aria-label={`Show image ${idx + 1}`}
             >
               <Image
                 src={img.url}
                 alt={img.alt ?? `${title} ${idx + 1}`}
                 fill
-                className="object-cover"
-                sizes="64px"
+                className="object-cover w-full h-full"
+                sizes="(max-width: 768px) 25vw, 15vw"
                 loading="lazy"
                 placeholder="blur"
                 blurDataURL={BLUR_PLACEHOLDER}

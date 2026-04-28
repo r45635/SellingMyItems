@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ExternalLink, Clock, Eye, AlertTriangle, Ban } from "lucide-react";
+import { ExternalLink, Clock, Eye } from "lucide-react";
 import { ImageCarousel } from "./image-carousel";
 import { useTranslations } from "next-intl";
 import { ITEM_CONDITIONS } from "@/lib/validations";
@@ -51,6 +51,7 @@ export function ItemDetailCard({
       ? new Intl.NumberFormat(undefined, {
           style: "currency",
           currency,
+          maximumFractionDigits: price % 1 === 0 ? 0 : 2,
         }).format(price)
       : null;
 
@@ -59,6 +60,7 @@ export function ItemDetailCard({
       ? new Intl.NumberFormat(undefined, {
           style: "currency",
           currency,
+          maximumFractionDigits: originalPrice % 1 === 0 ? 0 : 2,
         }).format(originalPrice)
       : null;
 
@@ -86,43 +88,33 @@ export function ItemDetailCard({
     <Card className="overflow-hidden">
       <ImageCarousel images={allImages} title={title} />
 
-      {status === "reserved" && (
-        <div className="mx-4 mt-4 rounded-lg border border-red-300 bg-red-50 dark:border-red-900 dark:bg-red-950/30 p-3 flex items-center gap-3">
-          <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400 shrink-0" />
-          <p className="text-sm font-semibold text-red-800 dark:text-red-200">
-            {isReservedForCurrentUser ? t("reservedForYouAlert") : t("reservedAlert")}
-          </p>
-        </div>
-      )}
-      {status === "sold" && (
-        <div className="mx-4 mt-4 rounded-lg border border-gray-300 bg-gray-100 dark:border-gray-700 dark:bg-gray-800 p-3 flex items-center gap-3">
-          <Ban className="h-5 w-5 text-gray-600 dark:text-gray-400 shrink-0" />
-          <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">
-            {t("soldAlert")}
-          </p>
-        </div>
-      )}
-
       <CardHeader>
-        <div className="flex items-start justify-between gap-2">
-          <CardTitle className="text-xl">{title}</CardTitle>
+        <div className="flex items-center gap-2">
           <Badge
-            variant={status === "sold" ? "destructive" : status === "pending" || status === "reserved" ? "secondary" : status === "hidden" ? "outline" : "default"}
-            className={`${
+            className={`rounded-full px-3 py-1 text-xs font-bold ${
               status === "reserved"
-                ? "bg-red-600 text-white border-red-600 hover:bg-red-600 font-bold px-3 py-1 text-sm"
+                ? "bg-red-100 text-red-700 border-red-200 hover:bg-red-100"
                 : status === "sold"
-                  ? "bg-gray-900 text-white border-gray-900 hover:bg-gray-900 font-bold px-3 py-1 text-sm"
-                  : ""
+                  ? "bg-gray-100 text-gray-600 border-gray-200 hover:bg-gray-100"
+                  : "bg-green-100 text-green-700 border-green-200 hover:bg-green-100"
             }`}
           >
+            <span className="w-1.5 h-1.5 rounded-full bg-current inline-block mr-1.5" />
             {isReservedForCurrentUser && status === "reserved" ? t("reservedForYou") : statusLabel}
           </Badge>
+          {status === "reserved" && (
+            <span className="text-xs text-muted-foreground">
+              · {t("reservedSubtle")}
+            </span>
+          )}
         </div>
+        <CardTitle className="text-xl md:text-2xl font-extrabold tracking-tight mt-2">
+          {title}
+        </CardTitle>
         {(formattedPrice || formattedOriginalPrice) && (
           <div className="flex items-baseline gap-2">
             {formattedPrice && (
-              <p className="text-2xl font-bold text-primary">{formattedPrice}</p>
+              <p className="text-3xl font-extrabold text-orange-600">{formattedPrice}</p>
             )}
             {formattedOriginalPrice && (
               <p className="text-lg text-muted-foreground line-through">{formattedOriginalPrice}</p>
@@ -157,7 +149,9 @@ export function ItemDetailCard({
         )}
         {description && <p className="text-sm">{description}</p>}
         {notes && (
-          <p className="text-sm text-muted-foreground italic">{notes}</p>
+          <div className="bg-orange-50 border-l-2 border-orange-400 rounded-r-lg px-3 py-2 text-xs text-orange-900 italic leading-relaxed dark:bg-orange-950/30 dark:text-orange-200 dark:border-orange-600">
+            📌 {notes}
+          </div>
         )}
         {(formattedDate || viewCount != null) && (
           <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground pt-1">
