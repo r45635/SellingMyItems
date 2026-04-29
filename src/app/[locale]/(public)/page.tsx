@@ -2,11 +2,13 @@ import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { db } from "@/db";
 import { profiles, projects, sellerAccounts, items, buyerWishlists, buyerWishlistItems } from "@/db/schema";
-import { and, count, desc, eq, isNull, isNotNull, max, min, ne, inArray, ilike } from "drizzle-orm";
-import { MapPin, Package, Heart, MapPinned, HandCoins, Tag } from "lucide-react";
+import { and, count, desc, eq, isNull, isNotNull, max, min, ne, inArray, ilike, sql } from "drizzle-orm";
+import { MapPin, Package, Heart, MapPinned, HandCoins, Tag, Navigation } from "lucide-react";
 import { SearchBar } from "@/components/shared/search-bar";
 import { EmptyState } from "@/components/shared/empty-state";
 import { getUser, getUserCapabilities } from "@/lib/auth";
+import { formatDistance, type DistanceUnit } from "@/lib/format";
+import { cn } from "@/lib/utils";
 
 function formatCurrency(value: number, currency: string = "USD") {
   try {
@@ -20,13 +22,46 @@ function formatCurrency(value: number, currency: string = "USD") {
   }
 }
 
+const RADIUS_OPTIONS = [5, 10, 25, 50, 100] as const;
+
 export default async function HomePage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; radius?: string }>;
 }) {
-  const { q: searchQuery } = await searchParams;
+  const { q: searchQuery, radius: radiusRaw } = await searchParams;
   const t = await getTranslations("home");
+
+  const user = await getUser();
+
+  // Pull the buyer's location + distance unit. We never auto-resolve;
+  // they must have set country + postal in /account for filtering and
+  // distance labels to kick in.
+  const buyerProfile = user
+    ? await db.query.profiles.findFirst({
+        where: eq(profiles.id, user.id),
+        columns: {
+          latitude: true,
+          longitude: true,
+          countryCode: true,
+          distanceUnit: true,
+        },
+      })
+    : null;
+  const buyerLat = buyerProfile?.latitude ?? null;
+  const buyerLng = buyerProfile?.longitude ?? null;
+  const buyerHasLocation = buyerLat != null && buyerLng != null;
+  const distanceUnit: DistanceUnit =
+    buyerProfile?.distanceUnit === "mi" ? "mi" : "km";
+
+  // Selected radius — only honored when the buyer actually has a
+  // saved location to measure from.
+  const requestedRadius = Number(radiusRaw);
+  const radiusKm =
+    buyerHasLocation &&
+    (RADIUS_OPTIONS as readonly number[]).includes(requestedRadius)
+      ? requestedRadius
+      : null;
 
   const activeSellerIds = await db
     .select({ id: sellerAccounts.id })
@@ -40,15 +75,48 @@ export default async function HomePage({
     ? ilike(projects.name, `%${searchQuery.trim()}%`)
     : undefined;
 
-  const [publicProjects, user] = await Promise.all([
+  // Distance expression in metres, only meaningful when the buyer has
+  // coords. We expose it on the SELECT so each card can render
+  // "X km/mi away"; for users without a location we just push NULL.
+  const distanceExpr = buyerHasLocation
+    ? sql<number>`earth_distance(
+        ll_to_earth(${projects.latitude}, ${projects.longitude}),
+        ll_to_earth(${buyerLat}, ${buyerLng})
+      )`
+    : sql<number | null>`NULL`;
+
+  // Seller-side restriction: hide a project when buyer is outside its
+  // declared radius. If the buyer has no saved location, all
+  // restricted projects are hidden too — safer default than leaking
+  // them to anonymous viewers the seller didn't intend to reach.
+  const sellerRestrictionFilter = buyerHasLocation
+    ? sql`(${projects.radiusKm} IS NULL OR earth_distance(
+        ll_to_earth(${projects.latitude}, ${projects.longitude}),
+        ll_to_earth(${buyerLat}, ${buyerLng})
+      ) < (${projects.radiusKm} * 1000))`
+    : isNull(projects.radiusKm);
+
+  // Buyer-asked radius: only applied when the user picked one and has
+  // a saved location. Projects with unknown coords drop out (NULL <
+  // anything is NULL → falsy in WHERE) which is correct: "near me"
+  // requires a known centroid.
+  const radiusFilter = radiusKm
+    ? sql`earth_distance(
+        ll_to_earth(${projects.latitude}, ${projects.longitude}),
+        ll_to_earth(${buyerLat}, ${buyerLng})
+      ) < ${radiusKm * 1000}`
+    : undefined;
+
+  const publicProjects =
     activeSellerIdSet.length > 0
-      ? db
+      ? await db
           .select({
             id: projects.id,
             name: projects.name,
             slug: projects.slug,
             cityArea: projects.cityArea,
             description: projects.description,
+            distanceMeters: distanceExpr,
           })
           .from(projects)
           .where(
@@ -57,14 +125,14 @@ export default async function HomePage({
               eq(projects.publishStatus, "approved"),
               isNull(projects.deletedAt),
               inArray(projects.sellerId, activeSellerIdSet),
-              searchFilter
+              searchFilter,
+              sellerRestrictionFilter,
+              radiusFilter
             )
           )
           .orderBy(desc(projects.createdAt))
           .limit(12)
-      : Promise.resolve([]),
-    getUser(),
-  ]);
+      : [];
 
   const itemCounts = await db
     .select({
@@ -220,6 +288,55 @@ export default async function HomePage({
             )}
           </div>
 
+          {/* Radius filter row — only meaningful for buyers with a
+              saved location. Otherwise we offer a quick CTA to /account
+              so they can set one. The chip URLs preserve ?q= when set
+              so radius and search compose naturally. */}
+          {buyerHasLocation ? (
+            <div className="mb-4 flex flex-wrap items-center gap-1.5">
+              <Navigation className="h-3.5 w-3.5 text-orange-500" />
+              <span className="text-xs font-medium text-muted-foreground">
+                {t("nearMe")}
+              </span>
+              {(["any", ...RADIUS_OPTIONS] as const).map((opt) => {
+                const isActive =
+                  opt === "any" ? radiusKm == null : radiusKm === opt;
+                const params = new URLSearchParams();
+                if (searchQuery?.trim()) params.set("q", searchQuery.trim());
+                if (opt !== "any") params.set("radius", String(opt));
+                const qs = params.toString();
+                const href = qs ? `/?${qs}` : "/";
+                return (
+                  <Link
+                    key={opt}
+                    href={href}
+                    className={cn(
+                      "inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-medium ring-1 transition-colors",
+                      isActive
+                        ? "bg-foreground text-background ring-foreground"
+                        : "bg-background text-muted-foreground ring-border hover:text-foreground"
+                    )}
+                  >
+                    {opt === "any"
+                      ? t("radiusAny")
+                      : `${opt} ${distanceUnit === "mi" ? "mi" : "km"}`}
+                  </Link>
+                );
+              })}
+            </div>
+          ) : user ? (
+            <div className="mb-4 flex items-center gap-2 rounded-lg border border-orange-200 bg-orange-50/60 px-3 py-2 text-xs text-orange-800 dark:border-orange-900/50 dark:bg-orange-950/20 dark:text-orange-300">
+              <Navigation className="h-3.5 w-3.5 shrink-0" />
+              <span className="flex-1">{t("setLocationPrompt")}</span>
+              <Link
+                href="/account"
+                className="font-semibold underline underline-offset-2"
+              >
+                {t("setLocationCta")}
+              </Link>
+            </div>
+          ) : null}
+
           {publicProjects.length === 0 ? (
             <EmptyState
               icon={Package}
@@ -265,6 +382,15 @@ export default async function HomePage({
                           <span className="inline-flex items-center gap-1">
                             <MapPin className="h-3 w-3" />
                             {project.cityArea}
+                          </span>
+                        )}
+                        {project.distanceMeters != null && (
+                          <span className="inline-flex items-center gap-1 font-medium text-orange-700 dark:text-orange-400">
+                            <Navigation className="h-3 w-3" />
+                            {formatDistance(
+                              project.distanceMeters / 1000,
+                              distanceUnit
+                            )}
                           </span>
                         )}
                         <span className="text-muted-foreground/40">·</span>
