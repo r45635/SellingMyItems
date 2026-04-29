@@ -8,33 +8,20 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Lock, Mail, ShoppingCart, Tag, Shield, Globe, Ruler, Coins, MapPin } from "lucide-react";
 import { ChangePasswordForm } from "@/features/account/components/change-password-form";
-import { updateAccountPreferencesAction, updateLocationAction } from "@/features/account/actions";
+import {
+  updateAccountPreferencesAction,
+  updateLocationAction,
+  updateProfileAction,
+} from "@/features/account/actions";
 import { CURRENCY_CODES } from "@/lib/currency";
 
-async function updateProfileAction(formData: FormData) {
-  "use server";
-  const user = await requireUser();
-
-  const displayName = String(formData.get("displayName") ?? "").trim();
-  const phone = String(formData.get("phone") ?? "").trim();
-  const emailVisibilityRaw = String(formData.get("emailVisibility") ?? "hidden");
-  const emailVisibility: "hidden" | "direct" =
-    emailVisibilityRaw === "direct" ? "direct" : "hidden";
-
-  await db
-    .update(profiles)
-    .set({
-      displayName: displayName || null,
-      phone: phone || null,
-      emailVisibility,
-      updatedAt: new Date(),
-    })
-    .where(eq(profiles.id, user.id));
-
-  revalidatePath("/account");
-}
-
-export default async function AccountPage() {
+export default async function AccountPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
+  const sp = await searchParams;
+  const errorKey = sp.error;
   const t = await getTranslations("nav");
   const tAccount = await getTranslations("account");
   const tContext = await getTranslations("context");
@@ -46,9 +33,30 @@ export default async function AccountPage() {
   const currentVisibility = profile?.emailVisibility ?? "hidden";
   const capabilities = await getUserCapabilities(user);
 
+  // Phone field hint — when a country is set, show the user the
+  // expected E.164 dial-in prefix so they don't get hit with the
+  // country-mismatch error after the fact.
+  const phoneHintByCountry: Record<string, string> = {
+    US: "+1",
+    CA: "+1",
+    FR: "+33",
+  };
+  const phoneHint = profile?.countryCode
+    ? phoneHintByCountry[profile.countryCode]
+    : null;
+
   return (
     <div className="container px-4 md:px-6 py-8 max-w-2xl">
       <h1 className="text-heading-2 mb-6">{t("account")}</h1>
+
+      {errorKey ? (
+        <div className="mb-5 rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300">
+          {errorKey === "phone_country_mismatch" &&
+            tAccount("errorPhoneCountryMismatch")}
+          {errorKey === "location_incomplete" &&
+            tAccount("errorLocationIncomplete")}
+        </div>
+      ) : null}
 
       <form action={updateProfileAction} className="space-y-5">
         <div>
@@ -79,7 +87,22 @@ export default async function AccountPage() {
             name="phone"
             type="tel"
             defaultValue={profile?.phone ?? ""}
+            placeholder={
+              phoneHint
+                ? `${phoneHint} 6 12 34 56 78`
+                : "+33 6 12 34 56 78"
+            }
+            autoComplete="tel"
           />
+          {phoneHint ? (
+            <p className="mt-1 text-xs text-muted-foreground">
+              {tAccount("phoneCountryHint", { prefix: phoneHint })}
+            </p>
+          ) : (
+            <p className="mt-1 text-xs text-muted-foreground">
+              {tAccount("phoneSetCountryHint")}
+            </p>
+          )}
         </div>
 
         <fieldset className="rounded-xl border p-4 space-y-3">

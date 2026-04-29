@@ -4,9 +4,11 @@ import { db } from "@/db";
 import { profiles } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { isCurrencyCode, type CurrencyCode } from "@/lib/currency";
 import { geocode } from "@/lib/geocoding";
+import { phoneMatchesCountry } from "@/lib/phone";
 
 const SUPPORTED_LOCALES = ["en", "fr"] as const;
 const SUPPORTED_DISTANCE_UNITS = ["km", "mi"] as const;
@@ -42,6 +44,51 @@ function clampUnit(value: unknown): DistanceUnit {
 
 function clampCurrency(value: unknown): CurrencyCode {
   return isCurrencyCode(value) ? value : "USD";
+}
+
+/**
+ * Update the signed-in user's basic profile fields. Phone, when
+ * provided alongside a saved location country, is validated against
+ * the country's E.164 dial-in prefix — refusing local-format numbers
+ * we couldn't reach reliably from email reminders / messaging.
+ *
+ * On phone/country mismatch we redirect with ?error=phone_country_mismatch
+ * and skip the DB write so the form preserves the user's input on
+ * page reload.
+ */
+export async function updateProfileAction(formData: FormData) {
+  const user = await requireUser();
+
+  const displayName = String(formData.get("displayName") ?? "").trim();
+  const phoneRaw = String(formData.get("phone") ?? "").trim();
+  const emailVisibilityRaw = String(
+    formData.get("emailVisibility") ?? "hidden"
+  );
+  const emailVisibility: "hidden" | "direct" =
+    emailVisibilityRaw === "direct" ? "direct" : "hidden";
+
+  if (phoneRaw) {
+    const profile = await db.query.profiles.findFirst({
+      where: eq(profiles.id, user.id),
+      columns: { countryCode: true },
+    });
+    const country = profile?.countryCode;
+    if (country && !phoneMatchesCountry(phoneRaw, country)) {
+      redirect("/account?error=phone_country_mismatch");
+    }
+  }
+
+  await db
+    .update(profiles)
+    .set({
+      displayName: displayName || null,
+      phone: phoneRaw || null,
+      emailVisibility,
+      updatedAt: new Date(),
+    })
+    .where(eq(profiles.id, user.id));
+
+  revalidatePath("/account");
 }
 
 /**
@@ -87,8 +134,8 @@ export async function updateLocationAction(formData: FormData) {
   const country = clampCountry(formData.get("countryCode"));
   const postal = String(formData.get("postalCode") ?? "").trim();
 
-  // Both blank → user cleared their location. Wipe coords too.
-  if (!country || !postal) {
+  // Both blank → user explicitly cleared their location. Wipe coords too.
+  if (!country && !postal) {
     await db
       .update(profiles)
       .set({
@@ -102,6 +149,27 @@ export async function updateLocationAction(formData: FormData) {
       .where(eq(profiles.id, user.id));
     revalidatePath("/account");
     return;
+  }
+
+  // Partial input — country alone or postal alone. Persist what we
+  // got but don't geocode (no point), and don't wipe the other field
+  // (previous bug: picking a country with empty postal silently
+  // erased the country too on the next page render). Coords are
+  // nulled because they're meaningless without both halves.
+  if (!country || !postal) {
+    await db
+      .update(profiles)
+      .set({
+        countryCode: country ?? null,
+        postalCode: postal || null,
+        latitude: null,
+        longitude: null,
+        locationUpdatedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(profiles.id, user.id));
+    revalidatePath("/account");
+    redirect("/account?error=location_incomplete");
   }
 
   const resolved = await geocode({ countryCode: country, postalCode: postal });
