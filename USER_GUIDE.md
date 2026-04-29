@@ -49,7 +49,9 @@ This guide covers how to use SellingMyItems from each perspective: **buyer**, **
 
 ### Browsing Projects & Items
 
-- **Homepage** (`/`) lists all public projects as cards showing the project name, location (city/area), and item count.
+- **Homepage** (`/`) lists all public projects as cards showing the project name, location (city/area), distance from you (when you've set a location), and item count.
+- **Near me filter**: once you've saved a country and postal code in `/account`, a chip row appears above the project grid: `5 / 10 / 25 / 50 / 100 / Anywhere`. Pick a radius to narrow the list to projects within that distance from your postal code centroid. Each card shows "X km away" or "X mi away" depending on your distance unit preference.
+- If you haven't set a location yet, the grid shows a small "Set your location" prompt linking to `/account` instead of the radius chips.
 - Click a project card to view the project page (`/project/[slug]`).
 - **If you're not logged in**: the items grid appears blurred with a "Sign in to see items" prompt. You must log in to see item details and prices.
 - **If you're logged in**: you see the full item grid with titles, prices, conditions, and thumbnail images. Each item shows its status badge (Available, Reserved, Sold).
@@ -77,12 +79,22 @@ A **purchase intent** is your expression of interest in buying one or more items
 
 1. From the wishlist page, click **"Submit Purchase Intent"** for a project.
 2. Fill in the form:
-   - **Phone number** (required)
+   - **Phone number** (optional). When you've saved a location country in `/account`, the phone is validated against the country's E.164 dial-in prefix (US/CA → `+1`, FR → `+33`).
    - **Preferred contact method**: email, phone, or in-app message
    - **Pickup notes** (optional): dates, times, or special instructions
-3. Submit — the seller receives an email notification with your intent details.
-4. **Limit**: 1 active intent per buyer per project. If you already have a submitted/reviewed intent, you cannot submit another until your current one is resolved.
+3. Submit — the seller receives an email notification with your intent details, in their preferred language.
+4. **Limit**: 1 active intent per buyer per project. Cancelled or declined intents don't count, so you can re-submit after withdrawal or rejection.
 5. Wait for the seller to accept or decline your intent.
+
+### Tracking your intents
+
+The **My intents** section in the avatar menu (`/my-intents`) lists every intent you've sent:
+
+- **Active** tab — submitted, reviewed, or accepted intents. Each card shows the project, item list, status pill, and direct link to the conversation thread.
+- **Archived** tab — finalized intents you've hidden from the active list (you can unarchive at any time).
+- **Cancel** button on still-pending intents — withdraws the intent and frees you to submit a new one for the same project.
+- **Re-send** button on declined or cancelled intents — bounces you back to the project to compose a fresh intent.
+- When the seller declines with a note, the note shows up in red on the intent card so you know why.
 
 ### Reservations
 
@@ -110,17 +122,25 @@ Once a seller marks reserved items as **sold** (to you), they appear in your pur
 You can exchange messages with sellers about specific projects:
 
 1. From a project page or the item detail page, initiate a conversation.
-2. View all threads at `/messages`.
-3. Click a thread to read and reply.
-4. **Unread indicator**: the navigation badge shows your unread message count.
-5. **Email notifications**: when a seller replies, you receive an email (throttled to max 1 every 5 minutes to avoid flooding).
+2. View all threads at `/messages`. The inbox shows **all** your conversations, both as a buyer (on someone else's project) and as a seller (on your own projects), with a green or orange side pill on each row so you know which hat you're wearing.
+3. Filter tabs at the top: **All**, **As buyer**, **As seller** — useful once you wear both hats.
+4. Click a thread to read and reply. Buyer-side threads route to `/messages/[id]`, seller-side to `/seller/messages/[id]` automatically.
+5. **Unread indicator**: the navigation badge shows your total unread count across **both** sides — you'll never miss a message because of which environment you're in.
+6. **System messages in-thread**: when the seller accepts, declines, or you cancel an intent, a marker is auto-posted into the thread (✅ accepted, ❌ declined with optional note, 🚫 cancelled, 📋 reserved). These count as unread, so the inbox surfaces state changes the same way it surfaces normal replies.
+7. **Email notifications**: when the other party replies, you receive an email **in your preferred language** (set in `/account`), throttled to max 1 every 5 minutes to avoid flooding.
 
 ### Account Management
 
 Edit your profile at `/account`:
 
 - **Display name**: shown to sellers in messages and intents
-- **Phone number**: used in purchase intents
+- **Phone number**: used in purchase intents. When you've saved a location country, the phone must start with that country's E.164 dial-in prefix (e.g. `+33` for France, `+1` for US/Canada). The form shows the expected prefix as a hint and rejects mismatches with a clear error message.
+- **Email visibility**: `hidden` (default — your real email is masked across the app, conversations route through in-app messaging) or `direct` (your email is shown to the counterparty when they also chose `direct`).
+- **Communication preferences**:
+  - **Language** — `English` / `Français`. Drives the language of every email we send you (welcome, intent updates, message notifications, recap emails) and pre-loads the right locale for the URLs we send.
+  - **Distance unit** — `km` / `mi`. Affects the "X km away" labels on project cards and the radius chip row units. Auto-aligns with your country (US → mi, others → km) when you save a location, unless you've explicitly picked the other unit.
+  - **Default selling currency** — `USD` / `EUR` / `CAD`. Pre-fills the currency dropdown when you create an item; you can still override per item.
+- **Location**: country dropdown (US / CA / FR for now) + postal code. We resolve the pair to a city centroid via OpenStreetMap and store only the approximate coordinates — never precise GPS. Drives the "Near me" radius matching on the homepage and lets sellers' radius restrictions decide whether you see their projects. You can clear both fields to remove your location entirely.
 
 ### Password Reset
 
@@ -149,9 +169,11 @@ A **project** groups items under a common theme (e.g. "Moving Sale — Harrison"
 - **Create** a project at `/seller/projects/new`:
   - **Name** (required): displayed on the homepage
   - **Slug** (auto-generated from name): URL-friendly identifier, must be unique
-  - **City/Area** (required): location shown on project card
+  - **City/Area** (required): human-readable label shown on project cards
   - **Description** (optional): details about the sale
-- **Edit** a project at `/seller/projects/[id]/edit` — change name, slug, city, description
+  - **Country + Postal code** (recommended): drives radius matching for buyers. We resolve to a city centroid via OpenStreetMap on save.
+  - **Restrict to my area** (optional): when enabled, set a radius in km. The project will only appear in the public homepage for buyers whose saved location is within that distance. Buyers without a saved location won't see restricted projects either — safer default than leaking them to anonymous viewers.
+- **Edit** a project at `/seller/projects/[id]/edit` — change any of the above
 - **Delete** a project — soft delete (`deletedAt` is set, project disappears from listings)
 - **Visibility**: projects created through the app are public by default. Admin can toggle public/private.
 

@@ -70,26 +70,29 @@ A user can hold multiple capabilities simultaneously (e.g. a seller is also a bu
 
 ### Buyer
 
-- **Browse projects** — public homepage with search, project cards (price range, available/total counts, location)
+- **Browse projects** — public homepage with search, project cards (price range, available/total counts, location, distance away)
+- **Radius search** — chip row "5 / 10 / 25 / 50 / 100 / Anywhere" above the project grid for users with a saved location; each card shows "X km away" or "X mi away" depending on the user's distance unit preference
 - **View items** — authenticated users see full item details, photos (4:3 carousel), prices, links; mobile floating "Send a message" FAB on project pages
 - **Guest preview** — unauthenticated users see blurred item grids with sign-in CTA
 - **Wishlist** — save items across projects, view selection summary with pricing/savings, remove items, optimistic toggle from item detail page
 - **Purchase intents** — submit a purchase intent for wishlisted items in a project (phone, contact method, pickup notes)
-- **Intent limits** — max 1 active intent per buyer per project
+- **My intents (`/my-intents`)** — dedicated buyer hub showing all sent intents with status, reviewer notes, cancel-pending, archive-finalized, and re-send-from-project actions
+- **Intent limits** — max 1 active intent per buyer per project; once cancelled / declined, buyer can re-submit
 - **Reservations** — view items reserved for you (auto-linked from accepted intents); per-project "Contact seller" CTA
 - **Purchases** — view purchase history (items sold to you), grouped by project
-- **Messaging** — threaded conversations per project, modern chat UI with avatars and emerald send button, unread indicator
-- **Account** — edit display name + phone, change password (with optional sign-out of other devices), email visibility toggle (`hidden` default / `direct`)
+- **Messaging** — unified `/messages` inbox showing both buyer-side and seller-side threads with side pills, status filter tabs, and a global unread badge; modern chat UI with avatars and emerald send button
+- **Account** — edit display name + phone (validated against the country's E.164 dial-in prefix), change password (with optional sign-out of other devices), email visibility toggle, and **communication preferences** (preferred locale for emails, distance unit, default selling currency) and **location** (country + postal code resolved to city centroid via Nominatim — no precise GPS stored)
 - **Password management** — forgot password (1h token), reset, change-from-account; password reset invalidates all sessions
 
 ### Seller (now open to every signed-in user)
 
 > Selling isn't gated by a separate role anymore. Any signed-in account can hit `/seller` and create a project; the `seller_accounts` row is lazily minted on first project creation. Public visibility is gated by an admin approval workflow instead.
 
-- **Project management** — create/edit/soft-delete projects (name, slug, city/area, description, visibility public/invitation-only)
+- **Project management** — create/edit/soft-delete projects (name, slug, city/area, description, visibility public/invitation-only, country + postal code for radius matching, optional `radius_km` to restrict visibility to nearby buyers)
 - **Publication workflow** — every project starts as `draft`; user submits for review → `pending` → admin **Approve** / **Reject (with reason)** → `approved` (live) or `rejected` (with reviewer note shown back to the seller)
 - **Category management** — custom categories per project with sort order; chip-row filter on the public project page
-- **Item management** — full CRUD: title, brand, description, condition (6 levels), age, price, original price, currency (USD/EUR/CAD), notes, status, cover image
+- **Item management** — full CRUD: title, brand, description, condition (6 levels), age, price, original price, currency (`USD/EUR/CAD` enum, defaulted from the seller's profile preference), notes, status, cover image
+- **Purchase intent inbox** — `/seller/intents` with Active / Archived tabs, status filter chips, per-thread "Message buyer" deep-link, "Decline with note" inline composer, item-level reserve subset
 - **Multi-image upload** — up to 10 images per item, drag-reorder, auto-convert to WebP
 - **External links** — reference URLs per item (rendered in the PDF recap too)
 - **Status management** — inline status select: available → pending → reserved → sold → hidden
@@ -100,7 +103,7 @@ A user can hold multiple capabilities simultaneously (e.g. a seller is also a bu
 - **Reservation recap** — send a recap email to a specific buyer; the recap is also posted as a regular seller message into the in-app conversation thread; optional PDF attachment
 - **PDF export** — checkbox-select items on the items page (or quick "All / Reserved only" filters), then **Download** or **Email PDF** to any address. Cover page + per-item page (image, gallery 2-up, attributes, description, links). Uses `@react-pdf/renderer` server-side; WebP uploads are normalized to PNG via sharp before embedding.
 - **Messaging** — reply to buyer threads, email notifications (throttled 5 min)
-- **Dashboard** — listed-value stat (total available items at price), 6 stat cards (listed value / items / views / wishlisted / intents / conversations), per-project health bar (proportional segments for available/pending/reserved/sold)
+- **Dashboard** — listed-value stat with **per-currency breakdown** (USD/EUR/CAD totals shown side-by-side instead of an arbitrary single currency), 6 stat cards (listed value / items / views / wishlisted / intents / conversations), per-project health bar (proportional segments for available/pending/reserved/sold)
 - **View tracking** — see how many views each item has received
 
 ### Admin
@@ -116,11 +119,14 @@ A user can hold multiple capabilities simultaneously (e.g. a seller is also a bu
 - **Responsive design** — optimized for phone, tablet, and desktop; mobile bottom nav with 5 colour-coded tabs (Home / Wishlist / Messages / My listings / Account); shared `NavIconBadge` system across menus, dropdown, sidebars
 - **Visual identity** — Syne (display) + DM Sans (body) Google Fonts via next/font; oklch-based color tokens; subtle dotted backdrop pattern; per-section colour palette (orange / rose / emerald / sky / violet / amber / indigo / red)
 - **Email privacy** — per-user `email_visibility` (hidden default / direct) masks real addresses across public + seller surfaces; "Contact seller" routes through in-app messaging
-- **i18n** — full English and French translations
+- **i18n** — full English and French translations. Outgoing emails are sent in the **recipient's** preferred locale (`profiles.preferred_locale`) — not the sender's URL locale — so a French buyer always gets French emails even when an English-speaking seller triggers them.
+- **Multi-currency** — USD, EUR, CAD as a proper DB enum. Each item is priced in the seller's chosen currency; buyers see prices unchanged (no conversion). Aggregations (seller dashboard, PDF recap) group by currency rather than picking arbitrarily.
+- **Geographic matching** — buyers and sellers store an approximate location (country + postal code resolved to city centroid via Nominatim/OSM, cached in `geocoded_locations`). Powers the homepage "Near me" radius filter and the optional seller-side `radius_km` restriction. `cube` + `earthdistance` postgres extensions handle the haversine queries with a GiST index on project coords.
 - **Dark mode** — system-preference-based theming, orange accent preserved in dark
 - **Image optimization** — auto-resize to 1920px max, WebP conversion, quality 75, EXIF stripping
-- **Rate limiting** — in-memory rate limiting on auth actions (sign up/in/forgot/reset/change), uploads, messages, intents
+- **Rate limiting** — in-memory rate limiting on auth actions (sign up/in/forgot/reset/change), uploads, messages, intents; Nominatim geocoding gated to 1 req/s globally per Node process
 - **Email notifications** — welcome, message notification (throttled 1/5min), intent received, intent status change, message copy, password reset, reservation recap, project invitation/access events
+- **Auto migrations on deploy** — `scripts/run-migrations.sh` applies any new `src/db/migrations/*.sql` between `docker compose up` and the `/api/health` curl, with a `_applied_migrations` tracking table so re-runs are no-ops
 
 ---
 
@@ -336,12 +342,13 @@ SellingMyItems/
 
 | Route | Description |
 |---|---|
-| `/account` | Edit profile (display name, phone) |
+| `/account` | Edit profile (display name, phone with country-prefix validation), email visibility, communication preferences (locale / distance unit / default currency), and location (country + postal code) |
 | `/wishlist` | Saved items grouped by project, with pricing summary and intent submission |
+| `/my-intents` | Buyer purchase-intent hub — Active / Archived tabs, status pills, cancel-pending, archive-finalized, re-send-from-project; reviewer note from declined intents shown inline |
 | `/reservations` | Items reserved for you, grouped by project |
 | `/purchases` | Purchase history (items sold to you), grouped by project |
-| `/messages` | Message inbox — conversation threads |
-| `/messages/[threadId]` | Thread detail — read and reply |
+| `/messages` | Unified inbox — buyer + seller threads with side pills, status filter tabs, global unread badge |
+| `/messages/[threadId]` | Thread detail — read and reply (buyer side) |
 
 ### Seller Routes
 
@@ -350,11 +357,11 @@ SellingMyItems/
 | `/seller` | Seller dashboard overview |
 | `/seller/projects` | List owned projects |
 | `/seller/projects/new` | Create new project |
-| `/seller/projects/[id]/edit` | Edit project (name, slug, city, description) |
+| `/seller/projects/[id]/edit` | Edit project (name, slug, city, description, country + postal code, optional radius restriction) |
 | `/seller/projects/[id]/items` | List items in project, with inline status changes and buyer linking |
 | `/seller/projects/[id]/items/new` | Create item |
 | `/seller/projects/[id]/items/[itemId]/edit` | Edit item (all fields, images, links) |
-| `/seller/intents` | View and manage buyer purchase intents, reserve items from intents |
+| `/seller/intents` | Buyer purchase intents — Active / Archived tabs, status filter chips, accept / decline-with-note / partial-reserve, "Message buyer" deep-link |
 | `/seller/messages` | Seller message inbox |
 | `/seller/messages/[threadId]` | Seller thread detail |
 | `/seller/settings` | Seller settings |
@@ -378,7 +385,7 @@ SellingMyItems/
 |---|---|
 | `item_status` | `available`, `pending`, `reserved`, `sold`, `hidden` |
 | `contact_method` | `email`, `phone`, `app_message` |
-| `intent_status` | `submitted`, `reviewed`, `accepted`, `declined` |
+| `intent_status` | `submitted`, `reviewed`, `accepted`, `declined`, `cancelled` |
 | `project_visibility` | `public`, `invitation_only` |
 | `project_publish_status` | `draft`, `pending`, `approved`, `rejected` |
 | `invitation_status` | `active`, `used`, `expired`, `revoked` |
@@ -386,20 +393,21 @@ SellingMyItems/
 | `access_grant_source` | `targeted_invitation`, `generic_request`, `seller_manual` |
 | `notification_type` | `invitation_received`, `access_granted`, `access_declined`, `access_revoked`, `access_requested` |
 | `email_visibility` | `hidden`, `direct` |
+| `currency_code` | `USD`, `EUR`, `CAD` |
 | `email_type` | `welcome`, `message_notification`, `message_copy`, `intent_received`, `intent_status`, `password_reset`, `reservation_recap`, `invitation_sent`, `access_granted`, `access_declined`, `access_revoked`, `access_requested`, `inbound_relay` (kept, unused) |
 | `email_status` | `sent`, `failed` |
 
-### Tables (22)
+### Tables (25)
 
 Core domain:
 
 | Table | Key Columns | Description |
 |---|---|---|
-| `profiles` | email (unique), passwordHash, role, isActive, displayName, phone, **emailVisibility** | User accounts |
+| `profiles` | email (unique), passwordHash, **isAdmin**, isActive, displayName, phone, emailVisibility, **preferredLocale**, **distanceUnit**, **defaultCurrency**, **countryCode**, **postalCode**, **latitude**, **longitude**, locationUpdatedAt | User accounts. Communication prefs drive outgoing email locale, distance unit on UI, and the default currency in the item form. Country + postal resolve to a city centroid via Nominatim — no precise GPS stored. |
 | `sessions` | token (unique), userId, expiresAt | Auth sessions (30-day TTL) |
 | `password_reset_tokens` | token (unique), userId, expiresAt, usedAt | Password reset tokens (1h TTL) |
 | `seller_accounts` | userId, isActive | Lazy-minted on first project creation |
-| `projects` | sellerId, name, slug (unique), cityArea, description, isPublic, visibility, **publishStatus**, **reviewerNote**, **submittedAt**, **reviewedAt**, deletedAt | Seller projects |
+| `projects` | sellerId, name, slug (unique), cityArea, description, isPublic, visibility, publishStatus, reviewerNote, submittedAt, reviewedAt, **countryCode**, **postalCode**, **latitude**, **longitude**, **radiusKm**, deletedAt | Seller projects. `radiusKm` (nullable) restricts visibility to buyers within that distance from the project's centroid; NULL means unrestricted. |
 | `project_categories` | projectId, name, sortOrder | Custom categories per project |
 | `items` | projectId, title, price, originalPrice, currency, status, coverImageUrl, reservedForUserId, soldToUserId, reservedAt, soldAt, viewCount, deletedAt | Items for sale |
 | `item_images` | itemId, url, altText, sortOrder | Additional item images |
@@ -412,14 +420,15 @@ Buyer flow:
 |---|---|---|
 | `buyer_wishlists` | userId, projectId | Wishlist per user per project |
 | `buyer_wishlist_items` | wishlistId, itemId | Items in wishlists |
-| `buyer_intents` | userId, projectId, phone, contactMethod, pickupNotes, status | Purchase intent submissions |
+| `buyer_intents` | userId, projectId, phone, contactMethod, pickupNotes, status, **reviewerNote**, **archivedAt**, **archivedBy** | Purchase intents. `archivedAt` is shared between buyer and seller — either side hiding it from both lists. `reviewerNote` is the optional seller message shown back to the buyer on a decline. `cancelled` status lets the buyer withdraw a still-pending intent and unblock the one-active-per-project lock. |
 | `buyer_intent_items` | intentId, itemId | Items in purchase intents |
 
-Messaging + invitations + admin:
+Geo + messaging + invitations + admin:
 
 | Table | Key Columns | Description |
 |---|---|---|
-| `conversation_threads` | projectId, buyerId, buyerLastReadAt, sellerLastReadAt | Message threads (1 per buyer, project) |
+| `geocoded_locations` | (countryCode, postalCode) PK, latitude, longitude, city, resolvedAt | Cache of Nominatim/OSM postal-code lookups. Negative results (NULL coords) kept with a 24h TTL so we don't re-hammer the upstream. |
+| `conversation_threads` | projectId, buyerId, **intentId**, buyerLastReadAt, sellerLastReadAt | Message threads (1 per buyer, project). `intentId` back-references the intent that auto-created the thread, so each intent card deep-links to its conversation. |
 | `conversation_messages` | threadId, senderId, body | Individual messages |
 | `project_invitations` | projectId, code, email, status, expiresAt, usedByUserId, usedAt | Generic + targeted invitation codes |
 | `project_access_grants` | projectId, userId, source, invitationId | Granted access to invitation-only projects |
@@ -428,7 +437,9 @@ Messaging + invitations + admin:
 | `email_logs` | toEmail, subject, type, status, errorMessage, resendId | Email sending logs |
 | `app_settings` | key (unique), value, updatedBy | Admin-managed settings (e.g. Resend API key) |
 
-### Migrations (20 files)
+### Migrations (23 files)
+
+Migrations are auto-applied on deploy by [`scripts/run-migrations.sh`](scripts/run-migrations.sh) — drop a new `*.sql` file in `src/db/migrations/`, push, and the workflow runner picks it up. Tracking lives in the `_applied_migrations` table.
 
 Numbered SQL files in `src/db/migrations/`. Notable steps:
 
@@ -452,6 +463,9 @@ Numbered SQL files in `src/db/migrations/`. Notable steps:
 | `0017` | Drop `thread_aliases` (inbound relay rolled back in favor of in-app messaging) |
 | `0018` | Unify roles: drop `seller`-role gating; add `project_publish_status` enum + `publish_status`/`reviewer_note`/`submitted_at`/`reviewed_at` columns; grandfather public projects → `approved` |
 | `0019` | Drop legacy `user_role` enum + `profiles.role` column; replace with `profiles.is_admin` boolean. Buyer/seller capabilities now derived from data (signed-in = buyer; row in `seller_accounts` = seller). |
+| `0020` | Intents redesign: `archived_at` + `archived_by` + `reviewer_note` on `buyer_intents`, `intent_id` FK on `conversation_threads`, hot-path indexes, `cancelled` value added to `intent_status` enum. |
+| `0021` | Promote `items.currency` from text to a `currency_code` enum (USD/EUR/CAD). Add per-user communication prefs on `profiles`: `preferred_locale`, `distance_unit`, `default_currency`. |
+| `0022` | Enable `cube` + `earthdistance` extensions. Location columns (`country_code`, `postal_code`, `latitude`, `longitude`) on `profiles` and `projects`, plus `radius_km` on `projects`. New `geocoded_locations` cache table. GiST index on project coords for fast radius queries. |
 
 ---
 
