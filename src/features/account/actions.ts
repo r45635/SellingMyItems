@@ -66,42 +66,25 @@ function clampCurrency(value: unknown): CurrencyCode {
 }
 
 /**
- * Update the signed-in user's basic profile fields. Phone, when
- * provided alongside a saved location country, is validated against
- * the country's E.164 dial-in prefix — refusing local-format numbers
- * we couldn't reach reliably from email reminders / messaging.
- *
- * On phone/country mismatch we redirect with ?error=phone_country_mismatch
- * and skip the DB write so the form preserves the user's input on
- * page reload.
+ * Update the signed-in user's identity fields (display name and email
+ * visibility). Phone is no longer part of this action — it moved to
+ * updateLocationContactAction so it's validated against the country
+ * submitted in the same form submission.
  */
 export async function updateProfileAction(formData: FormData) {
   const user = await requireUser();
 
   const displayName = String(formData.get("displayName") ?? "").trim();
-  const phoneRaw = String(formData.get("phone") ?? "").trim();
   const emailVisibilityRaw = String(
     formData.get("emailVisibility") ?? "hidden"
   );
   const emailVisibility: "hidden" | "direct" =
     emailVisibilityRaw === "direct" ? "direct" : "hidden";
 
-  if (phoneRaw) {
-    const profile = await db.query.profiles.findFirst({
-      where: eq(profiles.id, user.id),
-      columns: { countryCode: true },
-    });
-    const country = profile?.countryCode;
-    if (country && !phoneMatchesCountry(phoneRaw, country)) {
-      redirect("/account?error=phone_country_mismatch");
-    }
-  }
-
   await db
     .update(profiles)
     .set({
       displayName: displayName || null,
-      phone: phoneRaw || null,
       emailVisibility,
       updatedAt: new Date(),
     })
@@ -139,15 +122,131 @@ export async function updateAccountPreferencesAction(formData: FormData) {
   revalidatePath("/account");
 }
 
+/** @internal Kept only for retryGeocodeLocationAction. */
+async function _geocodeAndSave({
+  userId,
+  country,
+  postal,
+}: {
+  userId: string;
+  country: CountryCode;
+  postal: string;
+}) {
+  const resolved = await geocode({ countryCode: country, postalCode: postal });
+  await db
+    .update(profiles)
+    .set({
+      latitude: resolved.ok ? resolved.latitude : null,
+      longitude: resolved.ok ? resolved.longitude : null,
+      locationUpdatedAt: new Date(),
+      updatedAt: new Date(),
+    })
+    .where(eq(profiles.id, userId));
+  revalidatePath("/account");
+  revalidatePath("/");
+  return resolved;
+}
+
 /**
- * Persist (and geocode) the user's approximate location. Postal code +
- * country only — never browser GPS — so we never need to ask for the
- * Geolocation permission. The Nominatim call may fail (rate limit,
- * unknown postal); we still persist the country + postal text so the
- * user can re-save later and we'll re-geocode then. lat/lng are nulled
- * out in that case so radius queries silently skip this user.
+ * Persist (and geocode) the user's approximate location AND phone.
+ * Country + postal code only — never browser GPS. Phone is validated
+ * against the SUBMITTED countryCode (not the one in the DB) so the
+ * user can change country and phone in one save without hitting a
+ * mismatch error from the stale DB value.
+ *
+ * The Nominatim call may fail; we still persist country + postal so
+ * the user can re-save or use the retry button later.
  */
-export async function updateLocationAction(formData: FormData) {
+export async function updateLocationContactAction(formData: FormData) {
+  const user = await requireUser();
+
+  const country = clampCountry(formData.get("countryCode"));
+  const postal = String(formData.get("postalCode") ?? "").trim();
+  const phoneRaw = String(formData.get("phone") ?? "").trim();
+
+  // Validate phone against the SUBMITTED country (not the DB value).
+  if (phoneRaw && country && !phoneMatchesCountry(phoneRaw, country)) {
+    redirect("/account?error=phone_country_mismatch");
+  }
+
+  // Both location fields blank → explicit clear.
+  if (!country && !postal) {
+    await db
+      .update(profiles)
+      .set({
+        phone: phoneRaw || null,
+        countryCode: null,
+        postalCode: null,
+        latitude: null,
+        longitude: null,
+        locationUpdatedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(profiles.id, user.id));
+    revalidatePath("/account");
+    return;
+  }
+
+  // Partial location — persist what we have but don't geocode.
+  if (!country || !postal) {
+    await db
+      .update(profiles)
+      .set({
+        phone: phoneRaw || null,
+        countryCode: country ?? null,
+        postalCode: postal || null,
+        latitude: null,
+        longitude: null,
+        locationUpdatedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(profiles.id, user.id));
+    revalidatePath("/account");
+    redirect("/account?error=location_incomplete");
+  }
+
+  // Auto-align distance unit to country default unless user overrode it.
+  const profile = await db.query.profiles.findFirst({
+    where: eq(profiles.id, user.id),
+    columns: { distanceUnit: true, countryCode: true },
+  });
+  const previousCountry = profile?.countryCode ?? null;
+  const expectedUnitForPrevious = previousCountry
+    ? COUNTRY_DEFAULT_DISTANCE_UNIT[previousCountry as CountryCode]
+    : null;
+  const userTouchedUnit =
+    profile?.distanceUnit != null &&
+    expectedUnitForPrevious != null &&
+    profile.distanceUnit !== expectedUnitForPrevious;
+  const distanceUnit = userTouchedUnit
+    ? profile?.distanceUnit
+    : COUNTRY_DEFAULT_DISTANCE_UNIT[country];
+
+  await db
+    .update(profiles)
+    .set({
+      phone: phoneRaw || null,
+      countryCode: country,
+      postalCode: postal,
+      distanceUnit,
+      locationUpdatedAt: new Date(),
+      updatedAt: new Date(),
+    })
+    .where(eq(profiles.id, user.id));
+
+  const resolved = await _geocodeAndSave({
+    userId: user.id,
+    country,
+    postal,
+  });
+
+  if (!resolved.ok) {
+    redirect(`/account?error=${geocodeReasonToErrorSlug(resolved.reason)}`);
+  }
+}
+
+/** @internal Legacy — no longer exposed to the UI. Kept so nothing explodes during transition. */
+async function updateLocationAction(formData: FormData) {
   const user = await requireUser();
 
   const country = clampCountry(formData.get("countryCode"));

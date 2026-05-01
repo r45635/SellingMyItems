@@ -3,16 +3,14 @@ import { requireUser, getUserCapabilities } from "@/lib/auth";
 import { db } from "@/db";
 import { profiles } from "@/db/schema";
 import { eq } from "drizzle-orm";
-import { revalidatePath } from "next/cache";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Lock, Mail, ShoppingCart, Tag, Shield, Globe, Ruler, Coins, MapPin } from "lucide-react";
+import { Lock, Mail, ShoppingCart, Tag, Shield, Globe, Ruler, Coins } from "lucide-react";
 import { ChangePasswordForm } from "@/features/account/components/change-password-form";
+import { LocationContactForm } from "@/features/account/components/location-contact-form";
 import {
   updateAccountPreferencesAction,
-  updateLocationAction,
   updateProfileAction,
-  retryGeocodeLocationAction,
 } from "@/features/account/actions";
 import { CURRENCY_CODES } from "@/lib/currency";
 
@@ -34,18 +32,6 @@ export default async function AccountPage({
   });
   const currentVisibility = profile?.emailVisibility ?? "hidden";
   const capabilities = await getUserCapabilities(user);
-
-  // Phone field hint — when a country is set, show the user the
-  // expected E.164 dial-in prefix so they don't get hit with the
-  // country-mismatch error after the fact.
-  const phoneHintByCountry: Record<string, string> = {
-    US: "+1",
-    CA: "+1",
-    FR: "+33",
-  };
-  const phoneHint = profile?.countryCode
-    ? phoneHintByCountry[profile.countryCode]
-    : null;
 
   return (
     <div className="container px-4 md:px-6 py-8 max-w-2xl">
@@ -74,6 +60,7 @@ export default async function AccountPage({
       ) : null}
 
       <form action={updateProfileAction} className="space-y-5">
+        <p className="text-sm font-semibold">{tAccount("identityTitle")}</p>
         <div>
           <label htmlFor="email" className="block text-sm font-medium mb-1">
             Email
@@ -91,33 +78,6 @@ export default async function AccountPage({
             type="text"
             defaultValue={profile?.displayName ?? ""}
           />
-        </div>
-
-        <div>
-          <label htmlFor="phone" className="block text-sm font-medium mb-1">
-            {tAccount("phone")}
-          </label>
-          <Input
-            id="phone"
-            name="phone"
-            type="tel"
-            defaultValue={profile?.phone ?? ""}
-            placeholder={
-              phoneHint
-                ? `${phoneHint} 6 12 34 56 78`
-                : "+33 6 12 34 56 78"
-            }
-            autoComplete="tel"
-          />
-          {phoneHint ? (
-            <p className="mt-1 text-xs text-muted-foreground">
-              {tAccount("phoneCountryHint", { prefix: phoneHint })}
-            </p>
-          ) : (
-            <p className="mt-1 text-xs text-muted-foreground">
-              {tAccount("phoneSetCountryHint")}
-            </p>
-          )}
         </div>
 
         <fieldset className="rounded-xl border p-4 space-y-3">
@@ -197,6 +157,19 @@ export default async function AccountPage({
         </Button>
       </form>
 
+      {/* Location & Contact — country, postal code (geocoded), and phone.
+          Grouped so the phone prefix hint is always in sync with the
+          selected country in the same form. */}
+      <div className="mt-8">
+        <LocationContactForm
+          defaultCountry={profile?.countryCode ?? null}
+          defaultPostalCode={profile?.postalCode ?? null}
+          defaultPhone={profile?.phone ?? null}
+          latitude={profile?.latitude ?? null}
+          longitude={profile?.longitude ?? null}
+        />
+      </div>
+
       {/* Communication preferences — these drive outgoing email locale,
           distance unit, and the default currency in the item form. They
           live in their own form so a single field change doesn't bundle
@@ -241,6 +214,9 @@ export default async function AccountPage({
               <option value="km">km</option>
               <option value="mi">mi</option>
             </select>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {tAccount("distanceUnitHint")}
+            </p>
           </div>
 
           <div>
@@ -267,86 +243,6 @@ export default async function AccountPage({
           {tAccount("save")}
         </Button>
       </form>
-
-      {/* Location — postal-code-grain only. Drives radius matching on
-          the public homepage. We never store browser GPS. */}
-      <form
-        action={updateLocationAction}
-        className="mt-8 space-y-3 rounded-xl border p-4"
-      >
-        <div className="flex items-center gap-1.5">
-          <MapPin className="h-4 w-4 text-orange-500" />
-          <p className="text-sm font-semibold">{tAccount("locationTitle")}</p>
-        </div>
-        <p className="text-xs text-muted-foreground">
-          {tAccount("locationPrivacy")}
-        </p>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div>
-            <label htmlFor="countryCode" className="block text-sm font-medium mb-1">
-              {tAccount("country")}
-            </label>
-            <select
-              id="countryCode"
-              name="countryCode"
-              defaultValue={profile?.countryCode ?? ""}
-              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-            >
-              <option value="">—</option>
-              <option value="US">United States</option>
-              <option value="CA">Canada</option>
-              <option value="FR">France</option>
-            </select>
-          </div>
-
-          <div>
-            <label htmlFor="postalCode" className="block text-sm font-medium mb-1">
-              {tAccount("postalCode")}
-            </label>
-            <Input
-              id="postalCode"
-              name="postalCode"
-              type="text"
-              defaultValue={profile?.postalCode ?? ""}
-              placeholder="75001"
-              autoComplete="postal-code"
-            />
-          </div>
-        </div>
-
-        {profile?.latitude != null && profile?.longitude != null ? (
-          <p className="text-xs text-emerald-700 dark:text-emerald-300">
-            ✓ {tAccount("locationResolved")}
-          </p>
-        ) : profile?.postalCode && profile?.countryCode ? (
-          <p className="text-xs text-amber-700 dark:text-amber-300">
-            ⚠ {tAccount("locationUnresolved")}
-          </p>
-        ) : null}
-
-        <div className="flex flex-wrap items-center gap-2">
-          <Button type="submit" size="sm">
-            {tAccount("save")}
-          </Button>
-        </div>
-      </form>
-
-      {/* "Retry now" lives in its own form so it doesn't carry the
-          country/postal inputs — useful when the upstream was
-          temporarily unreachable but the saved values are correct. */}
-      {profile?.countryCode &&
-      profile?.postalCode &&
-      (profile.latitude == null || profile.longitude == null) ? (
-        <form
-          action={retryGeocodeLocationAction}
-          className="mt-3 flex justify-end"
-        >
-          <Button type="submit" size="sm" variant="outline">
-            {tAccount("retryGeocode")}
-          </Button>
-        </form>
-      ) : null}
 
       <div className="mt-8">
         <ChangePasswordForm />

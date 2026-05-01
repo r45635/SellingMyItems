@@ -79,7 +79,7 @@ A **purchase intent** is your expression of interest in buying one or more items
 
 1. From the wishlist page, click **"Submit Purchase Intent"** for a project.
 2. Fill in the form:
-   - **Phone number** (optional). When you've saved a location country in `/account`, the phone is validated against the country's E.164 dial-in prefix (US/CA → `+1`, FR → `+33`).
+   - **Phone number** (optional). The phone field lives in the **Location & Contact** section alongside your country — the expected dial-in prefix (US/CA → `+1`, FR → `+33`) updates instantly when you change the country, before you even save.
    - **Preferred contact method**: email, phone, or in-app message
    - **Pickup notes** (optional): dates, times, or special instructions
 3. Submit — the seller receives an email notification with your intent details, in their preferred language.
@@ -131,16 +131,22 @@ You can exchange messages with sellers about specific projects:
 
 ### Account Management
 
-Edit your profile at `/account`:
+Edit your profile at `/account`. The page is divided into four sections:
 
+**Identity**
 - **Display name**: shown to sellers in messages and intents
-- **Phone number**: used in purchase intents. When you've saved a location country, the phone must start with that country's E.164 dial-in prefix (e.g. `+33` for France, `+1` for US/Canada). The form shows the expected prefix as a hint and rejects mismatches with a clear error message.
 - **Email visibility**: `hidden` (default — your real email is masked across the app, conversations route through in-app messaging) or `direct` (your email is shown to the counterparty when they also chose `direct`).
-- **Communication preferences**:
-  - **Language** — `English` / `Français`. Drives the language of every email we send you (welcome, intent updates, message notifications, recap emails) and pre-loads the right locale for the URLs we send.
-  - **Distance unit** — `km` / `mi`. Affects the "X km away" labels on project cards and the radius chip row units. Auto-aligns with your country (US → mi, others → km) when you save a location, unless you've explicitly picked the other unit.
-  - **Default selling currency** — `USD` / `EUR` / `CAD`. Pre-fills the currency dropdown when you create an item; you can still override per item.
-- **Location**: country dropdown (US / CA / FR for now) + postal code. We resolve the pair to a city centroid via OpenStreetMap and store only the approximate coordinates — never precise GPS. Drives the "Near me" radius matching on the homepage and lets sellers' radius restrictions decide whether you see their projects. You can clear both fields to remove your location entirely.
+
+**Location & Contact**
+- **Country** + **postal code**: we resolve the pair to a city centroid via OpenStreetMap and store only approximate coordinates — never precise GPS. Drives the "Near me" radius matching on the homepage and lets sellers' radius restrictions decide whether you see their projects. You can clear both fields to remove your location entirely.
+- **Phone number**: used in purchase intents. The dial-in prefix hint updates live as soon as you select a country — no need to save first. The phone is validated against the selected country's E.164 prefix (e.g. `+33` for France, `+1` for US/Canada) at submit time. The form rejects mismatches with a clear error message.
+
+**Communication preferences**
+- **Language** — `English` / `Français`. Drives the language of every email we send you (welcome, intent updates, message notifications, recap emails).
+- **Distance unit** — `km` / `mi`. Affects the "X km away" labels on project cards and radius chip rows. Auto-aligns with your country (US → mi, others → km) when you save a location, unless you've explicitly picked the other unit.
+- **Default selling currency** — `USD` / `EUR` / `CAD`. Pre-fills the currency dropdown when you create an item; you can still override per item.
+
+**Password**
 
 ### Password Reset
 
