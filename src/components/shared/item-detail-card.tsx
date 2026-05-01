@@ -104,7 +104,7 @@ export function ItemDetailCard({
           </Badge>
           {status === "reserved" && (
             <span className="text-xs text-muted-foreground">
-              · {t("reservedSubtle")}
+              · {isReservedForCurrentUser ? t("youAreBuyingThis") : t("reservedSubtle")}
             </span>
           )}
         </div>

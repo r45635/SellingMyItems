@@ -221,6 +221,7 @@
     "reservedForYouAlert": "This item is reserved for you. Contact the seller to arrange pickup.",
     "reservedAlert": "This item is currently reserved.",
     "reservedSubtle": "Someone is buying this",
+    "youAreBuyingThis": "You are buying this",
     "soldAlert": "This item has been sold and is no longer available.",
     "readMore": "Read more",
     "showLess": "Show less",

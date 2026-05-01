@@ -288,7 +288,7 @@ export default async function ItemPage({
               </Badge>
               {item.status === "reserved" && (
                 <span className="text-xs text-muted-foreground">
-                  · {tItem("reservedSubtle")}
+                  · {isReservedForCurrentUser ? tItem("youAreBuyingThis") : tItem("reservedSubtle")}
                 </span>
               )}
             </div>

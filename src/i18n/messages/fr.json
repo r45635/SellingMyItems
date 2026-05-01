@@ -221,6 +221,7 @@
     "reservedForYouAlert": "Cet article vous est réservé. Contactez le vendeur pour organiser le retrait.",
     "reservedAlert": "Cet article est actuellement réservé.",
     "reservedSubtle": "Quelqu'un est en train de l'acheter",
+    "youAreBuyingThis": "C'est vous qui achetez cet article",
     "soldAlert": "Cet article a été vendu et n'est plus disponible.",
     "readMore": "Lire la suite",
     "showLess": "Réduire",

@@ -69,7 +69,7 @@ export function ItemTeaserCard({
             className={`absolute top-2 right-2 shadow-sm ${
               status === "reserved"
                 ? isReservedForCurrentUser
-                  ? "bg-red-600 text-white border-red-600 hover:bg-red-600 font-bold text-xs px-2.5 py-1 animate-pulse"
+                  ? "bg-red-600 text-white border-red-600 hover:bg-red-600 font-bold text-xs px-2.5 py-1 animate-bump ring-reserved-for-you"
                   : "bg-red-600 text-white border-red-600 hover:bg-red-600 font-bold text-xs px-2.5 py-1"
                 : status === "sold"
                   ? "bg-gray-900 text-white border-gray-900 hover:bg-gray-900 font-bold text-xs px-2.5 py-1"

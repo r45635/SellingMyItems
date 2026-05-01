@@ -205,9 +205,28 @@
     }
   }
 
+  /* "Reserved for you" badge: periodic bump + black/yellow/black ring */
+  @keyframes smi-bump {
+    0%, 65%, 100% { transform: scale(1); }
+    10% { transform: scale(1.22); }
+    22% { transform: scale(1.1); }
+    35% { transform: scale(1.18); }
+    50% { transform: scale(1); }
+  }
+  .animate-bump {
+    animation: smi-bump 3s ease-in-out infinite;
+  }
+  .ring-reserved-for-you {
+    box-shadow:
+      0 0 0 1.5px #000,
+      0 0 0 3.5px #fbbf24,
+      0 0 0 5px #000;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .stagger-fade-in > *,
-    .animate-fade-up {
+    .animate-fade-up,
+    .animate-bump {
       animation: none !important;
       opacity: 1 !important;
       transform: none !important;
