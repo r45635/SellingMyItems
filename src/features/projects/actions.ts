@@ -33,9 +33,11 @@ async function ensureSellerAccount(userId: string) {
 }
 
 /**
- * Resolve country + postal code to centroid coords. Returns null on
- * any failure path so the project save still goes through with text-
- * only location — the seller can re-save later and we'll re-geocode.
+ * Resolve country + postal code to centroid coords. Returns
+ * `{lat:null, lng:null}` on any failure path so the project save
+ * still goes through with text-only location — the seller can re-save
+ * later and we'll re-geocode. The lib logs the actual reason to
+ * stderr so failures are visible in `docker compose logs app`.
  */
 async function resolveProjectCoords(
   countryCode: string | undefined,
@@ -45,10 +47,10 @@ async function resolveProjectCoords(
     return { latitude: null, longitude: null };
   }
   const result = await geocode({ countryCode, postalCode });
-  return {
-    latitude: result?.latitude ?? null,
-    longitude: result?.longitude ?? null,
-  };
+  if (!result.ok) {
+    return { latitude: null, longitude: null };
+  }
+  return { latitude: result.latitude, longitude: result.longitude };
 }
 
 function readRadiusKm(formData: FormData): number | undefined {

@@ -7,8 +7,27 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { isCurrencyCode, type CurrencyCode } from "@/lib/currency";
-import { geocode } from "@/lib/geocoding";
+import { geocode, type GeocodeFailureReason } from "@/lib/geocoding";
 import { phoneMatchesCountry } from "@/lib/phone";
+
+/**
+ * Map a geocode failure reason to a stable URL slug we use in
+ * `?error=...` redirects. Keep these short — they're not visible to
+ * users, but they show up in browser history. The /account page
+ * matches on these to render the localized message.
+ */
+function geocodeReasonToErrorSlug(reason: GeocodeFailureReason): string {
+  switch (reason) {
+    case "invalid_input":
+      return "geocode_invalid_input";
+    case "no_match":
+      return "geocode_no_match";
+    case "unreachable":
+      return "geocode_unreachable";
+    case "bad_response":
+      return "geocode_bad_response";
+  }
+}
 
 const SUPPORTED_LOCALES = ["en", "fr"] as const;
 const SUPPORTED_DISTANCE_UNITS = ["km", "mi"] as const;
@@ -199,8 +218,8 @@ export async function updateLocationAction(formData: FormData) {
     .set({
       countryCode: country,
       postalCode: postal,
-      latitude: resolved?.latitude ?? null,
-      longitude: resolved?.longitude ?? null,
+      latitude: resolved.ok ? resolved.latitude : null,
+      longitude: resolved.ok ? resolved.longitude : null,
       distanceUnit,
       locationUpdatedAt: new Date(),
       updatedAt: new Date(),
@@ -209,4 +228,53 @@ export async function updateLocationAction(formData: FormData) {
 
   revalidatePath("/account");
   revalidatePath("/");
+
+  // On geocode failure, we still saved the user's typed values so
+  // they don't have to re-type. Redirect with a reason-specific error
+  // so /account renders the right banner ("retry", "code introuvable",
+  // "service indisponible", …).
+  if (!resolved.ok) {
+    redirect(`/account?error=${geocodeReasonToErrorSlug(resolved.reason)}`);
+  }
+}
+
+/**
+ * Re-run geocoding against the location already on the user's
+ * profile. Useful when the first save hit `unreachable` (transient)
+ * — no need for the user to re-type country + postal.
+ */
+export async function retryGeocodeLocationAction() {
+  const user = await requireUser();
+
+  const profile = await db.query.profiles.findFirst({
+    where: eq(profiles.id, user.id),
+    columns: { countryCode: true, postalCode: true },
+  });
+  if (!profile?.countryCode || !profile?.postalCode) {
+    redirect("/account?error=location_incomplete");
+  }
+
+  const resolved = await geocode({
+    countryCode: profile.countryCode,
+    postalCode: profile.postalCode,
+  });
+
+  if (!resolved.ok) {
+    revalidatePath("/account");
+    redirect(`/account?error=${geocodeReasonToErrorSlug(resolved.reason)}`);
+  }
+
+  await db
+    .update(profiles)
+    .set({
+      latitude: resolved.latitude,
+      longitude: resolved.longitude,
+      locationUpdatedAt: new Date(),
+      updatedAt: new Date(),
+    })
+    .where(eq(profiles.id, user.id));
+
+  revalidatePath("/account");
+  revalidatePath("/");
+  redirect("/account?notice=geocode_resolved");
 }

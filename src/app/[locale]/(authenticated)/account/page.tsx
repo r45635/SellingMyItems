@@ -12,16 +12,18 @@ import {
   updateAccountPreferencesAction,
   updateLocationAction,
   updateProfileAction,
+  retryGeocodeLocationAction,
 } from "@/features/account/actions";
 import { CURRENCY_CODES } from "@/lib/currency";
 
 export default async function AccountPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; notice?: string }>;
 }) {
   const sp = await searchParams;
   const errorKey = sp.error;
+  const noticeKey = sp.notice;
   const t = await getTranslations("nav");
   const tAccount = await getTranslations("account");
   const tContext = await getTranslations("context");
@@ -55,6 +57,19 @@ export default async function AccountPage({
             tAccount("errorPhoneCountryMismatch")}
           {errorKey === "location_incomplete" &&
             tAccount("errorLocationIncomplete")}
+          {errorKey === "geocode_no_match" &&
+            tAccount("errorGeocodeNoMatch")}
+          {errorKey === "geocode_unreachable" &&
+            tAccount("errorGeocodeUnreachable")}
+          {errorKey === "geocode_bad_response" &&
+            tAccount("errorGeocodeBadResponse")}
+          {errorKey === "geocode_invalid_input" &&
+            tAccount("errorGeocodeInvalidInput")}
+        </div>
+      ) : null}
+      {noticeKey === "geocode_resolved" ? (
+        <div className="mb-5 rounded-lg border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-300">
+          ✓ {tAccount("locationResolved")}
         </div>
       ) : null}
 
@@ -304,16 +319,34 @@ export default async function AccountPage({
           <p className="text-xs text-emerald-700 dark:text-emerald-300">
             ✓ {tAccount("locationResolved")}
           </p>
-        ) : profile?.postalCode ? (
+        ) : profile?.postalCode && profile?.countryCode ? (
           <p className="text-xs text-amber-700 dark:text-amber-300">
             ⚠ {tAccount("locationUnresolved")}
           </p>
         ) : null}
 
-        <Button type="submit" size="sm">
-          {tAccount("save")}
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button type="submit" size="sm">
+            {tAccount("save")}
+          </Button>
+        </div>
       </form>
+
+      {/* "Retry now" lives in its own form so it doesn't carry the
+          country/postal inputs — useful when the upstream was
+          temporarily unreachable but the saved values are correct. */}
+      {profile?.countryCode &&
+      profile?.postalCode &&
+      (profile.latitude == null || profile.longitude == null) ? (
+        <form
+          action={retryGeocodeLocationAction}
+          className="mt-3 flex justify-end"
+        >
+          <Button type="submit" size="sm" variant="outline">
+            {tAccount("retryGeocode")}
+          </Button>
+        </form>
+      ) : null}
 
       <div className="mt-8">
         <ChangePasswordForm />
