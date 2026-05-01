@@ -50,6 +50,13 @@ export default async function EditProjectPage({
           slug: project.slug,
           cityArea: project.cityArea,
           description: project.description ?? "",
+          countryCode: (project.countryCode ?? undefined) as
+            | "US"
+            | "CA"
+            | "FR"
+            | undefined,
+          postalCode: project.postalCode ?? "",
+          radiusKm: project.radiusKm ?? undefined,
         }}
       />
     </div>

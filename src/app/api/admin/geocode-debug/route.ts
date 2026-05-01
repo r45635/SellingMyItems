@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { geocodedLocations } from "@/db/schema";
-import { desc, sql } from "drizzle-orm";
+import { geocodedLocations, projects } from "@/db/schema";
+import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import { requireAdmin } from "@/lib/auth";
 import { geocode } from "@/lib/geocoding";
 
@@ -53,6 +53,35 @@ export async function GET(req: Request) {
     testGeocode = await geocode({ countryCode: "FR", postalCode: "75001" });
   }
 
+  // Approved + public projects that are silently invisible to radius
+  // searches because they have no resolved coordinates. These are the
+  // common "buyer picks 50km but sees nothing" footgun: the project's
+  // cityArea is set but country + postal weren't, so geocoding never
+  // ran. Surface them so an admin can poke the seller (or run a bulk
+  // re-geocode pass).
+  const projectsWithoutCoords = await db
+    .select({
+      id: projects.id,
+      slug: projects.slug,
+      name: projects.name,
+      cityArea: projects.cityArea,
+      countryCode: projects.countryCode,
+      postalCode: projects.postalCode,
+      publishStatus: projects.publishStatus,
+      isPublic: projects.isPublic,
+    })
+    .from(projects)
+    .where(
+      and(
+        isNull(projects.latitude),
+        isNull(projects.deletedAt),
+        eq(projects.publishStatus, "approved"),
+        eq(projects.isPublic, true)
+      )
+    )
+    .orderBy(desc(projects.updatedAt))
+    .limit(50);
+
   return NextResponse.json({
     cache: {
       count: recent.length,
@@ -61,6 +90,13 @@ export async function GET(req: Request) {
     extensions: {
       cube: extNames.includes("cube"),
       earthdistance: extNames.includes("earthdistance"),
+    },
+    projectsWithoutCoords: {
+      count: projectsWithoutCoords.length,
+      // The most likely cause when buyers report "radius search hides
+      // projects that should be there". Each row tells the seller
+      // exactly which project to edit.
+      rows: projectsWithoutCoords,
     },
     probe: probe ? testGeocode : null,
     note: "Pass ?probe=1 to also fire a live Nominatim call against FR/75001.",

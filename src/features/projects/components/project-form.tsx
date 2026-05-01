@@ -114,6 +114,14 @@ export function ProjectForm({ defaultValues, projectId }: ProjectFormProps) {
           {/* Pickup location — drives buyer-side radius matching. The
               cityArea above is the human-readable label; country +
               postal code is what we geocode for distance queries. */}
+          {isEdit && !defaultValues?.countryCode && (
+            <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-300">
+              <p className="font-semibold mb-1">
+                {t("seller.locationMissingTitle")}
+              </p>
+              <p>{t("seller.locationMissingBody")}</p>
+            </div>
+          )}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label htmlFor="countryCode">{t("seller.projectCountry")}</Label>

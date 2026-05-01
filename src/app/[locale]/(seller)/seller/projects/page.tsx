@@ -1,6 +1,6 @@
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
-import { Plus, FolderOpen } from "lucide-react";
+import { Plus, FolderOpen, MapPinOff } from "lucide-react";
 import { requireSeller } from "@/lib/auth";
 import { db } from "@/db";
 import { projects } from "@/db/schema";
@@ -30,6 +30,11 @@ export default async function SellerProjectsPage() {
           createdAt: projects.createdAt,
           publishStatus: projects.publishStatus,
           reviewerNote: projects.reviewerNote,
+          // Coords drive whether the project shows up in radius
+          // searches. NULL = invisible to "Near me" filters even if
+          // cityArea is set, so we want to flag this on the card.
+          latitude: projects.latitude,
+          longitude: projects.longitude,
         })
         .from(projects)
         .where(
@@ -85,6 +90,16 @@ export default async function SellerProjectsPage() {
                 </div>
                 <PublishStatusBadge status={project.publishStatus} />
               </div>
+              {(project.latitude == null || project.longitude == null) && (
+                <Link
+                  href={`/seller/projects/${project.slug}/edit`}
+                  className="inline-flex items-center gap-1.5 self-start rounded-md border border-amber-300 bg-amber-50 px-2 py-1 text-[11px] font-medium text-amber-800 hover:bg-amber-100 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-300 dark:hover:bg-amber-950/50"
+                  title={t("locationMissingHint")}
+                >
+                  <MapPinOff className="h-3 w-3" />
+                  {t("locationMissing")}
+                </Link>
+              )}
               <SubmitForReviewButton
                 projectIdOrSlug={project.slug}
                 status={project.publishStatus}
