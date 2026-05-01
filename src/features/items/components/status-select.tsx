@@ -1,8 +1,8 @@
 "use client";
 
-import { useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
+import { toast } from "sonner";
 import {
   Select,
   SelectContent,
@@ -22,24 +22,48 @@ interface StatusSelectProps {
 
 export function StatusSelect({ itemId, projectId, currentStatus }: StatusSelectProps) {
   const t = useTranslations("seller");
-  const router = useRouter();
+
+  // Optimistic UI: update the trigger immediately on click and let the
+  // server action revalidate in the background. Roll back on error.
+  const [optimistic, setOptimistic] = useState(currentStatus);
   const [isPending, startTransition] = useTransition();
 
+  // Resync from props if the server data changes for any reason
+  // (another tab, an admin override, etc.).
+  useEffect(() => {
+    setOptimistic(currentStatus);
+  }, [currentStatus]);
+
   function handleChange(newStatus: string | null) {
-    if (!newStatus || newStatus === currentStatus) return;
+    if (!newStatus || newStatus === optimistic || isPending) return;
+
+    const previous = optimistic;
+    setOptimistic(newStatus);
+
     startTransition(async () => {
       const formData = new FormData();
       formData.set("itemId", itemId);
       formData.set("projectId", projectId);
       formData.set("status", newStatus);
-      await updateItemStatusAction(formData);
-      router.refresh();
+
+      const result = await updateItemStatusAction(formData);
+
+      if (result && "error" in result && result.error) {
+        // Revert UI and surface the error. The server's revalidatePath
+        // will not have fired so the rest of the page stays consistent.
+        setOptimistic(previous);
+        toast.error(result.error);
+      }
+      // On success: no toast — the visible state change is feedback enough
+      // and we want to avoid noise on rapid status edits. The server has
+      // already revalidated so the rest of the row reflects side effects
+      // (sold buyer link, reservation cleared, etc.).
     });
   }
 
   return (
     <div className="relative inline-flex items-center gap-1.5">
-      <Select onValueChange={handleChange} defaultValue={currentStatus}>
+      <Select onValueChange={handleChange} value={optimistic} disabled={isPending}>
         <SelectTrigger className="h-7 w-[130px] text-xs">
           <SelectValue />
         </SelectTrigger>

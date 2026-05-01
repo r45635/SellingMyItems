@@ -5,7 +5,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { requireSeller } from "@/lib/auth";
 import { db } from "@/db";
 import { items, profiles, projects, sellerAccounts } from "@/db/schema";
-import { and, desc, eq, isNull, sql } from "drizzle-orm";
+import { and, asc, desc, eq, isNull, sql } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import { StatusSelect } from "@/features/items/components/status-select";
@@ -62,7 +62,12 @@ export default async function ProjectItemsPage({
           sql`sp.id = ${items.soldToUserId}`
         )
         .where(and(eq(items.projectId, project.id), isNull(items.deletedAt)))
-        .orderBy(desc(items.updatedAt))
+        // Stable order: items don't jump when their status (and updatedAt)
+        // changes. Matches the public project page sort. sortOrder is
+        // currently 0 for everyone but is reserved for a future
+        // drag-reorder UI; createdAt desc keeps newest items on top until
+        // then.
+        .orderBy(asc(items.sortOrder), desc(items.createdAt))
     : [];
 
   return (

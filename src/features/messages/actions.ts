@@ -32,7 +32,11 @@ function revalidateMessagePaths(threadId: string) {
   }
 }
 
-export async function sendMessageAction(formData: FormData) {
+type SendMessageResult = { ok: true } | { error: string };
+
+export async function sendMessageAction(
+  formData: FormData
+): Promise<SendMessageResult> {
   const user = await requireUser();
   const profileId = user.id;
 
@@ -41,7 +45,7 @@ export async function sendMessageAction(formData: FormData) {
     max: 20,
   });
   if (!rateCheck.ok) {
-    return;
+    return { error: "tooManyRequests" };
   }
 
   const threadId = String(formData.get("threadId") ?? "");
@@ -51,7 +55,7 @@ export async function sendMessageAction(formData: FormData) {
 
   const validated = messageSchema.safeParse({ body });
   if (!validated.success) {
-    return;
+    return { error: "invalidMessage" };
   }
 
   if (threadId) {
@@ -60,7 +64,7 @@ export async function sendMessageAction(formData: FormData) {
     });
 
     if (!thread) {
-      return;
+      return { error: "threadNotFound" };
     }
 
     const project = await db.query.projects.findFirst({
@@ -68,7 +72,7 @@ export async function sendMessageAction(formData: FormData) {
     });
 
     if (!project) {
-      return;
+      return { error: "projectNotFound" };
     }
 
     const sellerAccount = await db.query.sellerAccounts.findFirst({
@@ -82,7 +86,7 @@ export async function sendMessageAction(formData: FormData) {
     const isSeller = Boolean(sellerAccount);
 
     if (!isBuyer && !isSeller) {
-      return;
+      return { error: "forbidden" };
     }
 
     const now = new Date();
@@ -132,7 +136,7 @@ export async function sendMessageAction(formData: FormData) {
     }
 
     revalidateMessagePaths(thread.id);
-    return;
+    return { ok: true };
   }
 
   // Buyer flow: create/fetch thread from a project and send a message.
@@ -141,7 +145,7 @@ export async function sendMessageAction(formData: FormData) {
   });
 
   if (!project) {
-    return;
+    return { error: "projectNotFound" };
   }
 
   // Find or create thread
@@ -212,6 +216,7 @@ export async function sendMessageAction(formData: FormData) {
   }
 
   revalidateMessagePaths(thread.id);
+  return { ok: true };
 }
 
 // ─── Start conversation (buyer → seller, new thread) ───────────────────────

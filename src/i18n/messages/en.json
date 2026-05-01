@@ -178,6 +178,7 @@
     "filterAll": "All statuses",
     "filterAvailable": "Available",
     "filterReserved": "Reserved",
+    "filterReservedForYou": "Reserved for you",
     "filterSold": "Sold",
     "sortDefault": "Default order",
     "sortPriceAsc": "Price: low to high",
@@ -357,7 +358,9 @@
     "noThreadsSellerDesc": "Once a buyer reaches out about one of your projects, their message will appear here.",
     "filterAll": "All",
     "filterAsBuyer": "As buyer",
-    "filterAsSeller": "As seller"
+    "filterAsSeller": "As seller",
+    "errorSending": "Could not send your message. Please try again.",
+    "errorTooManyRequests": "You're sending messages too quickly. Please wait a moment."
   },
   "seller": {
     "dashboard": "Seller Dashboard",

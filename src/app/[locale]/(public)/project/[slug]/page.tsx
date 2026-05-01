@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { ItemTeaserCard } from "@/components/shared/item-teaser-card";
 import { ProjectItemsGrid } from "@/features/items/components/project-items-grid";
 import { InvitationGate } from "@/features/projects/components/invitation-gate";
@@ -13,12 +14,50 @@ import { getUser } from "@/lib/auth";
 import { computeProjectAccessState } from "@/lib/access";
 import { getTranslations } from "next-intl/server";
 
-export default async function ProjectPage({
+import { siteConfig } from "@/config";
+
+export async function generateMetadata({
   params,
 }: {
   params: Promise<{ slug: string; locale: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const project = await db.query.projects.findFirst({
+    where: and(
+      eq(projects.slug, slug),
+      eq(projects.isPublic, true),
+      eq(projects.publishStatus, "approved"),
+      isNull(projects.deletedAt)
+    ),
+    columns: {
+      name: true,
+      description: true,
+      cityArea: true,
+      isSeoIndexable: true,
+    },
+  });
+
+  if (!project) return {};
+
+  const noIndex = !project.isSeoIndexable;
+  return {
+    title: project.name,
+    description: project.description
+      ? project.description.slice(0, 160)
+      : `${project.name} — ${project.cityArea} · ${siteConfig.name}`,
+    robots: noIndex ? { index: false, follow: false } : undefined,
+  };
+}
+
+export default async function ProjectPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string; locale: string }>;
+  searchParams: Promise<{ status?: string }>;
 }) {
   const { slug, locale } = await params;
+  const { status } = await searchParams;
   const project = await db.query.projects.findFirst({
     where: and(
       eq(projects.slug, slug),
@@ -111,6 +150,20 @@ export default async function ProjectPage({
   const isLocked = isInvitationOnly && accessState !== "granted";
 
   const availableCount = projectItems.filter((i) => i.status === "available").length;
+  const reservedForCurrentUserCount = user
+    ? projectItems.filter(
+        (i) => i.status === "reserved" && i.reservedForUserId === user.id
+      ).length
+    : 0;
+
+  const initialStatusFilter =
+    status === "all" ||
+    status === "available" ||
+    status === "reserved" ||
+    status === "sold" ||
+    status === "reserved-for-you"
+      ? status
+      : "all";
 
   return (
     <div className="flex flex-col">
@@ -176,7 +229,10 @@ export default async function ProjectPage({
 
               {projectItems.length > 0 && !isLocked && (
                 <div className="flex items-center gap-2 pt-2 flex-wrap">
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg border border-border bg-white/70 text-sm">
+                  <Link
+                    href={`/project/${slug}?status=all#project-items`}
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg border border-border bg-white/70 text-sm hover:border-orange-300 hover:bg-orange-50 transition-colors"
+                  >
                     <Package className="h-3.5 w-3.5 text-muted-foreground" />
                     <span className="font-semibold tabular-nums">
                       {projectItems.length}
@@ -184,9 +240,12 @@ export default async function ProjectPage({
                     <span className="text-muted-foreground">
                       {t("itemCount", { count: projectItems.length })}
                     </span>
-                  </span>
+                  </Link>
                   {availableCount > 0 && (
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg border border-green-200 bg-green-50 text-sm dark:border-green-900 dark:bg-green-950/30">
+                    <Link
+                      href={`/project/${slug}?status=available#project-items`}
+                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg border border-green-200 bg-green-50 text-sm hover:border-green-300 hover:bg-green-100 dark:border-green-900 dark:bg-green-950/30 dark:hover:bg-green-950/40 transition-colors"
+                    >
                       <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block" />
                       <span className="font-bold tabular-nums text-green-700 dark:text-green-400">
                         {availableCount}
@@ -194,7 +253,21 @@ export default async function ProjectPage({
                       <span className="text-green-700/70 dark:text-green-400/70">
                         {t("filterAvailable").toLowerCase()}
                       </span>
-                    </span>
+                    </Link>
+                  )}
+                  {reservedForCurrentUserCount > 0 && (
+                    <Link
+                      href={`/project/${slug}?status=reserved-for-you#project-items`}
+                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg border border-red-200 bg-red-50 text-sm hover:border-red-300 hover:bg-red-100 dark:border-red-900 dark:bg-red-950/30 dark:hover:bg-red-950/40 transition-colors"
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-red-500 inline-block" />
+                      <span className="font-bold tabular-nums text-red-700 dark:text-red-400">
+                        {reservedForCurrentUserCount}
+                      </span>
+                      <span className="text-red-700/70 dark:text-red-400/70">
+                        {t("filterReservedForYou")}
+                      </span>
+                    </Link>
                   )}
                 </div>
               )}
@@ -241,7 +314,7 @@ export default async function ProjectPage({
         </div>
       </section>
 
-      <section className="py-8 md:py-10">
+      <section id="project-items" className="py-8 md:py-10 scroll-mt-24">
         <div className="container px-4 md:px-6">
           {isLocked ? (
             <InvitationGate
@@ -277,6 +350,7 @@ export default async function ProjectPage({
                 items={projectItems}
                 slug={slug}
                 userId={user.id}
+                initialStatusFilter={initialStatusFilter}
                 wishlistedItemIds={Array.from(wishlistedItemIds)}
                 labels={{
                   addToFavorites: tWishlist("addToFavorites"),

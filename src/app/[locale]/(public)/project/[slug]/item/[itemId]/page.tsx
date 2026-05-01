@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { getUser } from "@/lib/auth";
 import { computeProjectAccessState } from "@/lib/access";
 import { redirect } from "next/navigation";
@@ -34,6 +35,56 @@ import { and, eq, isNull, sql } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { ITEM_CONDITIONS } from "@/lib/validations";
+
+import { siteConfig } from "@/config";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string; itemId: string }>;
+}): Promise<Metadata> {
+  const { slug, itemId } = await params;
+
+  const row = await db
+    .select({
+      itemTitle: items.title,
+      itemDescription: items.description,
+      itemCoverImageUrl: items.coverImageUrl,
+      projectName: projects.name,
+      projectIsSeoIndexable: projects.isSeoIndexable,
+    })
+    .from(items)
+    .innerJoin(projects, eq(items.projectId, projects.id))
+    .where(
+      and(
+        eq(items.id, itemId),
+        eq(projects.slug, slug),
+        eq(projects.isPublic, true),
+        eq(projects.publishStatus, "approved"),
+        isNull(projects.deletedAt),
+        isNull(items.deletedAt)
+      )
+    )
+    .limit(1);
+
+  if (row.length === 0) return {};
+
+  const { itemTitle, itemDescription, itemCoverImageUrl, projectName, projectIsSeoIndexable } = row[0];
+  const noIndex = !projectIsSeoIndexable;
+
+  const ogImages = itemCoverImageUrl
+    ? [{ url: `${siteConfig.url}${itemCoverImageUrl}` }]
+    : undefined;
+
+  return {
+    title: `${itemTitle} — ${projectName}`,
+    description: itemDescription
+      ? itemDescription.slice(0, 160)
+      : `${itemTitle} for sale in ${projectName}`,
+    robots: noIndex ? { index: false, follow: false } : undefined,
+    openGraph: ogImages ? { images: ogImages } : undefined,
+  };
+}
 
 export default async function ItemPage({
   params,

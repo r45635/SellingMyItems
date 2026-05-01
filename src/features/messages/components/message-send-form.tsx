@@ -3,6 +3,7 @@
 import { useRef, useTransition } from "react";
 import { Send } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import { sendMessageAction } from "../actions";
 import { cn } from "@/lib/utils";
 
@@ -27,12 +28,21 @@ export function MessageSendForm({
   const formRef = useRef<HTMLFormElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [isPending, startTransition] = useTransition();
+  const t = useTranslations("messages");
 
   function handleSubmit(formData: FormData) {
     const body = String(formData.get("body") ?? "").trim();
     if (!body) return;
     startTransition(async () => {
-      await sendMessageAction(formData);
+      const result = await sendMessageAction(formData);
+      if (result && "error" in result) {
+        const errMessage =
+          result.error === "tooManyRequests"
+            ? t("errorTooManyRequests")
+            : t("errorSending");
+        toast.error(errMessage);
+        return;
+      }
       formRef.current?.reset();
       if (textareaRef.current) textareaRef.current.style.height = "auto";
       toast.success(sentMessage);

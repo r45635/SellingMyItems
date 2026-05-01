@@ -178,6 +178,7 @@
     "filterAll": "Tous les statuts",
     "filterAvailable": "Disponible",
     "filterReserved": "Réservé",
+    "filterReservedForYou": "Réservé pour vous",
     "filterSold": "Vendu",
     "sortDefault": "Ordre par défaut",
     "sortPriceAsc": "Prix croissant",
@@ -357,7 +358,9 @@
     "noThreadsSellerDesc": "Dès qu'un acheteur contactera l'un de vos projets, son message s'affichera ici.",
     "filterAll": "Tous",
     "filterAsBuyer": "En tant qu'acheteur",
-    "filterAsSeller": "En tant que vendeur"
+    "filterAsSeller": "En tant que vendeur",
+    "errorSending": "Impossible d'envoyer votre message. Veuillez réessayer.",
+    "errorTooManyRequests": "Vous envoyez des messages trop rapidement. Patientez un instant."
   },
   "seller": {
     "dashboard": "Tableau de bord vendeur",

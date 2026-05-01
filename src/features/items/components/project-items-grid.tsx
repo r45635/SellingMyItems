@@ -33,6 +33,7 @@ interface ProjectItemsGridProps {
   items: ProjectItem[];
   slug: string;
   userId?: string;
+  initialStatusFilter?: StatusFilter;
   wishlistedItemIds: string[];
   labels: {
     addToFavorites: string;
@@ -43,20 +44,39 @@ interface ProjectItemsGridProps {
   };
 }
 
-type StatusFilter = "all" | "available" | "pending" | "reserved" | "sold";
+type StatusFilter =
+  | "all"
+  | "available"
+  | "pending"
+  | "reserved"
+  | "sold"
+  | "reserved-for-you";
 type SortOption = "default" | "price-asc" | "price-desc" | "newest";
 
 export function ProjectItemsGrid({
   items,
   slug,
   userId,
+  initialStatusFilter = "all",
   wishlistedItemIds,
   labels,
 }: ProjectItemsGridProps) {
   const t = useTranslations("project");
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>(initialStatusFilter);
   const [sortOption, setSortOption] = useState<SortOption>("default");
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
+
+  const availableCount = useMemo(
+    () => items.filter((item) => item.status === "available").length,
+    [items]
+  );
+  const reservedForYouCount = useMemo(
+    () =>
+      items.filter(
+        (item) => item.status === "reserved" && item.reservedForUserId === userId
+      ).length,
+    [items, userId]
+  );
 
   const wishlistedSet = useMemo(
     () => new Set(wishlistedItemIds),
@@ -83,7 +103,11 @@ export function ProjectItemsGrid({
       result = result.filter((item) => item.categoryId === activeCategory);
     }
 
-    if (statusFilter !== "all") {
+    if (statusFilter === "reserved-for-you") {
+      result = result.filter(
+        (item) => item.status === "reserved" && item.reservedForUserId === userId
+      );
+    } else if (statusFilter !== "all") {
       result = result.filter((item) => item.status === statusFilter);
     }
 
@@ -102,7 +126,7 @@ export function ProjectItemsGrid({
     }
 
     return result;
-  }, [items, statusFilter, sortOption, activeCategory]);
+  }, [items, statusFilter, sortOption, activeCategory, userId]);
 
   return (
     <>
@@ -110,15 +134,64 @@ export function ProjectItemsGrid({
       <div className="flex flex-wrap items-center gap-3 mb-4">
         <div className="flex items-center gap-2">
           <Package className="h-5 w-5 text-orange-500" />
-          <h2 className="text-heading-4">
-            {items.length} {t("itemCount", { count: items.length })}
-          </h2>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setStatusFilter("all")}
+              className={cn(
+                "inline-flex items-center gap-1.5 px-3 py-1 rounded-lg border text-sm transition-colors",
+                statusFilter === "all"
+                  ? "border-orange-300 bg-orange-100 text-orange-700 dark:border-orange-800 dark:bg-orange-950/40 dark:text-orange-300"
+                  : "border-border bg-white/70 hover:bg-muted"
+              )}
+            >
+              <span className="font-semibold tabular-nums">{items.length}</span>
+              <span className="text-muted-foreground">
+                {t("itemCount", { count: items.length })}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setStatusFilter("available")}
+              className={cn(
+                "inline-flex items-center gap-1.5 px-3 py-1 rounded-lg border text-sm transition-colors",
+                statusFilter === "available"
+                  ? "border-green-300 bg-green-100 text-green-700 dark:border-green-900 dark:bg-green-950/40 dark:text-green-300"
+                  : "border-green-200 bg-green-50 text-green-700/90 dark:border-green-900 dark:bg-green-950/30 dark:text-green-300/90"
+              )}
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block" />
+              <span className="font-semibold tabular-nums">{availableCount}</span>
+              <span>{t("filterAvailable").toLowerCase()}</span>
+            </button>
+
+            {reservedForYouCount > 0 && (
+              <button
+                type="button"
+                onClick={() => setStatusFilter("reserved-for-you")}
+                className={cn(
+                  "inline-flex items-center gap-1.5 px-3 py-1 rounded-lg border text-sm transition-colors",
+                  statusFilter === "reserved-for-you"
+                    ? "border-red-300 bg-red-100 text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300"
+                    : "border-red-200 bg-red-50 text-red-700/90 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300/90"
+                )}
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-red-500 inline-block" />
+                <span className="font-semibold tabular-nums">{reservedForYouCount}</span>
+                <span>{t("filterReservedForYou")}</span>
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="flex items-center gap-2 ml-auto">
           <SlidersHorizontal className="h-4 w-4 text-muted-foreground hidden sm:block" />
 
-          <Select onValueChange={(v) => setStatusFilter((v ?? "all") as StatusFilter)} defaultValue="all">
+          <Select
+            onValueChange={(v) => setStatusFilter((v ?? "all") as StatusFilter)}
+            value={statusFilter}
+          >
             <SelectTrigger className="h-8 text-xs">
               <SelectValue />
             </SelectTrigger>
@@ -126,6 +199,9 @@ export function ProjectItemsGrid({
               <SelectItem value="all">{t("filterAll")}</SelectItem>
               <SelectItem value="available">{t("filterAvailable")}</SelectItem>
               <SelectItem value="reserved">{t("filterReserved")}</SelectItem>
+              {reservedForYouCount > 0 && (
+                <SelectItem value="reserved-for-you">{t("filterReservedForYou")}</SelectItem>
+              )}
               <SelectItem value="sold">{t("filterSold")}</SelectItem>
             </SelectContent>
           </Select>

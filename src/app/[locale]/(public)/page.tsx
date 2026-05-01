@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { db } from "@/db";
@@ -23,6 +24,19 @@ function formatCurrency(value: number, currency: string = "USD") {
 }
 
 const RADIUS_OPTIONS = [5, 10, 25, 50, 100] as const;
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "home" });
+  return {
+    title: t("hero"),
+    description: t("subtitle"),
+  };
+}
 
 export default async function HomePage({
   searchParams,
