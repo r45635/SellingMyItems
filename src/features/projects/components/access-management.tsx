@@ -63,7 +63,7 @@ type RequestRow = {
 type GrantRow = {
   id: string;
   userId: string;
-  source: "targeted_invitation" | "generic_request" | "seller_manual";
+  source: "targeted_invitation" | "generic_request" | "seller_manual" | "share_link";
   grantedAt: Date;
   email: string;
   displayName: string | null;
