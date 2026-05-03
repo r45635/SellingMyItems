@@ -68,6 +68,7 @@ export const accessGrantSourceEnum = pgEnum("access_grant_source", [
   "targeted_invitation",
   "generic_request",
   "seller_manual",
+  "share_link",
 ]);
 
 export const notificationTypeEnum = pgEnum("notification_type", [
@@ -557,6 +558,37 @@ export const projectAccessRequests = pgTable(
       table.userId,
       table.status
     ),
+  ]
+);
+
+// ─── Item Share Links ──────────────────────────────────────────────────────
+
+export const itemShareLinks = pgTable(
+  "item_share_links",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    itemId: uuid("item_id")
+      .notNull()
+      .references(() => items.id, { onDelete: "cascade" }),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    token: text("token").notNull().unique(),
+    createdBy: uuid("created_by")
+      .notNull()
+      .references(() => profiles.id, { onDelete: "cascade" }),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    revokedBy: uuid("revoked_by").references(() => profiles.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index("item_share_links_project_id_idx").on(table.projectId),
+    index("item_share_links_item_id_idx").on(table.itemId),
   ]
 );
 

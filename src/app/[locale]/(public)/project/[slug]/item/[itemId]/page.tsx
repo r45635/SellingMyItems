@@ -20,6 +20,7 @@ import {
   MessageCircle,
 } from "lucide-react";
 import { ItemDetailWishlistButton } from "@/features/wishlist/components/item-detail-wishlist-button";
+import { ShareItemDialog } from "@/features/items/components/share-item-dialog";
 import { ExpandableText } from "@/components/shared/expandable-text";
 import { db } from "@/db";
 import {
@@ -341,6 +342,7 @@ export default async function ItemPage({
                   className="w-full py-3 font-semibold"
                 />
               )}
+              <ShareItemDialog itemId={item.id} itemTitle={item.title} />
             </div>
 
             {isWishlisted && item.status === "available" && (

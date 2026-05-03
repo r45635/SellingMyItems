@@ -1,8 +1,9 @@
 import { db } from "@/db";
-import { profiles, sellerAccounts } from "@/db/schema";
-import { and, count, desc, eq, inArray } from "drizzle-orm";
+import { profiles, sellerAccounts, sessions } from "@/db/schema";
+import { and, count, desc, eq, inArray, max } from "drizzle-orm";
 import { ToggleActiveButton } from "./toggle-active-button";
 import { Pagination } from "@/components/shared/pagination";
+import { LocalizedDateTime } from "@/components/shared/localized-date-time";
 import { Shield, Tag, ShoppingCart } from "lucide-react";
 
 const PAGE_SIZE = 20;
@@ -37,17 +38,30 @@ export default async function AdminAccountsPage({
   // used to render the seller capability badge.
   const pageUserIds = allProfiles.map((p) => p.id);
   const sellerSet = new Set<string>();
+  const lastLoginMap = new Map<string, Date>();
+
   if (pageUserIds.length > 0) {
-    const sellerRows = await db
-      .select({ userId: sellerAccounts.userId })
-      .from(sellerAccounts)
-      .where(
-        and(
-          inArray(sellerAccounts.userId, pageUserIds),
-          eq(sellerAccounts.isActive, true)
-        )
-      );
+    const [sellerRows, lastLoginRows] = await Promise.all([
+      db
+        .select({ userId: sellerAccounts.userId })
+        .from(sellerAccounts)
+        .where(
+          and(
+            inArray(sellerAccounts.userId, pageUserIds),
+            eq(sellerAccounts.isActive, true)
+          )
+        ),
+      db
+        .select({ userId: sessions.userId, lastLoginAt: max(sessions.createdAt) })
+        .from(sessions)
+        .where(inArray(sessions.userId, pageUserIds))
+        .groupBy(sessions.userId),
+    ]);
+
     for (const row of sellerRows) sellerSet.add(row.userId);
+    for (const row of lastLoginRows) {
+      if (row.lastLoginAt) lastLoginMap.set(row.userId, row.lastLoginAt);
+    }
   }
 
   const totalItems = Number(totalCountResult[0]?.count ?? 0);
@@ -71,6 +85,7 @@ export default async function AdminAccountsPage({
               <th className="px-4 py-3 font-medium">Capabilities</th>
               <th className="px-4 py-3 font-medium">Status</th>
               <th className="px-4 py-3 font-medium">Created</th>
+              <th className="px-4 py-3 font-medium">Last login</th>
               <th className="px-4 py-3 font-medium">Action</th>
             </tr>
           </thead>
@@ -114,6 +129,13 @@ export default async function AdminAccountsPage({
                   </td>
                   <td className="px-4 py-3 text-muted-foreground text-xs">
                     {new Date(p.createdAt).toLocaleDateString("en-US")}
+                  </td>
+                  <td className="px-4 py-3 text-muted-foreground text-xs">
+                    {lastLoginMap.has(p.id) ? (
+                      <LocalizedDateTime value={lastLoginMap.get(p.id)!} />
+                    ) : (
+                      <span className="italic">Never</span>
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     {!p.isAdmin && (
