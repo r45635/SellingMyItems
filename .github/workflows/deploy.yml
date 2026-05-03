@@ -42,12 +42,12 @@ jobs:
             # easily several GB. Prune in escalating stages: images first
             # (cheap), stopped containers, then the builder cache only when
             # we're still below the headroom we want.
-            if [ "$AVAIL" -lt 3145728 ]; then
+            if [ "$AVAIL" -lt 4194304 ]; then
               echo "==> Low disk space detected (${AVAIL} KB), pruning Docker images..."
               docker image prune -af 2>/dev/null || true
               docker container prune -f 2>/dev/null || true
               AVAIL=$(df / | tail -1 | awk '{print $4}')
-              if [ "$AVAIL" -lt 2097152 ]; then
+              if [ "$AVAIL" -lt 3145728 ]; then
                 echo "==> Still low (${AVAIL} KB), pruning Docker builder cache..."
                 docker builder prune -af 2>/dev/null || true
                 AVAIL=$(df / | tail -1 | awk '{print $4}')
@@ -106,9 +106,14 @@ jobs:
               exit 1
             fi
 
-            # Post-deploy cleanup: remove only dangling images to preserve cache.
-            echo "==> Post-deploy prune (dangling only)..."
+            # Post-deploy cleanup: always purge dangling images AND the
+            # BuildKit builder cache. Next.js multi-stage builds can leave
+            # several GB of cache that accumulate silently between deploys
+            # on a small VPS disk. The next build will be ~30s slower but
+            # we avoid running out of space mid-build.
+            echo "==> Post-deploy prune (dangling images + builder cache)..."
             docker image prune -f 2>/dev/null || true
+            docker builder prune -f 2>/dev/null || true
 
             echo "==> Disk space AFTER deploy:"
             df -h / | tail -1
