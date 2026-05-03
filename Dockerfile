@@ -14,6 +14,8 @@ COPY . .
 ARG DATABASE_URL
 
 ENV DATABASE_URL=${DATABASE_URL}
+# Give the Next.js build worker enough heap for the TS type-check step.
+ENV NODE_OPTIONS=--max-old-space-size=2048
 
 RUN npm run build
 
