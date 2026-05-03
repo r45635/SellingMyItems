@@ -255,6 +255,7 @@ export const itemImages = pgTable("item_images", {
     .notNull()
     .references(() => items.id, { onDelete: "cascade" }),
   url: text("url").notNull(),
+  hdUrl: text("hd_url"),
   altText: text("alt_text"),
   sortOrder: integer("sort_order").default(0).notNull(),
   createdAt: timestamp("created_at", { withTimezone: true })

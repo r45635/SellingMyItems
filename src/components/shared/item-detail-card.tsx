@@ -8,7 +8,7 @@ import { ITEM_CONDITIONS } from "@/lib/validations";
 interface ItemDetailCardProps {
   title: string;
   coverImageUrl?: string | null;
-  images?: { url: string; alt?: string }[];
+  images?: { url: string; hdUrl?: string; alt?: string }[];
   links?: { url: string; label?: string }[];
   price?: number | null;
   originalPrice?: number | null;
@@ -69,7 +69,7 @@ export function ItemDetailCard({
     images.length > 0
       ? images
       : coverImageUrl
-        ? [{ url: coverImageUrl, alt: title }]
+        ? [{ url: coverImageUrl, hdUrl: undefined, alt: title }]
         : [];
 
   const statusLabel = t(status);

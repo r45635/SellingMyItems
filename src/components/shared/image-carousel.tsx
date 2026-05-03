@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import { BLUR_PLACEHOLDER } from "@/lib/image/placeholders";
 
 interface ImageCarouselProps {
-  images: { url: string; alt?: string }[];
+  images: { url: string; hdUrl?: string; alt?: string }[];
   title: string;
 }
 
@@ -201,7 +201,7 @@ export function ImageCarousel({ images, title }: ImageCarouselProps) {
           )}
           <div className="relative w-full h-full max-w-[90vw] max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
             <Image
-              src={images[current].url}
+              src={images[current].hdUrl ?? images[current].url}
               alt={images[current].alt ?? `${title} ${current + 1}`}
               fill
               className="object-contain"

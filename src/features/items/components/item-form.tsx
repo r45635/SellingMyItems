@@ -26,7 +26,7 @@ interface ItemFormProps {
   defaultValues?: Partial<ItemFormValues>;
   itemId?: string;
   categories?: { id: string; name: string }[];
-  existingImages?: { url: string; altText?: string | null }[];
+  existingImages?: { url: string; hdUrl?: string | null; altText?: string | null }[];
   existingLinks?: { url: string; label?: string | null }[];
   /** Defaults to the seller's profile-level preference; falls back to USD. */
   fallbackCurrency?: "USD" | "EUR" | "CAD";
@@ -43,8 +43,8 @@ export function ItemForm({
 }: ItemFormProps) {
   const t = useTranslations();
   const [serverError, setServerError] = useState("");
-  const [imageUrls, setImageUrls] = useState<string[]>(
-    existingImages.map((img) => img.url)
+  const [imageUrls, setImageUrls] = useState<{ url: string; hdUrl?: string }[]>(
+    existingImages.map((img) => ({ url: img.url, hdUrl: img.hdUrl ?? undefined }))
   );
   const [links, setLinks] = useState<{ url: string; label: string }[]>(
     existingLinks.map((l) => ({ url: l.url, label: l.label ?? "" }))
@@ -87,7 +87,10 @@ export function ItemForm({
       }
     });
     // Append image URLs
-    imageUrls.forEach((url) => formData.append("imageUrl", url));
+    imageUrls.forEach(({ url, hdUrl }) => {
+      formData.append("imageUrl", url);
+      formData.append("imageHdUrl", hdUrl ?? "");
+    });
 
     // Auto-add pending link input before submitting
     const allLinks = [...links];

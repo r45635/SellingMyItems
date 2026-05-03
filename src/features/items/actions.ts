@@ -79,11 +79,13 @@ export async function createItemAction(formData: FormData) {
 
   // Save image URLs
   const imageUrlValues = formData.getAll("imageUrl").map(String).filter(Boolean);
+  const imageHdUrlValues = formData.getAll("imageHdUrl").map(String);
   if (imageUrlValues.length > 0) {
     await db.insert(itemImages).values(
       imageUrlValues.map((url, idx) => ({
         itemId: createdItem.id,
         url,
+        hdUrl: imageHdUrlValues[idx] || null,
         sortOrder: idx,
       }))
     );
@@ -176,6 +178,13 @@ export async function updateItemAction(formData: FormData) {
 
   // Diff-based image update: only delete removed, insert new, update sort order
   const submittedUrls = formData.getAll("imageUrl").map(String).filter(Boolean);
+  const submittedHdUrls = formData.getAll("imageHdUrl").map(String);
+
+  // Build a map of url -> hdUrl for submitted images
+  const hdUrlMap = new Map<string, string | null>();
+  submittedUrls.forEach((url, idx) => {
+    hdUrlMap.set(url, submittedHdUrls[idx] || null);
+  });
 
   // Fetch current images from DB
   const currentImages = await db
@@ -207,6 +216,7 @@ export async function updateItemAction(formData: FormData) {
         toAdd.map((url) => ({
           itemId,
           url,
+          hdUrl: hdUrlMap.get(url) ?? null,
           sortOrder: 0, // Will be corrected below
         }))
       );

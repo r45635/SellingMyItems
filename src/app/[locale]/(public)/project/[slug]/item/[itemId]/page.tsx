@@ -197,9 +197,9 @@ export default async function ItemPage({
 
   const allImages =
     item.images.length > 0
-      ? item.images.map((img) => ({ url: img.url, alt: img.altText ?? undefined }))
+      ? item.images.map((img) => ({ url: img.url, hdUrl: img.hdUrl ?? undefined, alt: img.altText ?? undefined }))
       : item.coverImageUrl
-        ? [{ url: item.coverImageUrl, alt: item.title }]
+        ? [{ url: item.coverImageUrl, hdUrl: undefined, alt: item.title }]
         : [];
 
   const formattedPrice =

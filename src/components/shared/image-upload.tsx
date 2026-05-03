@@ -5,9 +5,11 @@ import { Upload, X, ImagePlus, Loader2, ChevronLeft, ChevronRight } from "lucide
 import { Button } from "@/components/ui/button";
 import imageCompression from "browser-image-compression";
 
+type UploadedImage = { url: string; hdUrl?: string };
+
 interface ImageUploadProps {
-  images: string[];
-  onChange: (images: string[]) => void;
+  images: UploadedImage[];
+  onChange: (images: UploadedImage[]) => void;
   maxImages?: number;
 }
 
@@ -73,7 +75,11 @@ export function ImageUpload({
           return;
         }
 
-        onChange([...imagesRef.current, ...data.urls]);
+        const newImages = (data.urls as string[]).map((url: string, i: number) => ({
+          url,
+          hdUrl: (data.hdUrls as string[] | undefined)?.[i] ?? undefined,
+        }));
+        onChange([...imagesRef.current, ...newImages]);
       } catch {
         setError("Network error during upload");
       } finally {
@@ -160,9 +166,9 @@ export function ImageUpload({
       {/* Image grid */}
       {images.length > 0 && (
         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
-          {images.map((url, idx) => (
+          {images.map((image, idx) => (
             <div
-              key={`${url}-${idx}`}
+              key={`${image.url}-${idx}`}
               className={`relative group aspect-square rounded-lg overflow-hidden border bg-muted transition-all ${
                 draggedIndex === idx ? "opacity-40 scale-95" : ""
               } ${dragOverIndex === idx && draggedIndex !== idx ? "ring-2 ring-primary" : ""}`}
@@ -174,7 +180,7 @@ export function ImageUpload({
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={url}
+                src={image.url}
                 alt={`Image ${idx + 1}`}
                 className="w-full h-full object-cover pointer-events-none"
               />

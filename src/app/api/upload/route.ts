@@ -16,8 +16,10 @@ const ALLOWED_TYPES = [
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 MB (raw from phone camera)
 const MAX_FILES_PER_REQUEST = 8;
-const MAX_DIMENSION = 1920; // Max width or height after resize
-const WEBP_QUALITY = 75;
+const STD_DIMENSION = 1024; // Standard display resolution
+const STD_QUALITY = 72;
+const HD_DIMENSION = 1920; // Full-resolution variant for zoom
+const HD_QUALITY = 80;
 
 export async function POST(request: NextRequest) {
   const user = await getUser();
@@ -59,6 +61,7 @@ export async function POST(request: NextRequest) {
   await mkdir(uploadDir, { recursive: true });
 
   const urls: string[] = [];
+  const hdUrls: string[] = [];
 
   for (const file of files) {
     if (!ALLOWED_TYPES.includes(file.type)) {
@@ -77,25 +80,43 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const fileName = `${randomUUID()}.webp`;
-    const filePath = path.join(uploadDir, fileName);
+    const uuid = randomUUID();
+    const stdFileName = `${uuid}.webp`;
+    const hdFileName = `${uuid}_hd.webp`;
+    const stdPath = path.join(uploadDir, stdFileName);
+    const hdPath = path.join(uploadDir, hdFileName);
 
     const rawBuffer = Buffer.from(await file.arrayBuffer());
 
-    // Resize to max 1920px, convert to WebP, strip all EXIF/GPS metadata
-    const processed = await sharp(rawBuffer)
-      .rotate() // Auto-rotate based on EXIF orientation before stripping
-      .resize(MAX_DIMENSION, MAX_DIMENSION, {
+    // Auto-rotate once from EXIF, then branch into two variants
+    const rotated = sharp(rawBuffer).rotate();
+
+    // Standard variant: 1024px, quality 72 — fast to load for normal display
+    const stdProcessed = await rotated
+      .clone()
+      .resize(STD_DIMENSION, STD_DIMENSION, {
         fit: "inside",
         withoutEnlargement: true,
       })
-      .webp({ quality: WEBP_QUALITY, effort: 6 })
+      .webp({ quality: STD_QUALITY, effort: 6 })
       .toBuffer();
 
-    await writeFile(filePath, processed);
+    // HD variant: 1920px, quality 80 — loaded only when user opens fullscreen zoom
+    const hdProcessed = await rotated
+      .clone()
+      .resize(HD_DIMENSION, HD_DIMENSION, {
+        fit: "inside",
+        withoutEnlargement: true,
+      })
+      .webp({ quality: HD_QUALITY, effort: 6 })
+      .toBuffer();
 
-    urls.push(`/uploads/${fileName}`);
+    await writeFile(stdPath, stdProcessed);
+    await writeFile(hdPath, hdProcessed);
+
+    urls.push(`/uploads/${stdFileName}`);
+    hdUrls.push(`/uploads/${hdFileName}`);
   }
 
-  return NextResponse.json({ urls });
+  return NextResponse.json({ urls, hdUrls });
 }

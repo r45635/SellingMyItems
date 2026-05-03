@@ -52,7 +52,7 @@ export default async function EditItemPage({
     .orderBy(asc(projectCategories.sortOrder), asc(projectCategories.name));
 
   const existingImages = await db
-    .select({ url: itemImages.url, altText: itemImages.altText })
+    .select({ url: itemImages.url, altText: itemImages.altText, hdUrl: itemImages.hdUrl })
     .from(itemImages)
     .where(eq(itemImages.itemId, itemId))
     .orderBy(asc(itemImages.sortOrder));
