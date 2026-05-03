@@ -81,7 +81,7 @@
     "password": "Password",
     "confirmPassword": "Confirm password",
     "passwordMismatch": "Passwords do not match",
-    "passwordTooShort": "Password must be at least 6 characters",
+    "passwordTooShort": "Password must be at least 8 characters",
     "emailTaken": "An account with this email already exists",
     "invalidCredentials": "Invalid email or password",
     "accountDisabled": "This account has been disabled",
@@ -171,7 +171,21 @@
     "confirmPassword": "Confirm new password",
     "signOutOtherDevices": "Sign out of other devices",
     "passwordChanged": "Password changed.",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "deleteAccount": "Delete account",
+    "deleteAccountDesc": "Permanently delete your account and all your data. This action is irreversible.",
+    "deleteAccountWarning": "This will permanently delete your profile, all your listings, messages, and uploaded files. This cannot be undone.",
+    "deleteAccountConfirm": "Enter your password to confirm deletion",
+    "deleteAccountButton": "Delete my account permanently",
+    "deleting": "Deleting…",
+    "errorInvalidPassword": "Incorrect password. Please try again.",
+    "errorPasswordRequired": "Please enter your password to confirm.",
+    "exportData": "Download my data",
+    "exportDataDesc": "Download a JSON archive of all your personal data: profile, listings, messages, intents, wishlist, and email history. GDPR Art. 20 — right to data portability.",
+    "exportDataButton": "Download my data",
+    "exportDataLoading": "Preparing\u2026",
+    "exportDataRateLimit": "You already requested an export recently. Please wait {hours, plural, one {1 hour} other {{hours} hours}} before requesting another.",
+    "exportDataError": "An error occurred. Please try again."
   },
   "project": {
     "title": "Project",
@@ -588,5 +602,53 @@
     "revokeLink": "Revoke",
     "revokeConfirm": "Revoke this link? It will no longer be accessible.",
     "revokeSuccess": "Link revoked"
+  },
+  "footer": {
+    "privacy": "Privacy Policy",
+    "terms": "Terms of Use"
+  },
+  "cookieNotice": {
+    "text": "By signing in you agree to our {privacy} and our use of a session cookie to keep you authenticated."
+  },
+  "privacy": {
+    "title": "Privacy Policy",
+    "lastUpdated": "Last updated: June 2025",
+    "intro": "SellingMyItems is committed to protecting your personal data. This policy explains what we collect, why, and what rights you have under the GDPR and applicable law.",
+    "controllerTitle": "Data Controller",
+    "controllerText": "The data controller is the operator of this SellingMyItems instance. For data requests, contact the administrator via the address in transactional emails you receive.",
+    "dataTitle": "Data We Collect",
+    "dataText": "Account data (email, display name, password hash, phone number); location data (country, postal code, approximate coordinates via OpenStreetMap); usage data (listings, intents, messages, wishlist); session token in an httpOnly cookie; email notification logs (retained 90 days).",
+    "purposeTitle": "Why We Process Your Data",
+    "purposeText": "Authentication and session management (contract); displaying listings and connecting buyers/sellers (contract); transactional emails (contract/legitimate interests); proximity search geocoding (contract); abuse prevention (legitimate interests).",
+    "thirdPartyTitle": "Third-Party Processors",
+    "thirdPartyText": "Resend (resend.com) — email delivery. Your email is transmitted solely to deliver emails you trigger. Resend is GDPR-compliant and acts as a data processor. OpenStreetMap/Nominatim — postal code geocoding. Your country and postal code are sent to the public Nominatim API; no personal identifiers are included.",
+    "retentionTitle": "Retention",
+    "retentionText": "Account data is kept until you delete your account. Sessions expire after 30 days. Email logs are purged after 90 days. Listings are kept until deleted by you or an administrator.",
+    "rightsTitle": "Your Rights (GDPR)",
+    "rightsText": "Access (Art. 15): export your data from account settings. Rectification (Art. 16): update your profile at any time. Erasure (Art. 17): delete your account and all data from settings. Portability (Art. 20): download a machine-readable export. Objection/Restriction (Art. 21/18): contact the administrator.",
+    "cookiesTitle": "Cookies",
+    "cookiesText": "We use a single strictly necessary httpOnly SameSite=Lax session cookie named session_token. No analytics, tracking, or third-party cookies are used.",
+    "contactTitle": "Contact",
+    "contactText": "To exercise your rights, use the Data Export or Delete Account features in your account settings, or contact the administrator via the email address in transactional emails."
+  },
+  "terms": {
+    "title": "Terms of Use",
+    "lastUpdated": "Last updated: June 2025",
+    "acceptanceTitle": "Acceptance",
+    "acceptanceText": "By creating an account or using SellingMyItems you agree to these terms. If you do not agree, do not use the Service.",
+    "descriptionTitle": "Service Description",
+    "descriptionText": "SellingMyItems is a private marketplace platform for sellers to list items and buyers to browse and contact sellers. The Service is provided as-is for personal, non-commercial use.",
+    "accountTitle": "Accounts",
+    "accountText": "Provide accurate information when creating an account. You are responsible for your credentials. Do not create accounts for others without their consent.",
+    "contentTitle": "User Content",
+    "contentText": "You retain ownership of your content (descriptions, photos). By posting, you grant the Service a limited licence to display your content to other users. Do not post illegal, offensive, or infringing content.",
+    "prohibitedTitle": "Prohibited Uses",
+    "prohibitedText": "You may not use the Service to violate any law, send spam, attempt unauthorised access to any account or system, or scrape data automatically.",
+    "liabilityTitle": "Limitation of Liability",
+    "liabilityText": "The Service is provided without warranties. The operator is not liable for transactions between users or for indirect or consequential damages.",
+    "terminationTitle": "Termination",
+    "terminationText": "We may suspend or terminate accounts that violate these terms. You may delete your account at any time from account settings.",
+    "changesTitle": "Changes",
+    "changesText": "We may update these terms. Continued use after changes constitutes acceptance."
   }
 }

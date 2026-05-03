@@ -56,10 +56,12 @@ A user can hold multiple capabilities simultaneously (e.g. a seller is also a bu
 | **Database** | PostgreSQL Alpine (Docker) | 16 |
 | **ORM** | Drizzle ORM (`postgres-js` driver) | 0.45.2 |
 | **Auth** | Self-hosted bcryptjs + PostgreSQL sessions | bcryptjs 3.0.3 |
+| **Cache / Rate limit** | Redis (ioredis), graceful in-memory fallback | ioredis 5.x |
 | **Image processing** | sharp (WebP conversion, resize, EXIF strip) | 0.34.5 |
 | **Storage** | Local filesystem (`/app/public/uploads`) | — |
 | **i18n** | next-intl (English + French) | 4.9.0 |
 | **Validation** | Zod + React Hook Form | Zod 4.3.6 |
+| **PDF** | @react-pdf/renderer (server-side PDF generation) | 4.3.3 |
 | **Email** | Resend (transactional, API key managed via admin UI) | 6.10.0 |
 | **Deploy** | Docker multi-stage build + Caddy 2 reverse proxy on VPS | — |
 | **CI/CD** | GitHub Actions (SSH-based auto-deploy on push to main) | — |
@@ -102,6 +104,7 @@ A user can hold multiple capabilities simultaneously (e.g. a seller is also a bu
 - **Sold with traceability** — when marking a reserved item as sold, the reserved buyer is auto-carried to sold-to
 - **Reservation recap** — send a recap email to a specific buyer; the recap is also posted as a regular seller message into the in-app conversation thread; optional PDF attachment
 - **PDF export** — checkbox-select items on the items page (or quick "All / Reserved only" filters), then **Download** or **Email PDF** to any address. Cover page + per-item page (image, gallery 2-up, attributes, description, links). Uses `@react-pdf/renderer` server-side; WebP uploads are normalized to PNG via sharp before embedding.
+- **Share links** — generate a short-lived (30-day) per-item share link for invitation-only projects. Buyers who open the link see an item teaser; authenticated buyers auto-claim access to the project and are redirected to the item detail page. Sellers manage active/revoked links at `/seller/projects/[id]/share-links`.
 - **Messaging** — reply to buyer threads, email notifications (throttled 5 min)
 - **Dashboard** — listed-value stat with **per-currency breakdown** (USD/EUR/CAD totals shown side-by-side instead of an arbitrary single currency), 6 stat cards (listed value / items / views / wishlisted / intents / conversations), per-project health bar (proportional segments for available/pending/reserved/sold)
 - **View tracking** — see how many views each item has received
@@ -125,6 +128,8 @@ A user can hold multiple capabilities simultaneously (e.g. a seller is also a bu
 - **Dark mode** — system-preference-based theming, orange accent preserved in dark
 - **Image optimization** — auto-resize to 1920px max, WebP conversion, quality 75, EXIF stripping
 - **Rate limiting** — in-memory rate limiting on auth actions (sign up/in/forgot/reset/change), uploads, messages, intents; Nominatim geocoding gated to 1 req/s globally per Node process
+- **HTTP security headers** — `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, and `Permissions-Policy` (camera/mic/geo off) on all routes
+- **GDPR compliance** — cookie notice on login/signup; Privacy Policy (`/privacy`) and Terms of Use (`/terms`) pages (EN + FR); account deletion with password confirmation (cascades all data, removes uploaded files, purges email logs); email logs auto-purged after **90 days** on each deploy
 - **Email notifications** — welcome, message notification (throttled 1/5min), intent received, intent status change, message copy, password reset, reservation recap, project invitation/access events
 - **Auto migrations on deploy** — `scripts/run-migrations.sh` applies any new `src/db/migrations/*.sql` between `docker compose up` and the `/api/health` curl, with a `_applied_migrations` tracking table so re-runs are no-ops
 
@@ -335,6 +340,9 @@ SellingMyItems/
 | `/signup` | Sign up — every account can buy; selling unlocks on first listing. Supports `?returnTo=` redirect |
 | `/forgot-password` | Request password reset email |
 | `/reset-password?token=...` | Reset password with valid token |
+| `/privacy` | GDPR-compliant Privacy Policy (EN + FR) |
+| `/terms` | Terms of Use (EN + FR) |
+| `/share/[token]` | Share link landing page — item teaser for guests, auto-claim for authenticated users |
 | `/project/[slug]` | Project page — guests see blurred items with sign-in CTA; auth users see full grid |
 | `/project/[slug]/item/[itemId]` | Item detail — full gallery, prices, condition, status alerts |
 
@@ -342,13 +350,15 @@ SellingMyItems/
 
 | Route | Description |
 |---|---|
-| `/account` | Edit profile (display name, phone with country-prefix validation), email visibility, communication preferences (locale / distance unit / default currency), and location (country + postal code) |
+| `/account` | Edit profile (display name, phone with country-prefix validation), email visibility, communication preferences (locale / distance unit / default currency), location (country + postal code), and **delete account** (password-confirmed, irreversible) |
 | `/wishlist` | Saved items grouped by project, with pricing summary and intent submission |
 | `/my-intents` | Buyer purchase-intent hub — Active / Archived tabs, status pills, cancel-pending, archive-finalized, re-send-from-project; reviewer note from declined intents shown inline |
+| `/my-projects` | Buyer projects hub — all projects the signed-in user has access to (public + invitation-only), with wishlist/intent/thread counts, access status badge, and filter chips |
 | `/reservations` | Items reserved for you, grouped by project |
 | `/purchases` | Purchase history (items sold to you), grouped by project |
 | `/messages` | Unified inbox — buyer + seller threads with side pills, status filter tabs, global unread badge |
 | `/messages/[threadId]` | Thread detail — read and reply (buyer side) |
+| `/notifications` | In-app notification centre — access events (invitation received, grant, revoke), mark-read actions |
 
 ### Seller Routes
 
@@ -361,6 +371,9 @@ SellingMyItems/
 | `/seller/projects/[id]/items` | List items in project, with inline status changes and buyer linking |
 | `/seller/projects/[id]/items/new` | Create item |
 | `/seller/projects/[id]/items/[itemId]/edit` | Edit item (all fields, images, links) |
+| `/seller/projects/[id]/access` | Manage invitations and access requests for invitation-only projects |
+| `/seller/projects/[id]/share-links` | Manage per-item share links — generate, copy, revoke |
+| `/seller/projects/[id]/reservations` | Per-project reservations view |
 | `/seller/intents` | Buyer purchase intents — Active / Archived tabs, status filter chips, accept / decline-with-note / partial-reserve, "Message buyer" deep-link |
 | `/seller/messages` | Seller message inbox |
 | `/seller/messages/[threadId]` | Seller thread detail |
@@ -390,14 +403,14 @@ SellingMyItems/
 | `project_publish_status` | `draft`, `pending`, `approved`, `rejected` |
 | `invitation_status` | `active`, `used`, `expired`, `revoked` |
 | `access_request_status` | `pending`, `approved`, `declined`, `cancelled` |
-| `access_grant_source` | `targeted_invitation`, `generic_request`, `seller_manual` |
+| `access_grant_source` | `targeted_invitation`, `generic_request`, `seller_manual`, `share_link` |
 | `notification_type` | `invitation_received`, `access_granted`, `access_declined`, `access_revoked`, `access_requested` |
 | `email_visibility` | `hidden`, `direct` |
 | `currency_code` | `USD`, `EUR`, `CAD` |
 | `email_type` | `welcome`, `message_notification`, `message_copy`, `intent_received`, `intent_status`, `password_reset`, `reservation_recap`, `invitation_sent`, `access_granted`, `access_declined`, `access_revoked`, `access_requested`, `inbound_relay` (kept, unused) |
 | `email_status` | `sent`, `failed` |
 
-### Tables (25)
+### Tables (26)
 
 Core domain:
 
@@ -435,6 +448,7 @@ Geo + messaging + invitations + admin:
 | `project_access_requests` | projectId, userId, status, codeUsed, message, invitationId | Pending requests to join an invitation-only project |
 | `notifications` | userId, type, title, body, linkUrl, projectId, readAt | In-app notifications (access events) |
 | `email_logs` | toEmail, subject, type, status, errorMessage, resendId | Email sending logs |
+| `item_share_links` | itemId, projectId, token (unique), createdBy, expiresAt, revokedAt, revokedBy | Per-item share link tokens (30-day validity). Claiming a link auto-grants the viewer access to the parent project (`access_grant_source = 'share_link'`). |
 | `app_settings` | key (unique), value, updatedBy | Admin-managed settings (e.g. Resend API key) |
 
 ### Migrations (23 files)
@@ -466,6 +480,8 @@ Numbered SQL files in `src/db/migrations/`. Notable steps:
 | `0020` | Intents redesign: `archived_at` + `archived_by` + `reviewer_note` on `buyer_intents`, `intent_id` FK on `conversation_threads`, hot-path indexes, `cancelled` value added to `intent_status` enum. |
 | `0021` | Promote `items.currency` from text to a `currency_code` enum (USD/EUR/CAD). Add per-user communication prefs on `profiles`: `preferred_locale`, `distance_unit`, `default_currency`. |
 | `0022` | Enable `cube` + `earthdistance` extensions. Location columns (`country_code`, `postal_code`, `latitude`, `longitude`) on `profiles` and `projects`, plus `radius_km` on `projects`. New `geocoded_locations` cache table. GiST index on project coords for fast radius queries. |
+| `0023` | Add `share_link` to `access_grant_source` enum. New `item_share_links` table (UUID PK, item/project/user FKs, unique token, expiry + revocation timestamps). |
+| `0024` | Create `purge_old_email_logs()` PostgreSQL function and run an initial purge. Email logs older than 90 days are removed on each deploy (`scripts/run-migrations.sh`). |
 
 ---
 
@@ -473,7 +489,7 @@ Numbered SQL files in `src/db/migrations/`. Notable steps:
 
 ### Auth Flow
 
-1. **Sign up**: Email + password (min 6 chars) + confirm password → bcrypt (12 rounds) → profile created with `is_admin = false` (selling unlocks later, on first project creation); "email already in use" surfaces inline CTAs to sign in or reset
+1. **Sign up**: Email + password (min **8** chars) + confirm password → bcrypt (12 rounds) → profile created with `is_admin = false` (selling unlocks later, on first project creation); "email already in use" surfaces inline CTAs to sign in or reset
 2. **Sign in**: Email + password → bcrypt compare → create session (30-day, `crypto.randomBytes(32)` token); login + signup share a split-screen layout (brand panel + form)
 3. **Session**: `session_token` httpOnly cookie, sameSite: lax, secure in production
 4. **Sign out**: Delete session from DB + clear cookie
@@ -609,7 +625,7 @@ docker exec -i sellingmyitems-db-1 psql -U sellingmyitems -d sellingmyitems < mi
 # Promote user to admin (the only role flip that still requires SQL —
 # selling is open to every signed-in user, no seller flip needed)
 docker exec sellingmyitems-db-1 psql -U sellingmyitems -d sellingmyitems \
-  -c "UPDATE profiles SET role = 'admin' WHERE email = 'admin@example.com';"
+  -c "UPDATE profiles SET is_admin = true WHERE email = 'admin@example.com';"
 
 # Check app health
 ssh root@VPS_IP "curl -sf http://localhost:5050 && echo OK"
@@ -714,6 +730,9 @@ Use this checklist when transferring the project to a different VPS or GitHub ac
 | **1 intent per buyer/project** | Prevents spam — a buyer can have only 1 active (submitted/reviewed) intent per project |
 | **Reservation → sold traceability** | When marking a reserved item as sold, the reserved buyer automatically becomes the sold-to buyer |
 | **Email throttling** | Message notifications limited to 1 per 5 minutes globally to avoid flooding inboxes |
+| **Email log retention** | `email_logs` rows are purged after 90 days on each deploy (GDPR Art. 5 storage limitation) |
+| **HTTP security headers** | `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy`, `Permissions-Policy` applied globally via `next.config.ts` |
+| **Account deletion** | Users can permanently delete their account from `/account` — cascades all DB data and removes uploaded files |
 
 ---
 

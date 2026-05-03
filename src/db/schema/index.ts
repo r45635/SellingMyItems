@@ -117,6 +117,8 @@ export const profiles = pgTable("profiles", {
   latitude: doublePrecision("latitude"),
   longitude: doublePrecision("longitude"),
   locationUpdatedAt: timestamp("location_updated_at", { withTimezone: true }),
+  // GDPR Art. 20 — rate-limit data exports to 1 per 24 h.
+  lastDataExportAt: timestamp("last_data_export_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),
@@ -905,4 +907,26 @@ export const conversationMessagesRelations = relations(
       references: [profiles.id],
     }),
   })
+);
+
+// ─── Deletion Log (GDPR Art. 17) ────────────────────────────────────────────
+// Audit trail for account deletions. The email is stored as a SHA-256 hex
+// hash so we can confirm an erasure occurred without re-identifying the user.
+
+export const deletionLog = pgTable(
+  "deletion_log",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    emailHash: text("email_hash").notNull(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    itemsCount: integer("items_count").default(0).notNull(),
+    imagesCount: integer("images_count").default(0).notNull(),
+    messagesCount: integer("messages_count").default(0).notNull(),
+    intentsCount: integer("intents_count").default(0).notNull(),
+  },
+  (table) => [
+    index("deletion_log_deleted_at_idx").on(table.deletedAt),
+  ]
 );

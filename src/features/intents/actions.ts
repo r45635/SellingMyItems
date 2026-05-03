@@ -90,7 +90,7 @@ export async function submitIntentAction(formData: FormData) {
   const user = await requireUser();
   const profileId = user.id;
 
-  const rateCheck = consumeRateLimit(`intents:submit:user:${profileId}`, {
+  const rateCheck = await consumeRateLimit(`intents:submit:user:${profileId}`, {
     windowMs: 10 * 60 * 1000,
     max: 8,
   });

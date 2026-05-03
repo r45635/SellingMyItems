@@ -13,13 +13,17 @@ This guide covers how to use SellingMyItems from each perspective: **buyer**, **
 - [For Buyers](#for-buyers)
   - [Getting Started](#getting-started)
   - [Browsing Projects & Items](#browsing-projects--items)
+  - [Accessing Shared Items](#accessing-shared-items)
+  - [My Projects](#my-projects)
   - [Wishlist](#wishlist)
   - [Purchase Intents](#purchase-intents)
   - [Reservations](#reservations)
   - [Purchase History](#purchase-history)
   - [Messaging](#messaging)
+  - [Notifications](#notifications)
   - [Account Management](#account-management)
   - [Password Reset](#password-reset)
+  - [Language Support](#language-support)
 - [For Sellers](#for-sellers)
   - [Becoming a Seller](#becoming-a-seller)
   - [Projects](#projects)
@@ -29,6 +33,8 @@ This guide covers how to use SellingMyItems from each perspective: **buyer**, **
   - [Reserving Items for Buyers](#reserving-items-for-buyers)
   - [Manually Linking a Buyer](#manually-linking-a-buyer)
   - [Marking Items as Sold](#marking-items-as-sold)
+  - [Share Links](#share-links)
+  - [Managing Invitations & Access Requests](#managing-invitations--access-requests)
   - [Messaging Buyers](#messaging-buyers)
 - [For Admins](#for-admins)
   - [Accessing the Admin Dashboard](#accessing-the-admin-dashboard)
@@ -43,7 +49,7 @@ This guide covers how to use SellingMyItems from each perspective: **buyer**, **
 
 ### Getting Started
 
-1. **Sign up** at `/signup` — enter your email, choose a password (min 6 characters), and optionally a display name.
+1. **Sign up** at `/signup` — enter your email, choose a password (min **8** characters), and optionally a display name.
 2. You can browse, wishlist, and contact sellers right away. If you ever want to sell something yourself, just hit **"Sell"** from the home or the avatar menu — your seller capability unlocks automatically when you submit your first project.
 3. After signing up, you receive a **welcome email** (if email sending is configured).
 
@@ -63,6 +69,29 @@ This guide covers how to use SellingMyItems from each perspective: **buyer**, **
   - Status banner — if the item is reserved for you, you see a personalized "Reserved for you" message
   - External reference links
   - Wishlist heart button
+
+### Accessing Shared Items
+
+Sellers can share a private (invitation-only) project item with you via a **share link** — a URL of the form `/share/<token>`.
+
+1. Open the share link in your browser.
+2. If you **are not logged in**, you see a teaser card with the item title, price and cover image, plus a **"Sign in"** prompt.
+3. If you **are logged in**, access is granted automatically and you are redirected to the full item detail page inside the project. No extra steps required.
+
+Share links are valid for **30 days** from the moment the seller generated them. If the link has expired or been revoked by the seller, you see an "Invalid or expired link" message.
+
+The share page is **not indexed by search engines** (robots: noindex), so your access stays private.
+
+### My Projects
+
+The **My projects** hub (`/my-projects`) shows every project you have a relationship with:
+
+- **Public projects** you have wishlisted, expressed an intent on, or messaged the seller about
+- **Invitation-only projects** you have been granted access to (via a direct invitation, an accepted access request, or a share link)
+
+Each card shows the project name, location, and three quick counters (wishlisted items, intents, messages). An **access status badge** indicates your standing: Granted, Pending approval, or Declined.
+
+Use the **filter chips** at the top to narrow to Public-only, Invitation-only, or a combination.
 
 ### Wishlist
 
@@ -129,6 +158,16 @@ You can exchange messages with sellers about specific projects:
 6. **System messages in-thread**: when the seller accepts, declines, or you cancel an intent, a marker is auto-posted into the thread (✅ accepted, ❌ declined with optional note, 🚫 cancelled, 📋 reserved). These count as unread, so the inbox surfaces state changes the same way it surfaces normal replies.
 7. **Email notifications**: when the other party replies, you receive an email **in your preferred language** (set in `/account`), throttled to max 1 every 5 minutes to avoid flooding.
 
+### Notifications
+
+The **Notifications** page (`/notifications`) collects in-app access events:
+
+- Invitation received for an invitation-only project
+- Access request approved or declined by the seller
+- Access revoked by the seller
+
+Unread notifications are flagged with a badge on the bell icon in the navigation bar. On the notifications page you can **mark individual notifications as read** or use **"Mark all as read"** to clear the badge in one click.
+
 ### Account Management
 
 Edit your profile at `/account`. The page is divided into four sections:
@@ -147,6 +186,20 @@ Edit your profile at `/account`. The page is divided into four sections:
 - **Default selling currency** — `USD` / `EUR` / `CAD`. Pre-fills the currency dropdown when you create an item; you can still override per item.
 
 **Password**
+
+- **Change password**: from the Account page, enter your current password then choose a new one (min 8 characters). Check "Sign out of other devices" to invalidate all other active sessions.
+
+**Delete account**
+
+- The **Delete account** section is at the bottom of the `/account` page.
+- Click **Delete account**, then enter your current password to confirm. This action is **irreversible**.
+- Everything is erased: your profile, all your listings, messages, intents, wishlist, uploaded images and files, and email history. Sessions are closed immediately.
+- If you want to keep a copy of your data first, contact the platform admin before proceeding.
+
+**Privacy & Legal**
+
+- Read the [Privacy Policy](/privacy) to understand what data is collected and how long it is retained.
+- Read the [Terms of Use](/terms) for the platform rules.
 
 ### Password Reset
 
@@ -256,6 +309,41 @@ Two ways:
 2. **From the buyer link form**: When an item is reserved and linked to a buyer, a **"Mark as Sold"** button appears. Clicking it transitions the item to sold with full buyer traceability.
 
 Once sold, the item appears in the buyer's `/purchases` page.
+
+### Share Links
+
+Share links let you send a private URL to someone so they can access an **invitation-only** project item without going through the standard access-request flow.
+
+**Generating a share link**
+
+1. Go to `/seller/projects/[id]/share-links`.
+2. Click **"Generate share link"** next to the item you want to share. A new token is created on the spot.
+3. Click the **copy icon** to copy the full URL to your clipboard, then paste it into an email, a WhatsApp message, etc.
+
+**What happens when the recipient opens the link**
+
+- **Unauthenticated visitor** — sees a teaser (cover image, title, price) and a prompt to sign in.
+- **Authenticated user** — access is granted instantly and they land on the full item detail page.
+
+**Revoking a share link**
+
+On the share-links management page, click **"Revoke"** next to any active link. The link stops working immediately. Buyers who already claimed access keep their access (they're already in your project's access-grants list), but they can no longer share the link further.
+
+**Expiry**
+
+Links expire **30 days** after creation. Expired links are shown greyed-out on the management page and cannot be claimed.
+
+**Multiple links per item**: you can generate several links for the same item (e.g. one per person you're sharing with). Revoke individually as needed.
+
+### Managing Invitations & Access Requests
+
+For **invitation-only** projects you can control exactly who gets in from the **Access** page at `/seller/projects/[id]/access`:
+
+- **Pending requests** — buyers who asked to join; you can **Approve** or **Decline** (with an optional note that is shown to the buyer).
+- **Granted access** — list of buyers who already have access; you can **Revoke** any entry.
+- **Declined / Revoked** — historical log.
+
+Approving a request sends the buyer an in-app notification and they immediately gain access.
 
 ### Messaging Buyers
 

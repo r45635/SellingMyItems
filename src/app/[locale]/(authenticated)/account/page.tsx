@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Lock, Mail, ShoppingCart, Tag, Shield, Globe, Ruler, Coins } from "lucide-react";
 import { ChangePasswordForm } from "@/features/account/components/change-password-form";
+import { DeleteAccountForm } from "@/features/account/components/delete-account-form";
+import { ExportDataForm } from "@/features/account/components/export-data-form";
 import { LocationContactForm } from "@/features/account/components/location-contact-form";
 import {
   updateAccountPreferencesAction,
@@ -246,6 +248,14 @@ export default async function AccountPage({
 
       <div className="mt-8">
         <ChangePasswordForm />
+      </div>
+
+      <div className="mt-8">
+        <ExportDataForm />
+      </div>
+
+      <div className="mt-8">
+        <DeleteAccountForm />
       </div>
     </div>
   );

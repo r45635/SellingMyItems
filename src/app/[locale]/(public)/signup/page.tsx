@@ -13,6 +13,7 @@ import { AuthSplitPanel } from "@/features/auth/components/auth-split-panel";
 
 export default function SignupPage() {
   const t = useTranslations("auth");
+  const tCookie = useTranslations("cookieNotice");
   const searchParams = useSearchParams();
   const returnTo = searchParams.get("returnTo");
   const [email, setEmail] = useState("");
@@ -96,7 +97,7 @@ export default function SignupPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  minLength={6}
+                  minLength={8}
                   autoComplete="new-password"
                   className="pr-14"
                 />
@@ -119,7 +120,7 @@ export default function SignupPage() {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
-                minLength={6}
+                minLength={8}
                 autoComplete="new-password"
               />
             </div>
@@ -162,6 +163,16 @@ export default function SignupPage() {
               >
                 {t("signIn")}
               </Link>
+            </p>
+
+            <p className="text-center text-xs text-muted-foreground">
+              {tCookie.rich("text", {
+                privacy: (chunks) => (
+                  <Link href="/privacy" className="underline hover:text-foreground">
+                    {chunks}
+                  </Link>
+                ),
+              })}
             </p>
           </form>
         </div>

@@ -196,10 +196,8 @@ async function isProjectSeller(userId: string, projectId: string): Promise<boole
 }
 
 async function userCanShareItem(userId: string, projectId: string): Promise<boolean> {
-  // Seller of the project can always share
-  if (await isProjectSeller(userId, projectId)) return true;
-  // Any authenticated user with active project access can share
-  return userHasProjectAccess(userId, projectId);
+  // Only the seller of the project may create share links
+  return isProjectSeller(userId, projectId);
 }
 
 // ─── Fetch share links for seller management page ────────────────────────────

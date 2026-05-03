@@ -13,6 +13,7 @@ import { AuthSplitPanel } from "@/features/auth/components/auth-split-panel";
 
 export default function LoginPage() {
   const t = useTranslations("auth");
+  const tCookie = useTranslations("cookieNotice");
   const searchParams = useSearchParams();
   const returnTo = searchParams.get("returnTo");
   const initialEmail = searchParams.get("email") ?? "";
@@ -131,6 +132,16 @@ export default function LoginPage() {
               >
                 {t("signUp")}
               </Link>
+            </p>
+
+            <p className="text-center text-xs text-muted-foreground">
+              {tCookie.rich("text", {
+                privacy: (chunks) => (
+                  <Link href="/privacy" className="underline hover:text-foreground">
+                    {chunks}
+                  </Link>
+                ),
+              })}
             </p>
           </form>
         </div>

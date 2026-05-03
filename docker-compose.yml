@@ -10,16 +10,23 @@ services:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-sellingmyitems}"]
-      # `start_period` gives postgres breathing room on a fresh
-      # `--force-recreate` (cold image, slower disk on the VPS). Without
-      # it the first probe fired ~immediately, which made
-      # `docker compose up -d` abort on the dependency check before
-      # postgres was ready. retries+interval define steady-state
-      # checking once we're past start_period.
       start_period: 30s
       interval: 5s
       timeout: 5s
       retries: 12
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --save 60 1 --loglevel warning
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      start_period: 5s
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
   app:
     build:
@@ -33,6 +40,7 @@ services:
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-sellingmyitems}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-sellingmyitems}
       NODE_ENV: production
+      REDIS_URL: redis://redis:6379
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       RESEND_FROM_EMAIL: ${RESEND_FROM_EMAIL:-SellingMyItems <onboarding@resend.dev>}
       NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:5050}
@@ -41,6 +49,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     networks:
       - default
       - shared-proxy
@@ -48,6 +58,7 @@ services:
 volumes:
   pgdata:
   uploads:
+  redisdata:
 
 networks:
   shared-proxy:

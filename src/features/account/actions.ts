@@ -1,14 +1,32 @@
 "use server";
 
 import { db } from "@/db";
-import { profiles } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import {
+  profiles,
+  sessions,
+  emailLogs,
+  sellerAccounts,
+  projects,
+  items,
+  itemImages,
+  itemFiles,
+  buyerIntents,
+  conversationMessages,
+  conversationThreads,
+  deletionLog,
+} from "@/db/schema";
+import { eq, inArray } from "drizzle-orm";
+import { createHash } from "crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { isCurrencyCode, type CurrencyCode } from "@/lib/currency";
 import { geocode, type GeocodeFailureReason } from "@/lib/geocoding";
 import { phoneMatchesCountry } from "@/lib/phone";
+import bcrypt from "bcryptjs";
+import { unlink } from "fs/promises";
+import path from "path";
+import { cookies } from "next/headers";
 
 /**
  * Map a geocode failure reason to a stable URL slug we use in
@@ -376,4 +394,116 @@ export async function retryGeocodeLocationAction() {
   revalidatePath("/account");
   revalidatePath("/");
   redirect("/account?notice=geocode_resolved");
+}
+
+/**
+ * Permanently delete the signed-in user's account and all associated data.
+ * Requires the current password as confirmation.
+ *
+ * Cascade chain (via DB foreign keys):
+ *   profiles → sessions, sellerAccounts → projects → items → itemImages/itemFiles
+ *   profiles → buyerWishlists → wishlistItems
+ *   profiles → buyerIntents → intentItems
+ *   profiles → conversationThreads → conversationMessages
+ *
+ * email_logs has no FK → deleted explicitly by email address.
+ * Uploaded files on disk are removed best-effort after the DB row is gone.
+ */
+export async function deleteAccountAction(formData: FormData) {
+  const user = await requireUser();
+
+  const password = String(formData.get("password") ?? "");
+  if (!password) {
+    return { error: "passwordRequired" };
+  }
+
+  const profile = await db.query.profiles.findFirst({
+    where: eq(profiles.id, user.id),
+    columns: { passwordHash: true, email: true },
+  });
+  if (!profile) {
+    return { error: "notFound" };
+  }
+
+  const valid = await bcrypt.compare(password, profile.passwordHash);
+  if (!valid) {
+    return { error: "invalidPassword" };
+  }
+
+  // Collect file URLs from the user's items so we can clean up disk after
+  // the DB cascade removes the rows themselves.
+  const userItems = await db
+    .select({ id: items.id })
+    .from(items)
+    .innerJoin(projects, eq(items.projectId, projects.id))
+    .innerJoin(sellerAccounts, eq(projects.sellerId, sellerAccounts.id))
+    .where(eq(sellerAccounts.userId, user.id));
+
+  const itemIds = userItems.map((i) => i.id);
+  const diskUrls: string[] = [];
+
+  let imagesCount = 0;
+  if (itemIds.length > 0) {
+    const imgs = await db
+      .select({ url: itemImages.url })
+      .from(itemImages)
+      .where(inArray(itemImages.itemId, itemIds));
+    const files = await db
+      .select({ url: itemFiles.url })
+      .from(itemFiles)
+      .where(inArray(itemFiles.itemId, itemIds));
+    diskUrls.push(...imgs.map((r) => r.url), ...files.map((r) => r.url));
+    imagesCount = imgs.length + files.length;
+  }
+
+  // Count buyer-side data for the deletion log.
+  const [intentsRows, messagesRows] = await Promise.all([
+    db
+      .select({ id: buyerIntents.id })
+      .from(buyerIntents)
+      .where(eq(buyerIntents.userId, user.id)),
+    db
+      .select({ id: conversationMessages.id })
+      .from(conversationMessages)
+      .innerJoin(
+        conversationThreads,
+        eq(conversationMessages.threadId, conversationThreads.id)
+      )
+      .where(eq(conversationThreads.buyerId, user.id)),
+  ]);
+
+  // Delete email logs — no FK to profiles, must be deleted by email.
+  await db.delete(emailLogs).where(eq(emailLogs.toEmail, profile.email));
+
+  // Delete the profile — all FK-cascaded rows are removed automatically.
+  await db.delete(profiles).where(eq(profiles.id, user.id));
+
+  // Write GDPR Art. 17 audit entry (email stored as SHA-256 hash only).
+  const emailHash = createHash("sha256").update(profile.email).digest("hex");
+  await db.insert(deletionLog).values({
+    emailHash,
+    itemsCount: itemIds.length,
+    imagesCount,
+    messagesCount: messagesRows.length,
+    intentsCount: intentsRows.length,
+  });
+
+  // Remove uploaded files from disk (best-effort; ignore missing files).
+  const uploadsDir = path.join(process.cwd(), "public", "uploads");
+  for (const url of diskUrls) {
+    const filename = path.basename(url);
+    if (filename && filename !== "." && filename !== "..") {
+      try {
+        await unlink(path.join(uploadsDir, filename));
+      } catch {
+        // File already gone or never existed — not a fatal error.
+      }
+    }
+  }
+
+  // Clear the session cookie so the browser doesn't hold a stale token.
+  const cookieStore = await cookies();
+  cookieStore.delete("session_token");
+
+  redirect("/login");
 }

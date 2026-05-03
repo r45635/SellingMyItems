@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
 
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
   const rateKey = `upload:post:user:${user.id}:${ip ?? "unknown"}`;
-  const rateCheck = consumeRateLimit(rateKey, {
+  const rateCheck = await consumeRateLimit(rateKey, {
     windowMs: 5 * 60 * 1000,
     max: 20,
   });

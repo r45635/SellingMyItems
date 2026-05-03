@@ -75,3 +75,23 @@ if [ "$NEW_COUNT" = "0" ]; then
 else
   echo "==> $NEW_COUNT migration(s) applied."
 fi
+
+# Purge email logs older than 90 days on every deploy (GDPR Art. 5).
+# The purge_old_email_logs() function is created by migration 0024; if it
+# doesn't exist yet (e.g. first bootstrap) we fall back to a direct DELETE.
+PURGED=$(psql_in -tAc "
+  SELECT CASE
+    WHEN EXISTS (
+      SELECT 1 FROM pg_proc p
+      JOIN pg_namespace n ON n.oid = p.pronamespace
+      WHERE p.proname = 'purge_old_email_logs' AND n.nspname = 'public'
+    )
+    THEN purge_old_email_logs()::text
+    ELSE (
+      WITH d AS (
+        DELETE FROM email_logs WHERE created_at < NOW() - INTERVAL '90 days' RETURNING 1
+      ) SELECT COUNT(*)::text FROM d
+    )
+  END;
+" | tr -d '[:space:]')
+echo "==> Email log purge: ${PURGED:-0} row(s) removed."

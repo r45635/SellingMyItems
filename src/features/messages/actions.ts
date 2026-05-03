@@ -40,7 +40,7 @@ export async function sendMessageAction(
   const user = await requireUser();
   const profileId = user.id;
 
-  const rateCheck = consumeRateLimit(`messages:send:user:${profileId}`, {
+  const rateCheck = await consumeRateLimit(`messages:send:user:${profileId}`, {
     windowMs: 60 * 1000,
     max: 20,
   });
@@ -231,7 +231,7 @@ export async function startConversationAction(formData: FormData) {
   const user = await requireUser();
   const profileId = user.id;
 
-  const rateCheck = consumeRateLimit(`messages:start:user:${profileId}`, {
+  const rateCheck = await consumeRateLimit(`messages:start:user:${profileId}`, {
     windowMs: 60 * 1000,
     max: 10,
   });

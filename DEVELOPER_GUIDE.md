@@ -144,15 +144,39 @@ src/app/
     ├── (authenticated)/        # requireUser() guard
     │   ├── account/page.tsx
     │   ├── wishlist/page.tsx
+    │   ├── my-projects/page.tsx     # All projects the buyer has a relationship with
+    │   ├── my-intents/page.tsx
     │   ├── reservations/page.tsx
     │   ├── purchases/page.tsx
+    │   ├── notifications/page.tsx   # In-app notification centre
     │   └── messages/
     │       ├── page.tsx
+    │       ├── new/page.tsx         # New-message composer with projectId param
+    │       └── [threadId]/page.tsx
+    ├── (public)/               # No auth required
+    │   ├── page.tsx            # Homepage
+    │   ├── login/page.tsx
+    │   ├── signup/page.tsx
+    │   ├── forgot-password/page.tsx
+    │   ├── reset-password/page.tsx
+    │   ├── privacy/page.tsx           # GDPR Privacy Policy (EN + FR)
+    │   ├── terms/page.tsx             # Terms of Use (EN + FR)
+    │   ├── share/[token]/page.tsx   # Item share link landing page
+    │   └── project/[slug]/
+    │       ├── page.tsx        # Project detail
+    │       └── item/[itemId]/page.tsx
     │       └── [threadId]/page.tsx
     ├── (seller)/               # requireSeller() guard
     │   ├── seller/
     │   │   ├── page.tsx        # Dashboard
     │   │   ├── projects/
+    │   │   │   ├── new/page.tsx
+    │   │   │   └── [id]/
+    │   │   │       ├── edit/page.tsx
+    │   │   │       ├── items/          # Item CRUD
+    │   │   │       ├── access/page.tsx # Invitation/access-request management
+    │   │   │       ├── share-links/page.tsx  # Per-item share link management
+    │   │   │       └── reservations/page.tsx # Project-level reservations view
     │   │   ├── intents/page.tsx
     │   │   ├── messages/
     │   │   └── settings/page.tsx
@@ -265,8 +289,19 @@ export const db = drizzle(client, { schema });
 
 All schema definitions are in `src/db/schema/index.ts`. This is a single large file containing:
 - 6 enum definitions (pgEnum)
-- 17 table definitions (pgTable)
+- 26 table definitions (pgTable)
 - Full relation definitions (for Drizzle relational queries)
+
+### Enums
+
+| Enum | Values |
+|---|---|
+| `item_condition` | `new`, `like_new`, `very_good`, `good`, `acceptable`, `for_parts` |
+| `item_status` | `available`, `pending`, `reserved`, `sold`, `hidden` |
+| `intent_status` | `submitted`, `reviewed`, `accepted`, `declined` |
+| `project_publish_status` | `draft`, `pending`, `approved`, `rejected` |
+| `access_grant_source` | `targeted_invitation`, `generic_request`, `seller_manual`, `share_link` |
+| `email_type` | `welcome`, `message_notification`, `message_copy`, `intent_received`, `intent_status`, `password_reset` |
 
 ### Schema Conventions
 
@@ -308,6 +343,20 @@ docker exec -i sellingmyitems-db-1 psql -U sellingmyitems -d sellingmyitems < sr
 ```bash
 npx drizzle-kit push
 ```
+
+### Migration History (key milestones)
+
+| Migration | Changes |
+|---|---|
+| `0000` | Initial schema: profiles, projects, items, sessions |
+| `0003` | Add `user_role` enum |
+| `0006` | Add `admin` role value |
+| `0019` | Drop `user_role` enum — replace role gating with `profiles.is_admin` boolean + open selling |
+| `0022` | `cube` + `earthdistance` extensions; location columns on profiles/projects; `geocoded_locations` cache; GiST index |
+| `0023` | Add `share_link` to `access_grant_source` enum; new `item_share_links` table |
+| `0024` | GDPR retention: create `purge_old_email_logs()` function + initial purge; `run-migrations.sh` calls it on every deploy |
+| `0025` | GDPR Art. 20: add `last_data_export_at timestamptz` to `profiles` for per-user export rate-limiting |
+| `0026` | GDPR Art. 17: create `deletion_log` audit table (hashed email + entity counts) |
 
 ### Query Patterns
 
@@ -392,11 +441,13 @@ export async function createItemAction(formData: FormData) {
 | File | Actions |
 |---|---|
 | `src/lib/auth/actions.ts` | signUp, signIn, signOut, forgotPassword, resetPassword |
-| `src/features/items/actions.ts` | createItem, updateItem, updateItemStatus, deleteItem, linkReservationToBuyer, markItemSold, searchBuyers |
+| `src/features/items/actions.ts` | createItem, updateItem, updateItemStatus, deleteItem, linkReservationToBuyer, markItemSold, **searchBuyersAction** (restricted to buyers with existing intent/thread on seller's projects; min query length 3) |
 | `src/features/projects/actions.ts` | createProject, updateProject, deleteProject |
 | `src/features/wishlist/actions.ts` | addWishlistItem, removeWishlistItem |
 | `src/features/intents/actions.ts` | submitIntent, updateIntentStatus, reserveItemsFromIntent |
 | `src/features/messages/actions.ts` | sendMessage, notifyRecipient, sendCopyToSender |
+| `src/features/items/share-actions.ts` | createItemShareLink, revokeItemShareLink, claimShareLink, getProjectShareLinks |
+| `src/features/account/actions.ts` | updateProfile, changePassword, **deleteAccountAction** (password-verified; cascades DB rows + removes uploaded files) |
 | `src/features/admin-dashboard/actions.ts` | toggleProfileActive, toggleProjectPublic, updateResendApiKey |
 
 ---
@@ -498,6 +549,15 @@ All email templates check the current locale and render content in the appropria
 
 Message notifications use an in-memory `Map<email, timestamp>` to prevent flooding. Only 1 notification email per 5 minutes per recipient, regardless of how many messages are sent.
 
+### Retention (GDPR)
+
+`email_logs` rows are purged after **90 days** by the `purge_old_email_logs()` PostgreSQL function created by migration `0024`. The function is called at the end of every `scripts/run-migrations.sh` run (i.e. on every deploy). To run manually:
+
+```bash
+docker exec sellingmyitems-db-1 psql -U sellingmyitems -d sellingmyitems \
+  -c "SELECT purge_old_email_logs();"
+```
+
 ---
 
 ## Internationalization (i18n)
@@ -559,20 +619,37 @@ export function ItemCard() {
 
 ## Security
 
+### HTTP Security Headers
+
+All routes receive the following headers, configured in `next.config.ts`:
+
+| Header | Value |
+|---|---|
+| `X-Frame-Options` | `DENY` (prevents clickjacking) |
+| `X-Content-Type-Options` | `nosniff` (prevents MIME sniffing) |
+| `Referrer-Policy` | `strict-origin-when-cross-origin` |
+| `Permissions-Policy` | `camera=(), microphone=(), geolocation=()` |
+
 ### Rate Limiting
 
-```typescript
-// src/lib/security/rate-limit.ts
-// In-memory Map-based rate limiter (single-node only)
+Rate limiting is implemented in `src/lib/security/rate-limit.ts` with automatic Redis/in-memory fallback:
 
-class RateLimiter {
-  private attempts: Map<string, { count: number; resetAt: number }>;
-  
-  check(key: string, limit: number, windowMs: number): boolean { ... }
+```typescript
+// async — always await
+const result = await consumeRateLimit("auth:login:127.0.0.1", {
+  limit: 5,
+  windowMs: 60_000,
+});
+if (!result.allowed) {
+  return { error: "rate_limited" };
 }
 ```
 
-**Important**: This rate limiter uses an in-memory `Map`. It resets on server restart and doesn't work across multiple instances. For production scaling, replace with Redis-based rate limiting.
+**Redis backend** (production): requires `REDIS_URL` env var (e.g. `redis://redis:6379`). Uses fixed-window `INCR + EXPIRE`. Client singleton in `src/lib/security/redis-client.ts` with `connectTimeout: 2000`, `commandTimeout: 1000`, `maxRetriesPerRequest: 1`.
+
+**In-memory fallback** (development / Redis unavailable): uses a global `Map`, resets on restart, single-process only. Opportunistically pruned at 1 000 entries.
+
+Key format: `rl:<action>:<identifier>` where identifier is an IP address or user ID.
 
 ### Input Validation
 
@@ -581,8 +658,8 @@ All form inputs are validated server-side with **Zod** schemas defined in `src/l
 ```typescript
 export const signUpSchema = z.object({
   email: z.email(),
-  password: z.string().min(6),
-  confirmPassword: z.string().min(6),
+  password: z.string().min(8),
+  confirmPassword: z.string().min(8),
 }).refine(data => data.password === data.confirmPassword);
 
 export const createItemSchema = z.object({
@@ -658,6 +735,7 @@ src/features/
 │   ├── item-form.tsx               # Create/edit item form (client component)
 │   ├── item-status-select.tsx      # Inline status dropdown
 │   ├── link-buyer-form.tsx         # Search + link buyer to reserved item
+│   ├── share-item-dialog.tsx       # Generate/copy/revoke share links (client dialog)
 │   └── ...
 ├── projects/components/
 │   ├── project-form.tsx            # Create/edit project form
@@ -842,12 +920,14 @@ Caddy runs in a separate Docker Compose at `/opt/trystbrief/` and shares the `sh
 ### Adding a New Feature
 
 1. **Schema**: Add tables/columns in `src/db/schema/index.ts`
-2. **Migration**: `npx drizzle-kit generate` → review SQL → apply on VPS
+2. **Migration**: `npx drizzle-kit generate` → review SQL → apply on VPS (use `IF NOT EXISTS` guards)
 3. **Actions**: Create `src/features/{feature}/actions.ts` with `"use server"` functions
 4. **Components**: Create `src/features/{feature}/components/` for UI
 5. **Pages**: Add pages in the appropriate route group under `src/app/[locale]/`
 6. **i18n**: Add translation keys to both `en.json` and `fr.json`
 7. **Navigation**: Update header/sidebar if needed
+
+> **Example: Share links pattern** — `item_share_links` (`0023`) is a good reference for adding a token-based ephemeral-access feature: enum extension with `IF NOT EXISTS`, token generation from `crypto.randomBytes`, server-side claim logic, public page with robots `noindex`, and a seller management UI backed by a dedicated actions file.
 
 ### Adding a New Capability
 
@@ -897,9 +977,10 @@ To add a new capability:
 | Uploads not persisting | Ensure Docker volume `uploads` is mounted at `/app/public/uploads` |
 | 502 after deploy | Check `shared-proxy` network exists and Caddy config references `sellingmyitems-app:3000` |
 | Emails not sending | Check Resend API key in admin dashboard or env var. Check `/admin/emails` for failures. Verify `RESEND_FROM_EMAIL` uses a verified domain — the sandbox `onboarding@resend.dev` only delivers to the account owner. |
-| Rate limit errors | In-memory rate limiter resets on restart. Wait for the window to expire. |
+| Rate limit errors | In production, rate limits are stored in Redis and survive restarts. In dev (no `REDIS_URL`), the in-memory fallback resets on restart — simply wait for the window to expire or restart the server. |
 | Migrations fail | Check order-sensitive enum additions. Use `IF NOT EXISTS` for safety. |
 | Auth cookie not set | Check `secure` flag — only set in production. Use `http://localhost:3000` for dev. |
+| Account deletion fails | Ensure uploaded files exist at `/app/public/uploads/`; `unlink` errors are best-effort and won't abort the deletion. |
 
 ### Useful Commands
 

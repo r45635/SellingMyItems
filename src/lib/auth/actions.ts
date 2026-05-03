@@ -40,7 +40,7 @@ export async function signUpAction(formData: FormData) {
   if (!email || !password) {
     return { error: "Email and password are required" };
   }
-  if (password.length < 6) {
+  if (password.length < 8) {
     return { error: "passwordTooShort" };
   }
   if (password !== confirmPassword) {
@@ -48,7 +48,7 @@ export async function signUpAction(formData: FormData) {
   }
 
   const clientIp = await getClientIp();
-  const ipCheck = consumeRateLimit(`auth:signup:ip:${clientIp}`, {
+  const ipCheck = await consumeRateLimit(`auth:signup:ip:${clientIp}`, {
     windowMs: 10 * 60 * 1000,
     max: 10,
   });
@@ -56,7 +56,7 @@ export async function signUpAction(formData: FormData) {
     return { error: "tooManyRequests" };
   }
 
-  const emailCheck = consumeRateLimit(`auth:signup:email:${email}`, {
+  const emailCheck = await consumeRateLimit(`auth:signup:email:${email}`, {
     windowMs: 10 * 60 * 1000,
     max: 5,
   });
@@ -134,7 +134,7 @@ export async function signInAction(formData: FormData) {
   }
 
   const clientIp = await getClientIp();
-  const ipCheck = consumeRateLimit(`auth:signin:ip:${clientIp}`, {
+  const ipCheck = await consumeRateLimit(`auth:signin:ip:${clientIp}`, {
     windowMs: 10 * 60 * 1000,
     max: 20,
   });
@@ -142,7 +142,7 @@ export async function signInAction(formData: FormData) {
     return { error: "tooManyRequests" };
   }
 
-  const emailCheck = consumeRateLimit(`auth:signin:email:${email}`, {
+  const emailCheck = await consumeRateLimit(`auth:signin:email:${email}`, {
     windowMs: 10 * 60 * 1000,
     max: 8,
   });
@@ -226,7 +226,7 @@ export async function forgotPasswordAction(formData: FormData) {
   }
 
   const clientIp = await getClientIp();
-  const ipCheck = consumeRateLimit(`auth:forgot:ip:${clientIp}`, {
+  const ipCheck = await consumeRateLimit(`auth:forgot:ip:${clientIp}`, {
     windowMs: 15 * 60 * 1000,
     max: 5,
   });
@@ -234,7 +234,7 @@ export async function forgotPasswordAction(formData: FormData) {
     return { error: "tooManyRequests" };
   }
 
-  const emailCheck = consumeRateLimit(`auth:forgot:email:${email}`, {
+  const emailCheck = await consumeRateLimit(`auth:forgot:email:${email}`, {
     windowMs: 15 * 60 * 1000,
     max: 3,
   });
@@ -280,7 +280,7 @@ export async function resetPasswordAction(formData: FormData) {
     return { error: "invalidToken" };
   }
 
-  if (!password || password.length < 6) {
+  if (!password || password.length < 8) {
     return { error: "passwordTooShort" };
   }
 
@@ -289,7 +289,7 @@ export async function resetPasswordAction(formData: FormData) {
   }
 
   const clientIp = await getClientIp();
-  const ipCheck = consumeRateLimit(`auth:reset:ip:${clientIp}`, {
+  const ipCheck = await consumeRateLimit(`auth:reset:ip:${clientIp}`, {
     windowMs: 15 * 60 * 1000,
     max: 10,
   });
@@ -347,7 +347,7 @@ export async function changePasswordAction(formData: FormData) {
   if (!currentPassword || !newPassword) {
     return { error: "Fields required" };
   }
-  if (newPassword.length < 6) {
+  if (newPassword.length < 8) {
     return { error: "passwordTooShort" };
   }
   if (newPassword !== confirmPassword) {
@@ -357,7 +357,7 @@ export async function changePasswordAction(formData: FormData) {
     return { error: "passwordSameAsOld" };
   }
 
-  const rate = consumeRateLimit(`auth:change:user:${user.id}`, {
+  const rate = await consumeRateLimit(`auth:change:user:${user.id}`, {
     windowMs: PASSWORD_CHANGE_RATE_LIMIT_MS,
     max: 5,
   });

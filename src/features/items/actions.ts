@@ -3,7 +3,7 @@
 import { requireSeller } from "@/lib/auth";
 import { itemFormSchema, ITEM_STATUSES } from "@/lib/validations";
 import { db } from "@/db";
-import { items, itemImages, itemLinks, profiles, sellerAccounts } from "@/db/schema";
+import { items, itemImages, itemLinks, profiles, sellerAccounts, projects, buyerIntents, conversationThreads } from "@/db/schema";
 import { and, eq, isNull, inArray, notInArray, ilike } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
@@ -535,18 +535,61 @@ export async function markItemSoldAction(formData: FormData) {
 
 /**
  * Search for buyers by email (for seller to link reservations/sales).
+ * Restricted to buyers who already have a purchase intent or conversation
+ * thread with this seller's projects, preventing full user enumeration.
  */
 export async function searchBuyersAction(query: string) {
   const user = await requireSeller();
 
-  if (!query || query.length < 2) {
+  if (!query || query.length < 3) {
+    return [];
+  }
+
+  // Get this seller's project IDs.
+  const sellerProjects = await db
+    .select({ id: projects.id })
+    .from(projects)
+    .innerJoin(sellerAccounts, eq(projects.sellerId, sellerAccounts.id))
+    .where(eq(sellerAccounts.userId, user.id));
+
+  if (sellerProjects.length === 0) {
+    return [];
+  }
+
+  const projectIds = sellerProjects.map((p) => p.id);
+
+  // Collect distinct buyer IDs from intents and threads for this seller's projects.
+  const [intentBuyers, threadBuyers] = await Promise.all([
+    db
+      .selectDistinct({ buyerId: buyerIntents.userId })
+      .from(buyerIntents)
+      .where(inArray(buyerIntents.projectId, projectIds)),
+    db
+      .selectDistinct({ buyerId: conversationThreads.buyerId })
+      .from(conversationThreads)
+      .where(inArray(conversationThreads.projectId, projectIds)),
+  ]);
+
+  const buyerIds = [
+    ...new Set([
+      ...intentBuyers.map((b) => b.buyerId),
+      ...threadBuyers.map((b) => b.buyerId),
+    ]),
+  ];
+
+  if (buyerIds.length === 0) {
     return [];
   }
 
   const results = await db
     .select({ id: profiles.id, email: profiles.email, displayName: profiles.displayName })
     .from(profiles)
-    .where(ilike(profiles.email, `%${query}%`))
+    .where(
+      and(
+        inArray(profiles.id, buyerIds),
+        ilike(profiles.email, `%${query}%`)
+      )
+    )
     .limit(5);
 
   return results;
