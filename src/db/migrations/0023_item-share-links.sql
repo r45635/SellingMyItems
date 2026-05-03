@@ -1,5 +1,5 @@
 -- Add share_link as a new access grant source
-ALTER TYPE "access_grant_source" ADD VALUE 'share_link';
+ALTER TYPE "access_grant_source" ADD VALUE IF NOT EXISTS 'share_link';
 
 -- Item share links table
 CREATE TABLE IF NOT EXISTS "item_share_links" (
