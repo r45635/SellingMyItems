@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
         fit: "inside",
         withoutEnlargement: true,
       })
-      .webp({ quality: STD_QUALITY, effort: 6 })
+      .webp({ quality: STD_QUALITY, effort: 4 })
       .toBuffer();
 
     // HD variant: 1920px, quality 80 — loaded only when user opens fullscreen zoom
@@ -108,7 +108,7 @@ export async function POST(request: NextRequest) {
         fit: "inside",
         withoutEnlargement: true,
       })
-      .webp({ quality: HD_QUALITY, effort: 6 })
+      .webp({ quality: HD_QUALITY, effort: 4 })
       .toBuffer();
 
     await writeFile(stdPath, stdProcessed);

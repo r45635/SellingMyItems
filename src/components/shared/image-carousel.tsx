@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useRef, useEffect } from "react";
 import Image from "next/image";
-import { ChevronLeft, ChevronRight, ImageOff, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, ImageOff, Loader2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BLUR_PLACEHOLDER } from "@/lib/image/placeholders";
 
@@ -14,6 +14,7 @@ interface ImageCarouselProps {
 export function ImageCarousel({ images, title }: ImageCarouselProps) {
   const [current, setCurrent] = useState(0);
   const [zoomed, setZoomed] = useState(false);
+  const [hdLoaded, setHdLoaded] = useState(false);
   const touchStartX = useRef(0);
   const touchEndX = useRef(0);
 
@@ -27,8 +28,14 @@ export function ImageCarousel({ images, title }: ImageCarouselProps) {
   const prev = useCallback(() => goTo(current - 1), [current, goTo]);
   const next = useCallback(() => goTo(current + 1), [current, goTo]);
 
-  // Keyboard navigation
+  // Reset HD loaded state when current image changes
   useEffect(() => {
+    setHdLoaded(false);
+  }, [current]);
+
+  // Keyboard navigation — only active while overlay is open
+  useEffect(() => {
+    if (!zoomed) return;
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === "ArrowLeft") prev();
       if (e.key === "ArrowRight") next();
@@ -36,7 +43,7 @@ export function ImageCarousel({ images, title }: ImageCarouselProps) {
     };
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [prev, next]);
+  }, [zoomed, prev, next]);
 
   if (images.length === 0) {
     return (
@@ -68,7 +75,7 @@ export function ImageCarousel({ images, title }: ImageCarouselProps) {
     <div>
       {/* Main image with navigation */}
       <div
-        className="aspect-video relative bg-muted group select-none cursor-pointer"
+        className="aspect-video relative bg-muted group select-none cursor-zoom-in"
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
@@ -98,16 +105,16 @@ export function ImageCarousel({ images, title }: ImageCarouselProps) {
           <>
             <button
               type="button"
-              onClick={prev}
-              className="absolute left-1 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity sm:p-2 touch:opacity-100"
+              onClick={(e) => { e.stopPropagation(); prev(); }}
+              className="absolute left-1 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity sm:p-2"
               aria-label="Previous image"
             >
               <ChevronLeft className="h-5 w-5" />
             </button>
             <button
               type="button"
-              onClick={next}
-              className="absolute right-1 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity sm:p-2 touch:opacity-100"
+              onClick={(e) => { e.stopPropagation(); next(); }}
+              className="absolute right-1 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity sm:p-2"
               aria-label="Next image"
             >
               <ChevronRight className="h-5 w-5" />
@@ -122,7 +129,7 @@ export function ImageCarousel({ images, title }: ImageCarouselProps) {
               <button
                 key={idx}
                 type="button"
-                onClick={() => goTo(idx)}
+                onClick={(e) => { e.stopPropagation(); goTo(idx); }}
                 className={cn(
                   "w-2 h-2 rounded-full transition-all",
                   idx === current
@@ -171,20 +178,22 @@ export function ImageCarousel({ images, title }: ImageCarouselProps) {
           className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center"
           onClick={() => setZoomed(false)}
         >
+          {/* Close button — stopPropagation so it doesn't re-trigger the overlay onClick */}
           <button
             type="button"
-            onClick={() => setZoomed(false)}
-            className="absolute top-4 right-4 text-white bg-black/50 rounded-full p-2 hover:bg-black/70 z-10"
+            onClick={(e) => { e.stopPropagation(); setZoomed(false); }}
+            className="absolute top-4 right-4 text-white bg-black/50 rounded-full p-2 hover:bg-black/70 z-20"
             aria-label="Close"
           >
             <X className="h-6 w-6" />
           </button>
+
           {images.length > 1 && (
             <>
               <button
                 type="button"
                 onClick={(e) => { e.stopPropagation(); prev(); }}
-                className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full p-2 z-10"
+                className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full p-2 z-20"
                 aria-label="Previous"
               >
                 <ChevronLeft className="h-6 w-6" />
@@ -192,25 +201,39 @@ export function ImageCarousel({ images, title }: ImageCarouselProps) {
               <button
                 type="button"
                 onClick={(e) => { e.stopPropagation(); next(); }}
-                className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full p-2 z-10"
+                className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full p-2 z-20"
                 aria-label="Next"
               >
                 <ChevronRight className="h-6 w-6" />
               </button>
             </>
           )}
-          <div className="relative w-full h-full max-w-[90vw] max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
+
+          {/* Spinner while HD image loads */}
+          {!hdLoaded && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+              <Loader2 className="h-10 w-10 text-white/70 animate-spin" />
+            </div>
+          )}
+
+          {/* Image container — stopPropagation prevents clicking image from closing overlay */}
+          <div
+            className="relative w-full h-full max-w-[90vw] max-h-[90vh]"
+            onClick={(e) => e.stopPropagation()}
+          >
             <Image
               src={images[current].hdUrl ?? images[current].url}
               alt={images[current].alt ?? `${title} ${current + 1}`}
               fill
-              className="object-contain"
+              className={cn("object-contain transition-opacity duration-300", hdLoaded ? "opacity-100" : "opacity-0")}
               sizes="90vw"
               priority
+              onLoad={() => setHdLoaded(true)}
             />
           </div>
+
           {images.length > 1 && (
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/60 text-white text-sm px-3 py-1 rounded-full">
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/60 text-white text-sm px-3 py-1 rounded-full pointer-events-none z-10">
               {current + 1} / {images.length}
             </div>
           )}
