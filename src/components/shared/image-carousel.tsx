@@ -81,17 +81,25 @@ export function ImageCarousel({ images, title }: ImageCarouselProps) {
         onTouchEnd={handleTouchEnd}
         onClick={() => setZoomed(true)}
       >
-        <Image
-          src={images[current].url}
-          alt={images[current].alt ?? `${title} ${current + 1}`}
-          fill
-          className="object-contain"
-          sizes="(max-width: 768px) 100vw, 50vw"
-          priority={current === 0}
-          loading={current === 0 ? "eager" : "lazy"}
-          placeholder="blur"
-          blurDataURL={BLUR_PLACEHOLDER}
-        />
+        {/* All images stacked — pre-loaded eagerly so navigation is instant (opacity switch, no network request) */}
+        {images.map((img, idx) => (
+          <Image
+            key={idx}
+            src={img.url}
+            alt={idx === current ? (img.alt ?? `${title} ${idx + 1}`) : ""}
+            fill
+            className={cn(
+              "object-contain transition-opacity duration-150",
+              idx === current ? "opacity-100" : "opacity-0"
+            )}
+            sizes="(max-width: 768px) 100vw, 50vw"
+            priority={idx === 0}
+            loading="eager"
+            placeholder="blur"
+            blurDataURL={BLUR_PLACEHOLDER}
+            aria-hidden={idx !== current}
+          />
+        ))}
 
         {/* Counter badge — overlay on image, bottom-right */}
         {images.length > 1 && (
