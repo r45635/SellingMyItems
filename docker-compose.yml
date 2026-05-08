@@ -35,8 +35,10 @@ services:
         DATABASE_URL: postgresql://${POSTGRES_USER:-sellingmyitems}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-sellingmyitems}
     container_name: sellingmyitems-app
     restart: unless-stopped
-    ports:
-      - "${APP_PORT:-5050}:3000"
+    # Port 3000 is only reachable by Caddy via the shared-proxy network.
+    # HTTP :5050 is now handled by Caddy (301 → HTTPS :5055). See CADDY_PATCH_5050_REDIRECT.md.
+    expose:
+      - "3000"
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-sellingmyitems}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-sellingmyitems}
       NODE_ENV: production

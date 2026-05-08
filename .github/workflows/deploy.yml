@@ -95,10 +95,11 @@ jobs:
             # Verify connectivity AND that the DB schema matches the
             # code we just deployed. /api/health does a SELECT on
             # profiles, so a missing column or enum drift fails this
-            # curl with 503 — the previous root-page check would have
-            # missed that.
+            # check with a non-zero exit — the previous curl-via-host
+            # would have missed that once port 5050 is no longer
+            # published on the host (Caddy now owns 5050 for HTTPS redirect).
             echo "==> Verifying app + DB schema..."
-            if curl -sf http://localhost:5050/api/health -o /dev/null; then
+            if docker exec sellingmyitems-app wget -qO- http://localhost:3000/api/health > /dev/null 2>&1; then
               echo "✅ App + DB healthy"
             else
               echo "❌ App or DB schema unhealthy at /api/health"
