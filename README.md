@@ -208,7 +208,6 @@ DATABASE_URL=postgresql://sellingmyitems:yourpassword@localhost:5432/sellingmyit
 POSTGRES_USER=sellingmyitems
 POSTGRES_PASSWORD=<strong-password>
 POSTGRES_DB=sellingmyitems
-APP_PORT=5050
 NEXT_PUBLIC_APP_URL=https://yourdomain.com
 RESEND_API_KEY=re_your_key_here              # Required: for email sending
 RESEND_FROM_EMAIL=YourApp <noreply@yourdomain.com>  # Required: verified domain sender
@@ -253,7 +252,9 @@ docker exec sellingmyitems-db-1 psql -U sellingmyitems -d sellingmyitems \
 docker compose up -d --build
 ```
 
-The app runs on port 5050 (configurable via `APP_PORT`). Use a reverse proxy (Caddy/Nginx) for HTTPS.
+The app container binds internally on port 3000. A reverse proxy (Caddy/Nginx) handles TLS and forwards traffic — see `CADDY_PATCH_5050_REDIRECT.md` for the production Caddy setup.
+
+> **Port transition note:** HTTP `:5050` redirects permanently (301) to HTTPS `:5055`. Direct HTTP access is no longer served by the app container.
 
 ---
 
@@ -593,7 +594,7 @@ Outbound notifications fire as usual (new message, intent received, reservation 
 | **Domain** | `sellingmyitems.toprecipes.best:5055` |
 | **Reverse proxy** | Caddy 2 Alpine at `/opt/trystbrief/` |
 | **Docker network** | `shared-proxy` (external, cross-compose connectivity) |
-| **App container** | `sellingmyitems-app` on port 3000 (exposed as 5050) |
+| **App container** | `sellingmyitems-app` on port 3000 (internal only — Caddy proxies via `shared-proxy` network) |
 | **DB container** | `sellingmyitems-db-1` (PostgreSQL 16) |
 | **Uploads** | Docker named volume `uploads` → `/app/public/uploads` |
 
@@ -612,7 +613,7 @@ GitHub Actions (deploy.yml)
        ├── git pull origin main
        ├── docker compose build --no-cache
        ├── docker compose up -d --force-recreate --remove-orphans
-       ├── Health check (curl localhost:5050)
+       ├── Health check (docker exec sellingmyitems-app wget /api/health)
        └── Post-deploy: prune unused images
 ```
 
@@ -628,7 +629,7 @@ docker exec sellingmyitems-db-1 psql -U sellingmyitems -d sellingmyitems \
   -c "UPDATE profiles SET is_admin = true WHERE email = 'admin@example.com';"
 
 # Check app health
-ssh root@VPS_IP "curl -sf http://localhost:5050 && echo OK"
+ssh root@VPS_IP "docker exec sellingmyitems-app wget -qO- http://localhost:3000/api/health"
 
 # Database backup
 docker exec sellingmyitems-db-1 pg_dump -U sellingmyitems sellingmyitems > backup.sql
@@ -685,7 +686,7 @@ Use this checklist when transferring the project to a different VPS or GitHub ac
 5. Bootstrap and deploy
   - Run: `bash scripts/vps-setup.sh`
   - Push to `main` to trigger GitHub Actions deploy
-  - Verify health: `curl -sf http://localhost:5050`
+  - Verify health: `docker exec sellingmyitems-app wget -qO- http://localhost:3000/api/health`
 
 6. Admin handoff checks (in-app)
   - Create or promote one admin user (`/admin` access)
