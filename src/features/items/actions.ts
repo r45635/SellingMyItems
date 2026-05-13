@@ -3,7 +3,7 @@
 import { requireSeller } from "@/lib/auth";
 import { itemFormSchema, ITEM_STATUSES } from "@/lib/validations";
 import { db } from "@/db";
-import { items, itemImages, itemLinks, profiles, sellerAccounts, projects, buyerIntents, conversationThreads } from "@/db/schema";
+import { items, itemImages, itemLinks, profiles, sellerAccounts, projects, buyerIntents, conversationThreads, conversationMessages } from "@/db/schema";
 import { and, eq, isNull, inArray, notInArray, ilike } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
@@ -20,6 +20,15 @@ function revalidateSellerItemsPaths(projectIdOrSlug: string) {
   for (const locale of siteConfig.locales) {
     revalidatePath(`/${locale}/seller/projects/${projectIdOrSlug}/items`);
   }
+}
+
+function revalidateReservationsPaths(projectIdOrSlug: string) {
+  revalidatePath(`/seller/projects/${projectIdOrSlug}/reservations`);
+  for (const locale of siteConfig.locales) {
+    revalidatePath(`/${locale}/seller/projects/${projectIdOrSlug}/reservations`);
+    revalidatePath(`/${locale}/reservations`);
+  }
+  revalidatePath(`/reservations`);
 }
 
 async function getSellerAccountId(user: { id: string; email: string }) {
@@ -603,4 +612,153 @@ export async function searchBuyersAction(query: string) {
     .limit(5);
 
   return results;
+}
+
+/**
+ * Bulk-update status for a set of reserved items (all belonging to the same
+ * buyer). Optionally posts a structured message to the buyer's conversation
+ * thread. Allowed target statuses: "sold" | "available".
+ */
+export async function bulkUpdateReservedItemsAction(
+  itemIds: string[],
+  projectId: string,
+  status: "sold" | "available",
+  message?: string
+) {
+  if (!itemIds || itemIds.length === 0) {
+    return { error: "No items provided" };
+  }
+
+  const user = await requireSeller();
+
+  const sellerAccountId = await getSellerAccountId(user);
+  if (!sellerAccountId) {
+    return { error: "Seller account not found" };
+  }
+
+  const ownedProject = await findSellerProject(sellerAccountId, projectId);
+  if (!ownedProject) {
+    return { error: "Project not found or unauthorized" };
+  }
+
+  // Fetch all target items in one query to validate ownership and collect data.
+  const targetItems = await db
+    .select({
+      id: items.id,
+      title: items.title,
+      price: items.price,
+      currency: items.currency,
+      reservedForUserId: items.reservedForUserId,
+    })
+    .from(items)
+    .where(
+      and(
+        inArray(items.id, itemIds),
+        eq(items.projectId, ownedProject.id),
+        isNull(items.deletedAt)
+      )
+    );
+
+  if (targetItems.length === 0) {
+    return { error: "No matching items found" };
+  }
+
+  // Enforce single-buyer constraint: all items must belong to the same buyer.
+  const buyerIds = new Set(targetItems.map((i) => i.reservedForUserId).filter(Boolean));
+  if (buyerIds.size > 1) {
+    return { error: "All items must be reserved for the same buyer" };
+  }
+
+  const buyerUserId = targetItems[0].reservedForUserId ?? null;
+  const now = new Date();
+
+  // Build the update payload.
+  const updateData: Record<string, unknown> = { status, updatedAt: now };
+  if (status === "sold") {
+    if (buyerUserId) {
+      updateData.soldToUserId = buyerUserId;
+    }
+    updateData.soldAt = now;
+  } else {
+    // "available" — release reservation
+    updateData.reservedForUserId = null;
+    updateData.reservedAt = null;
+    updateData.soldToUserId = null;
+    updateData.soldAt = null;
+  }
+
+  await db
+    .update(items)
+    .set(updateData)
+    .where(
+      and(
+        inArray(items.id, itemIds),
+        eq(items.projectId, ownedProject.id),
+        isNull(items.deletedAt)
+      )
+    );
+
+  // Optionally post a structured message to the buyer's conversation thread.
+  if (message && buyerUserId) {
+    const trimmedNote = message.trim();
+
+    // Build plain-text body (emoji prefix + item list + optional seller note).
+    const lines: string[] = [];
+    if (status === "sold") {
+      lines.push("✅ Items marqués comme vendus :");
+    } else {
+      lines.push("🔓 Réservation libérée :");
+    }
+    lines.push("");
+    for (const item of targetItems) {
+      const priceStr =
+        item.price != null
+          ? new Intl.NumberFormat("fr-FR", {
+              style: "currency",
+              currency: item.currency ?? "EUR",
+            }).format(item.price)
+          : "";
+      lines.push(priceStr ? `• ${item.title} — ${priceStr}` : `• ${item.title}`);
+    }
+    if (trimmedNote) {
+      lines.push("");
+      lines.push("---");
+      lines.push(trimmedNote);
+    }
+    const body = lines.join("\n");
+
+    // Find-or-create the thread for this buyer↔project pair.
+    let thread = await db.query.conversationThreads.findFirst({
+      where: and(
+        eq(conversationThreads.projectId, ownedProject.id),
+        eq(conversationThreads.buyerId, buyerUserId)
+      ),
+    });
+    if (!thread) {
+      const [created] = await db
+        .insert(conversationThreads)
+        .values({
+          projectId: ownedProject.id,
+          buyerId: buyerUserId,
+          sellerLastReadAt: now,
+        })
+        .returning();
+      thread = created;
+    }
+
+    await db.insert(conversationMessages).values({
+      threadId: thread.id,
+      senderId: user.id,
+      body,
+    });
+
+    await db
+      .update(conversationThreads)
+      .set({ updatedAt: now, sellerLastReadAt: now })
+      .where(eq(conversationThreads.id, thread.id));
+  }
+
+  revalidateSellerItemsPaths(projectId);
+  revalidateReservationsPaths(projectId);
+  return { success: true };
 }
