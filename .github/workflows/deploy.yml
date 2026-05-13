@@ -67,7 +67,7 @@ jobs:
             # Clone repo on first deploy, then pull
             if [ ! -d "$APP_DIR" ]; then
               echo "==> First deploy: cloning repo..."
-              git clone git@github.com:r45635/SellingMyItems.git "$APP_DIR"
+              git clone https://github.com/r45635/SellingMyItems.git "$APP_DIR"
               cd "$APP_DIR"
               cp .env.example .env
               echo "⚠  Default .env created — edit POSTGRES_PASSWORD before next deploy!"
@@ -80,10 +80,6 @@ jobs:
             docker compose build --pull
             docker compose up -d --force-recreate --remove-orphans
 
-            # Wait for db + app to be ready
-            echo "==> Waiting for app to be ready..."
-            sleep 3
-
             # Apply any new SQL migrations BEFORE declaring the deploy
             # healthy. Idempotent — first run bootstraps the tracking
             # table from existing files; subsequent runs only apply
@@ -95,14 +91,24 @@ jobs:
             # Verify connectivity AND that the DB schema matches the
             # code we just deployed. /api/health does a SELECT on
             # profiles, so a missing column or enum drift fails this
-            # check with a non-zero exit — the previous curl-via-host
-            # would have missed that once port 5050 is no longer
-            # published on the host (Caddy now owns 5050 for HTTPS redirect).
-            echo "==> Verifying app + DB schema..."
-            if docker exec sellingmyitems-app wget -qO- http://localhost:3000/api/health > /dev/null 2>&1; then
-              echo "✅ App + DB healthy"
-            else
-              echo "❌ App or DB schema unhealthy at /api/health"
+            # check with a non-zero exit.
+            # Note: use 127.0.0.1 not localhost — Alpine's busybox wget
+            # may prefer ::1 (IPv6) while Next.js only binds 0.0.0.0 (IPv4).
+            # Retry for up to 60s to give the freshly-recreated container
+            # time to complete its Next.js startup.
+            echo "==> Verifying app + DB schema (up to 60s)..."
+            HEALTH_OK=0
+            for i in $(seq 1 12); do
+              if docker exec sellingmyitems-app wget -qO- http://127.0.0.1:3000/api/health > /dev/null 2>&1; then
+                echo "✅ App + DB healthy (attempt ${i})"
+                HEALTH_OK=1
+                break
+              fi
+              echo "  Attempt ${i}/12 failed, retrying in 5s..."
+              sleep 5
+            done
+            if [ "$HEALTH_OK" -ne 1 ]; then
+              echo "❌ App or DB schema unhealthy after 60s at /api/health"
               docker compose logs --tail=50 app || true
               exit 1
             fi
