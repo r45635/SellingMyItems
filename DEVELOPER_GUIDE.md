@@ -441,7 +441,7 @@ export async function createItemAction(formData: FormData) {
 | File | Actions |
 |---|---|
 | `src/lib/auth/actions.ts` | signUp, signIn, signOut, forgotPassword, resetPassword |
-| `src/features/items/actions.ts` | createItem, updateItem, updateItemStatus, deleteItem, linkReservationToBuyer, markItemSold, **searchBuyersAction** (restricted to buyers with existing intent/thread on seller's projects; min query length 3) |
+| `src/features/items/actions.ts` | createItem, updateItem, updateItemStatus, deleteItem, linkReservationToBuyer, markItemSold, **searchBuyersAction** (restricted to buyers with existing intent/thread on seller's projects; min query length 3), **bulkUpdateReservedItemsAction** (mark all reserved items for a buyer as sold or release them, with optional message) |
 | `src/features/projects/actions.ts` | createProject, updateProject, deleteProject |
 | `src/features/wishlist/actions.ts` | addWishlistItem, removeWishlistItem |
 | `src/features/intents/actions.ts` | submitIntent, updateIntentStatus, reserveItemsFromIntent |
@@ -902,7 +902,7 @@ networks:
 | SSH alias | `ssh vultr` |
 | Full command | `ssh -i ~/.ssh/id_ed25519_vultr_r45635 r45635@45.32.220.152` |
 
-> **Note:** Manual ops use `r45635` (in `sudo` + `docker` groups). GitHub Actions deploys as `root` via a separate SSH key (`VPS_SSH_KEY` secret) — the app lives at `/root/sellingmyitems/`.
+> **Note:** Both manual ops and GitHub Actions use `r45635` (in `sudo` + `docker` groups). The app lives at `/home/r45635/sellingmyitems/`.
 
 ### Running Containers
 
@@ -914,7 +914,7 @@ One stack, three containers — **not** multiple app instances:
 | `sellingmyitems-db-1` | postgres:16-alpine | internal |
 | `sellingmyitems-redis-1` | redis:7-alpine | internal |
 
-Useful commands (run as `r45635` or `root`):
+Useful commands (run as `r45635`):
 
 ```bash
 # Live logs
@@ -924,25 +924,25 @@ docker logs sellingmyitems-app -f
 docker exec -it sellingmyitems-app sh
 
 # Restart only the app (no rebuild)
-cd /root/sellingmyitems && docker compose restart app
+cd ~/sellingmyitems && docker compose restart app
 ```
 
 ### GitHub Actions Deploy
 
-On push to `main`, `.github/workflows/deploy.yml` runs (as `root`, in `/root/sellingmyitems`):
+On push to `main`, `.github/workflows/deploy.yml` runs (as `r45635`, in `/home/r45635/sellingmyitems`):
 
 1. Acquire deploy lock (`/tmp/sellingmyitems-deploy.lock`)
 2. Prune Docker images/containers if disk < 4 GB free
 3. Abort if disk < 1 GB free
 4. Ensure `shared-proxy` network exists
-5. `git clone` (first deploy) or `git pull origin main`
+5. `git clone` via HTTPS (first deploy) or `git pull origin main`
 6. `docker compose build --pull`
 7. `docker compose up -d --force-recreate --remove-orphans`
 8. Run DB migrations (`scripts/run-migrations.sh`)
-9. Health check (`docker exec sellingmyitems-app wget -qO- http://localhost:3000/api/health`)
+9. Health check — retries `docker exec sellingmyitems-app wget -qO- http://127.0.0.1:3000/api/health` up to 12× (5 s apart, 60 s total) to allow for container startup
 10. Post-deploy prune (dangling images + builder cache)
 
-Required GitHub secrets: `VPS_HOST`, `VPS_USER` (root), `VPS_SSH_KEY`, optionally `VPS_PORT`, `VPS_APP_DIR`.
+Required GitHub secrets: `VPS_HOST`, `VPS_USER` (`r45635`), `VPS_SSH_KEY`, optionally `VPS_PORT`, `VPS_APP_DIR` (default `$HOME/sellingmyitems`).
 
 ### Caddy Reverse Proxy
 
