@@ -206,6 +206,8 @@
     "sortPriceDesc": "Price: high to low",
     "sortNewest": "Most recent",
     "noMatchingItems": "No items match the current filter",
+    "searchItems": "Search items...",
+    "noItemsMatchingSearch": "No items match \"{q}\"",
     "backToProjects": "All projects",
     "backToProject": "Back to project",
     "contactSeller": "Seller",

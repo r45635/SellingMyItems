@@ -3,7 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { db } from "@/db";
 import { profiles, projects, sellerAccounts, items, buyerWishlists, buyerWishlistItems } from "@/db/schema";
-import { and, count, desc, eq, isNull, isNotNull, max, min, ne, inArray, ilike, sql } from "drizzle-orm";
+import { and, count, desc, eq, isNull, isNotNull, max, min, ne, inArray, sql } from "drizzle-orm";
 import { MapPin, Package, Heart, MapPinned, HandCoins, Tag, Navigation } from "lucide-react";
 import { SearchBar } from "@/components/shared/search-bar";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -86,7 +86,7 @@ export default async function HomePage({
   const activeSellerIdSet = activeSellerIds.map((s) => s.id);
 
   const searchFilter = searchQuery?.trim()
-    ? ilike(projects.name, `%${searchQuery.trim()}%`)
+    ? sql`unaccent(${projects.name}) ilike unaccent(${`%${searchQuery.trim()}%`})`
     : undefined;
 
   // Distance expression in metres, only meaningful when the buyer has

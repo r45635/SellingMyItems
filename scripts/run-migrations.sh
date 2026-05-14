@@ -27,6 +27,13 @@ psql_in() {
   docker compose exec -T "$DB_SVC" psql -U "$DB_USER" -d "$DB_NAME" "$@"
 }
 
+# Ensure required PostgreSQL extensions are installed (idempotent, ms).
+# unaccent: accent-insensitive search (e.g. "mosaique" finds "mosaïque").
+# cube + earthdistance: already used for radius queries (migration 0022).
+psql_in -c "CREATE EXTENSION IF NOT EXISTS unaccent;" >/dev/null
+psql_in -c "CREATE EXTENSION IF NOT EXISTS cube;" >/dev/null
+psql_in -c "CREATE EXTENSION IF NOT EXISTS earthdistance;" >/dev/null
+
 if [ ! -d "$MIGRATIONS_DIR" ]; then
   echo "❌ Migrations dir '$MIGRATIONS_DIR' not found." >&2
   exit 1

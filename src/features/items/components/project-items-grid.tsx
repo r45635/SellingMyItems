@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Package, SlidersHorizontal } from "lucide-react";
+import { Package, Search, SlidersHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface ProjectItem {
@@ -53,6 +53,11 @@ type StatusFilter =
   | "reserved-for-you";
 type SortOption = "default" | "price-asc" | "price-desc" | "newest";
 
+/** Strip accents and lowercase — used for accent-insensitive filtering. */
+function normalizeSearch(s: string) {
+  return s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+}
+
 export function ProjectItemsGrid({
   items,
   slug,
@@ -65,6 +70,7 @@ export function ProjectItemsGrid({
   const [statusFilter, setStatusFilter] = useState<StatusFilter>(initialStatusFilter);
   const [sortOption, setSortOption] = useState<SortOption>("default");
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [textFilter, setTextFilter] = useState("");
 
   const availableCount = useMemo(
     () => items.filter((item) => item.status === "available").length,
@@ -99,6 +105,11 @@ export function ProjectItemsGrid({
   const filteredAndSorted = useMemo(() => {
     let result = items;
 
+    if (textFilter.trim()) {
+      const norm = normalizeSearch(textFilter.trim());
+      result = result.filter((item) => normalizeSearch(item.title).includes(norm));
+    }
+
     if (activeCategory) {
       result = result.filter((item) => item.categoryId === activeCategory);
     }
@@ -126,10 +137,22 @@ export function ProjectItemsGrid({
     }
 
     return result;
-  }, [items, statusFilter, sortOption, activeCategory, userId]);
+  }, [items, statusFilter, sortOption, activeCategory, userId, textFilter]);
 
   return (
     <>
+      {/* Text search */}
+      <div className="relative mb-4">
+        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
+        <input
+          type="search"
+          value={textFilter}
+          onChange={(e) => setTextFilter(e.target.value)}
+          placeholder={t("searchItems")}
+          className="w-full rounded-lg border border-border bg-white/70 py-2 pl-9 pr-3 text-sm outline-none focus:border-orange-300 focus:ring-1 focus:ring-orange-200 dark:bg-background/70"
+        />
+      </div>
+
       {/* Filter & Sort Bar */}
       <div className="flex flex-wrap items-center gap-3 mb-4">
         <div className="flex items-center gap-2">
@@ -260,7 +283,7 @@ export function ProjectItemsGrid({
       )}
 
       {/* Filtered count badge when any filter is active */}
-      {(statusFilter !== "all" || activeCategory !== null) && (
+      {(statusFilter !== "all" || activeCategory !== null || textFilter.trim() !== "") && (
         <div className="mb-3">
           <Badge variant="secondary" className="text-xs">
             {filteredAndSorted.length} / {items.length}
@@ -304,7 +327,11 @@ export function ProjectItemsGrid({
       ) : (
         <div className="text-center py-10 text-muted-foreground">
           <Package className="h-8 w-8 mx-auto mb-2 text-muted-foreground/30" />
-          <p className="text-sm">{t("noMatchingItems")}</p>
+          <p className="text-sm">
+            {textFilter.trim()
+              ? t("noItemsMatchingSearch", { q: textFilter.trim() })
+              : t("noMatchingItems")}
+          </p>
         </div>
       )}
     </>

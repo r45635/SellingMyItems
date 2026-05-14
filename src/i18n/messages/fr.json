@@ -206,6 +206,8 @@
     "sortPriceDesc": "Prix décroissant",
     "sortNewest": "Plus récents",
     "noMatchingItems": "Aucun article ne correspond au filtre",
+    "searchItems": "Rechercher un article...",
+    "noItemsMatchingSearch": "Aucun article ne correspond à « {q} »",
     "backToProjects": "Tous les projets",
     "backToProject": "Retour au projet",
     "contactSeller": "Vendeur",
