@@ -357,6 +357,7 @@ npx drizzle-kit push
 | `0024` | GDPR retention: create `purge_old_email_logs()` function + initial purge; `run-migrations.sh` calls it on every deploy |
 | `0025` | GDPR Art. 20: add `last_data_export_at timestamptz` to `profiles` for per-user export rate-limiting |
 | `0026` | GDPR Art. 17: create `deletion_log` audit table (hashed email + entity counts) |
+| `0027` | Add `hd_url text` to `item_images` — progressive HD loading (standard 1024 px + HD 1920 px on zoom) |
 
 ### Query Patterns
 
@@ -468,14 +469,14 @@ API Route (src/app/api/upload/route.ts)
   ├── Rate limit (20/5min per user)
   ├── File type validation (JPEG, PNG, WebP, GIF, AVIF)
   ├── File size check (max 20MB per file, 8 files per request)
-  ├── Process each file with sharp:
+  ├── Process each file with sharp (two passes):
   │   ├── Auto-rotate (EXIF orientation)
-  │   ├── Resize to max 1920px (preserving aspect ratio)
-  │   ├── Convert to WebP (quality 75)
-  │   └── Strip all EXIF metadata
-  ├── Generate unique filename (UUID + .webp)
-  ├── Save to /app/public/uploads/
-  └── Return JSON { urls: ["/uploads/xxx.webp", ...] }
+  │   ├── Standard variant: resize to max 1024 px, WebP quality 72, strip EXIF
+  │   │   └── saved as {uuid}.webp
+  │   └── HD variant: resize to max 1920 px, WebP quality 80, strip EXIF
+  │       └── saved as {uuid}_hd.webp
+  ├── Save both variants to /app/public/uploads/
+  └── Return JSON { urls: ["/uploads/{uuid}.webp", ...], hdUrls: ["/uploads/{uuid}_hd.webp", ...] }
 ```
 
 ### File Serving
@@ -938,7 +939,7 @@ On push to `main`, `.github/workflows/deploy.yml` runs (as `r45635`, in `/home/r
 5. `git clone` via HTTPS (first deploy) or `git pull origin main`
 6. `docker compose build --pull`
 7. `docker compose up -d --force-recreate --remove-orphans`
-8. Run DB migrations (`scripts/run-migrations.sh`)
+8. Run DB migrations (`scripts/run-migrations.sh`) — also installs extensions (`unaccent`, `cube`, `earthdistance`) idempotently before applying SQL files
 9. Health check — retries `docker exec sellingmyitems-app wget -qO- http://127.0.0.1:3000/api/health` up to 12× (5 s apart, 60 s total) to allow for container startup
 10. Post-deploy prune (dangling images + builder cache)
 

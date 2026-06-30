@@ -117,6 +117,9 @@ export default async function SellerDashboardPage() {
     wishlistCountResult,
     intentCountResult,
     threadCountResult,
+    perProjectViewsResult,
+    perProjectWishlistResult,
+    perProjectIntentResult,
   ] = await Promise.all([
     // Items by status (aggregate)
     db
@@ -192,6 +195,28 @@ export default async function SellerDashboardPage() {
       .select({ count: count() })
       .from(conversationThreads)
       .where(inArray(conversationThreads.projectId, projectIds)),
+
+    // Per-project view totals
+    db
+      .select({ projectId: items.projectId, total: sum(items.viewCount) })
+      .from(items)
+      .where(and(inArray(items.projectId, projectIds), isNull(items.deletedAt)))
+      .groupBy(items.projectId),
+
+    // Per-project wishlist counts
+    db
+      .select({ projectId: buyerWishlists.projectId, cnt: count() })
+      .from(buyerWishlistItems)
+      .innerJoin(buyerWishlists, eq(buyerWishlistItems.wishlistId, buyerWishlists.id))
+      .where(inArray(buyerWishlists.projectId, projectIds))
+      .groupBy(buyerWishlists.projectId),
+
+    // Per-project intent counts
+    db
+      .select({ projectId: buyerIntents.projectId, cnt: count() })
+      .from(buyerIntents)
+      .where(inArray(buyerIntents.projectId, projectIds))
+      .groupBy(buyerIntents.projectId),
   ]);
 
   // Process item stats
@@ -226,6 +251,17 @@ export default async function SellerDashboardPage() {
   const listedValue = listedTotalsByCurrency[0]?.total ?? 0;
   const listedCurrency = listedTotalsByCurrency[0]?.currency ?? "USD";
   const otherListedTotals = listedTotalsByCurrency.slice(1);
+
+  // Per-project engagement Maps
+  const projectViewsMap = new Map(
+    perProjectViewsResult.map((r) => [r.projectId, Number(r.total ?? 0)])
+  );
+  const projectWishlistMap = new Map(
+    perProjectWishlistResult.map((r) => [r.projectId, r.cnt])
+  );
+  const projectIntentMap = new Map(
+    perProjectIntentResult.map((r) => [r.projectId, r.cnt])
+  );
 
   // Per-project status counts → drives the inline health bar on each card.
   type ProjectHealth = {
@@ -480,6 +516,26 @@ export default async function SellerDashboardPage() {
                         </span>
                       )}
                     </div>
+                    {(projectViewsMap.get(project.id) ?? 0) > 0 && (
+                      <div className="mt-2 pt-2 border-t border-border/50 flex gap-3 text-[11px] text-muted-foreground">
+                        <span className="inline-flex items-center gap-1">
+                          <Eye className="h-3 w-3" />
+                          {(projectViewsMap.get(project.id) ?? 0).toLocaleString()}
+                        </span>
+                        {(projectWishlistMap.get(project.id) ?? 0) > 0 && (
+                          <span className="inline-flex items-center gap-1">
+                            <Heart className="h-3 w-3 text-rose-500" />
+                            {projectWishlistMap.get(project.id)}
+                          </span>
+                        )}
+                        {(projectIntentMap.get(project.id) ?? 0) > 0 && (
+                          <span className="inline-flex items-center gap-1">
+                            <ShoppingCart className="h-3 w-3 text-amber-500" />
+                            {projectIntentMap.get(project.id)}
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </>
                 ) : (
                   <p className="mt-2 text-[11px] text-muted-foreground">

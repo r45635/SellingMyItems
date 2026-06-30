@@ -1,11 +1,11 @@
 import { getTranslations, getLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
-import { Plus, ArrowLeft, ImageOff, Eye, ClipboardList, KeyRound, Package, Share2 } from "lucide-react";
+import { Plus, ArrowLeft, ImageOff, Eye, ClipboardList, KeyRound, Package, Share2, Heart, ShoppingCart } from "lucide-react";
 import { EmptyState } from "@/components/shared/empty-state";
 import { requireSeller } from "@/lib/auth";
 import { db } from "@/db";
-import { items, profiles, projects, sellerAccounts } from "@/db/schema";
-import { and, asc, desc, eq, isNull, sql } from "drizzle-orm";
+import { items, profiles, projects, sellerAccounts, buyerWishlistItems, buyerWishlists, buyerIntentItems } from "@/db/schema";
+import { and, asc, count, desc, eq, isNull, sql } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import { StatusSelect } from "@/features/items/components/status-select";
@@ -36,39 +36,60 @@ export default async function ProjectItemsPage({
     notFound();
   }
 
-  const projectItems = project
-    ? await db
-        .select({
-          id: items.id,
-          title: items.title,
-          status: items.status,
-          price: items.price,
-          currency: items.currency,
-          coverImageUrl: items.coverImageUrl,
-          viewCount: items.viewCount,
-          updatedAt: items.updatedAt,
-          reservedForUserId: items.reservedForUserId,
-          soldToUserId: items.soldToUserId,
-          reservedForEmail: sql<string | null>`rp.email`.as("reservedForEmail"),
-          soldToEmail: sql<string | null>`sp.email`.as("soldToEmail"),
-        })
-        .from(items)
-        .leftJoin(
-          sql`${profiles} as rp`,
-          sql`rp.id = ${items.reservedForUserId}`
-        )
-        .leftJoin(
-          sql`${profiles} as sp`,
-          sql`sp.id = ${items.soldToUserId}`
-        )
-        .where(and(eq(items.projectId, project.id), isNull(items.deletedAt)))
-        // Stable order: items don't jump when their status (and updatedAt)
-        // changes. Matches the public project page sort. sortOrder is
-        // currently 0 for everyone but is reserved for a future
-        // drag-reorder UI; createdAt desc keeps newest items on top until
-        // then.
-        .orderBy(asc(items.sortOrder), desc(items.createdAt))
-    : [];
+  const [projectItems, wishlistCountsRaw, intentCountsRaw] = project
+    ? await Promise.all([
+        db
+          .select({
+            id: items.id,
+            title: items.title,
+            status: items.status,
+            price: items.price,
+            currency: items.currency,
+            coverImageUrl: items.coverImageUrl,
+            viewCount: items.viewCount,
+            updatedAt: items.updatedAt,
+            reservedForUserId: items.reservedForUserId,
+            soldToUserId: items.soldToUserId,
+            reservedForEmail: sql<string | null>`rp.email`.as("reservedForEmail"),
+            soldToEmail: sql<string | null>`sp.email`.as("soldToEmail"),
+          })
+          .from(items)
+          .leftJoin(
+            sql`${profiles} as rp`,
+            sql`rp.id = ${items.reservedForUserId}`
+          )
+          .leftJoin(
+            sql`${profiles} as sp`,
+            sql`sp.id = ${items.soldToUserId}`
+          )
+          .where(and(eq(items.projectId, project.id), isNull(items.deletedAt)))
+          // Stable order: items don't jump when their status (and updatedAt)
+          // changes. Matches the public project page sort. sortOrder is
+          // currently 0 for everyone but is reserved for a future
+          // drag-reorder UI; createdAt desc keeps newest items on top until
+          // then.
+          .orderBy(asc(items.sortOrder), desc(items.createdAt)),
+
+        // Wishlist count per item in this project
+        db
+          .select({ itemId: buyerWishlistItems.itemId, cnt: count() })
+          .from(buyerWishlistItems)
+          .innerJoin(buyerWishlists, eq(buyerWishlistItems.wishlistId, buyerWishlists.id))
+          .where(eq(buyerWishlists.projectId, project.id))
+          .groupBy(buyerWishlistItems.itemId),
+
+        // Intent count per item in this project
+        db
+          .select({ itemId: buyerIntentItems.itemId, cnt: count() })
+          .from(buyerIntentItems)
+          .innerJoin(items, eq(buyerIntentItems.itemId, items.id))
+          .where(and(eq(items.projectId, project.id), isNull(items.deletedAt)))
+          .groupBy(buyerIntentItems.itemId),
+      ])
+    : [[], [], []];
+
+  const wishlistMap = new Map(wishlistCountsRaw.map((r) => [r.itemId, r.cnt]));
+  const intentMap = new Map(intentCountsRaw.map((r) => [r.itemId, r.cnt]));
 
   return (
     <div>
@@ -207,9 +228,23 @@ export default async function ProjectItemsPage({
                     </div>
                     <div>
                       <p className="font-medium">{item.title}</p>
-                      <p className="mt-0.5 inline-flex items-center gap-1 text-xs text-muted-foreground">
-                        <Eye className="h-3.5 w-3.5" />
-                        {item.viewCount} views
+                      <p className="mt-0.5 inline-flex items-center gap-2.5 text-xs text-muted-foreground">
+                        <span className="inline-flex items-center gap-1">
+                          <Eye className="h-3.5 w-3.5" />
+                          {item.viewCount}
+                        </span>
+                        {(wishlistMap.get(item.id) ?? 0) > 0 && (
+                          <span className="inline-flex items-center gap-1">
+                            <Heart className="h-3.5 w-3.5 text-rose-500" />
+                            {wishlistMap.get(item.id)}
+                          </span>
+                        )}
+                        {(intentMap.get(item.id) ?? 0) > 0 && (
+                          <span className="inline-flex items-center gap-1">
+                            <ShoppingCart className="h-3.5 w-3.5 text-amber-500" />
+                            {intentMap.get(item.id)}
+                          </span>
+                        )}
                       </p>
                     </div>
                   </div>

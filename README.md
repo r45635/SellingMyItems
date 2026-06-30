@@ -126,7 +126,8 @@ A user can hold multiple capabilities simultaneously (e.g. a seller is also a bu
 - **Multi-currency** — USD, EUR, CAD as a proper DB enum. Each item is priced in the seller's chosen currency; buyers see prices unchanged (no conversion). Aggregations (seller dashboard, PDF recap) group by currency rather than picking arbitrarily.
 - **Geographic matching** — buyers and sellers store an approximate location (country + postal code resolved to city centroid via Nominatim/OSM, cached in `geocoded_locations`). Powers the homepage "Near me" radius filter and the optional seller-side `radius_km` restriction. `cube` + `earthdistance` postgres extensions handle the haversine queries with a GiST index on project coords.
 - **Dark mode** — system-preference-based theming, orange accent preserved in dark
-- **Image optimization** — auto-resize to 1920px max, WebP conversion, quality 75, EXIF stripping
+- **Image optimization** — dual-resolution upload: standard 1024 px WebP (quality 72) for normal display + HD 1920 px WebP (quality 80) lazy-loaded on zoom. EXIF stripping on all variants.
+- **Accent-insensitive search** — homepage project search uses PostgreSQL `unaccent` extension (server-side); in-project item search uses a client-side `normalizeSearch()` helper. Both strip diacritics so "mosaique" finds "mosaïque".
 - **Rate limiting** — in-memory rate limiting on auth actions (sign up/in/forgot/reset/change), uploads, messages, intents; Nominatim geocoding gated to 1 req/s globally per Node process
 - **HTTP security headers** — `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, and `Permissions-Policy` (camera/mic/geo off) on all routes
 - **GDPR compliance** — cookie notice on login/signup; Privacy Policy (`/privacy`) and Terms of Use (`/terms`) pages (EN + FR); account deletion with password confirmation (cascades all data, removes uploaded files, purges email logs); email logs auto-purged after **90 days** on each deploy
@@ -298,7 +299,7 @@ SellingMyItems/
 │   │   └── admin-dashboard/    # Admin actions + sidebar (actions + components)
 │   ├── db/
 │   │   ├── index.ts            # Drizzle client initialization
-│   │   ├── schema/index.ts     # Complete Drizzle schema (22 tables, 13 enums)
+│   │   ├── schema/index.ts     # Complete Drizzle schema (25 tables, 13 enums)
 │   │   └── migrations/         # SQL migrations (0000–0018)
 │   ├── lib/
 │   │   ├── auth/               # Authentication
@@ -411,7 +412,7 @@ SellingMyItems/
 | `email_type` | `welcome`, `message_notification`, `message_copy`, `intent_received`, `intent_status`, `password_reset`, `reservation_recap`, `invitation_sent`, `access_granted`, `access_declined`, `access_revoked`, `access_requested`, `inbound_relay` (kept, unused) |
 | `email_status` | `sent`, `failed` |
 
-### Tables (26)
+### Tables (25)
 
 Core domain:
 
@@ -424,7 +425,7 @@ Core domain:
 | `projects` | sellerId, name, slug (unique), cityArea, description, isPublic, visibility, publishStatus, reviewerNote, submittedAt, reviewedAt, **countryCode**, **postalCode**, **latitude**, **longitude**, **radiusKm**, deletedAt | Seller projects. `radiusKm` (nullable) restricts visibility to buyers within that distance from the project's centroid; NULL means unrestricted. |
 | `project_categories` | projectId, name, sortOrder | Custom categories per project |
 | `items` | projectId, title, price, originalPrice, currency, status, coverImageUrl, reservedForUserId, soldToUserId, reservedAt, soldAt, viewCount, deletedAt | Items for sale |
-| `item_images` | itemId, url, altText, sortOrder | Additional item images |
+| `item_images` | itemId, url, hdUrl, altText, sortOrder | Additional item images. `url` is the standard 1024 px WebP; `hdUrl` is the HD 1920 px variant loaded on zoom. |
 | `item_files` | itemId, url, fileName, mimeType, sizeBytes | Attached files |
 | `item_links` | itemId, url, label | External reference links |
 
@@ -452,7 +453,7 @@ Geo + messaging + invitations + admin:
 | `item_share_links` | itemId, projectId, token (unique), createdBy, expiresAt, revokedAt, revokedBy | Per-item share link tokens (30-day validity). Claiming a link auto-grants the viewer access to the parent project (`access_grant_source = 'share_link'`). |
 | `app_settings` | key (unique), value, updatedBy | Admin-managed settings (e.g. Resend API key) |
 
-### Migrations (23 files)
+### Migrations (29 files)
 
 Migrations are auto-applied on deploy by [`scripts/run-migrations.sh`](scripts/run-migrations.sh) — drop a new `*.sql` file in `src/db/migrations/`, push, and the workflow runner picks it up. Tracking lives in the `_applied_migrations` table.
 
@@ -483,6 +484,9 @@ Numbered SQL files in `src/db/migrations/`. Notable steps:
 | `0022` | Enable `cube` + `earthdistance` extensions. Location columns (`country_code`, `postal_code`, `latitude`, `longitude`) on `profiles` and `projects`, plus `radius_km` on `projects`. New `geocoded_locations` cache table. GiST index on project coords for fast radius queries. |
 | `0023` | Add `share_link` to `access_grant_source` enum. New `item_share_links` table (UUID PK, item/project/user FKs, unique token, expiry + revocation timestamps). |
 | `0024` | Create `purge_old_email_logs()` PostgreSQL function and run an initial purge. Email logs older than 90 days are removed on each deploy (`scripts/run-migrations.sh`). |
+| `0025` | GDPR Art. 20: add `last_data_export_at timestamptz` to `profiles` for per-user export rate-limiting (max 1 export/24 h). |
+| `0026` | GDPR Art. 17: create `deletion_log` audit table (SHA-256 hashed email + entity counts) so account deletions are traceable without re-identification. |
+| `0027` | Add `hd_url` column to `item_images` — enables progressive HD loading: standard 1024 px WebP for normal display, 1920 px WebP loaded on fullscreen zoom. |
 
 ---
 
@@ -525,7 +529,7 @@ In-memory rate limiter (`Map`-based, single-node) applied to:
 
 - File type validation (JPEG, PNG, WebP, GIF, AVIF only)
 - Max 20MB per file, max 8 files per request
-- Images auto-processed: resize to max 1920px, convert to WebP (quality 75), strip EXIF metadata
+- Images auto-processed into two WebP variants: standard 1024 px (quality 72) + HD 1920 px (quality 80); EXIF stripped from both
 - Path traversal protection on file serving
 - 1-year immutable cache headers on served uploads
 

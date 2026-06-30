@@ -69,6 +69,29 @@ Permet aux sellers de partager un item d'un projet invitation-only via une URL c
 
 ---
 
+## Images HD progressives — ✅ Livré
+
+**Statut** : implémenté (migration 0027)
+
+- Pipeline `sharp` à double résolution : variante standard 1024 px (WebP quality 72) pour l'affichage normal + variante HD 1920 px (WebP quality 80) chargée uniquement au zoom plein écran
+- Nouvelle colonne `item_images.hd_url` (migration `0027`) pour stocker l'URL HD
+- Pré-chargement eager de toutes les images du carousel pour une navigation sans spinner
+- Spinner visible pendant le chargement HD ; résolution standard affichée immédiatement
+- L'API `/api/upload` renvoie désormais `{ urls, hdUrls }` — les deux tableaux sont indexés de manière identique
+
+---
+
+## Recherche accent-insensible (unaccent) — ✅ Livré
+
+**Statut** : implémenté
+
+- Recherche de projets en page d'accueil : utilise `unaccent()` côté PostgreSQL via une fonction SQL brute dans `page.tsx` — "mosaique" trouve "mosaïque"
+- Recherche d'items dans le grid projet : filtrage côté client via `normalizeSearch()` (décomposition NFD + suppression des diacritiques)
+- Extension PostgreSQL `unaccent` installée de manière idempotente au début de chaque run `scripts/run-migrations.sh` (avec `cube` et `earthdistance`)
+- Clés i18n ajoutées : `project.searchItems` (EN + FR)
+
+---
+
 ## Sécurité & conformité GDPR — ✅ Livré
 
 **Statut** : implémenté (mai 2026)
