@@ -152,8 +152,11 @@ async function callNominatim(
   input: GeocodeInput
 ): Promise<GeocodeResult> {
   const url = new URL(NOMINATIM_ENDPOINT);
-  url.searchParams.set("postalcode", input.postalCode);
-  url.searchParams.set("country", input.countryCode);
+  // Free-text q + countrycodes handles both postal codes ("75001") and
+  // city names ("Toronto") — the structured postalcode= param rejects anything
+  // that doesn't look like a postal code to Nominatim.
+  url.searchParams.set("q", input.postalCode);
+  url.searchParams.set("countrycodes", input.countryCode.toLowerCase());
   url.searchParams.set("format", "json");
   url.searchParams.set("limit", "1");
   url.searchParams.set("addressdetails", "1");

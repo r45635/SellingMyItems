@@ -29,7 +29,7 @@ export function LocationContactForm({
   const t = useTranslations("account");
   const [country, setCountry] = useState<string>(defaultCountry ?? "");
   const [postalValue, setPostalValue] = useState<string>(defaultPostalCode ?? "");
-  const [geoStatus, setGeoStatus] = useState<"idle" | "loading" | "denied" | "error">("idle");
+  const [geoStatus, setGeoStatus] = useState<"idle" | "loading" | "success" | "denied" | "error">("idle");
   const [geoCoords, setGeoCoords] = useState<{ lat: number; lng: number } | null>(null);
   const postalRef = useRef<HTMLInputElement>(null);
 
@@ -45,9 +45,9 @@ export function LocationContactForm({
           if (!res.ok) { setGeoStatus("error"); return; }
           const data = await res.json();
           setCountry(data.countryCode ?? "");
-          setPostalValue(data.postalCode ?? "");
+          setPostalValue(data.postalCode ?? data.city ?? "");
           setGeoCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-          setGeoStatus("idle");
+          setGeoStatus("success");
         } catch {
           setGeoStatus("error");
         }
@@ -76,16 +76,22 @@ export function LocationContactForm({
         <p className="text-xs text-muted-foreground">{t("locationContactDesc")}</p>
 
         {/* Browser geolocation shortcut */}
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={handleUseMyLocation}
-            disabled={geoStatus === "loading"}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-medium transition-all hover:bg-muted disabled:opacity-60"
-          >
-            <LocateFixed className="h-3.5 w-3.5 text-orange-500" />
-            {geoStatus === "loading" ? t("geoLocating") : t("useMyLocation")}
-          </button>
+        <div className="space-y-1.5">
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={handleUseMyLocation}
+              disabled={geoStatus === "loading"}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-medium transition-all hover:bg-muted disabled:opacity-60"
+            >
+              <LocateFixed className="h-3.5 w-3.5 text-orange-500" />
+              {geoStatus === "loading" ? t("geoLocating") : t("useMyLocation")}
+            </button>
+            <span className="text-xs text-muted-foreground">{t("geoButtonHint")}</span>
+          </div>
+          {geoStatus === "success" && (
+            <p className="text-xs text-emerald-700 dark:text-emerald-300">{t("geoDetected")}</p>
+          )}
           {geoStatus === "denied" && (
             <p className="text-xs text-amber-700 dark:text-amber-300">{t("geoLocationDenied")}</p>
           )}
@@ -111,7 +117,7 @@ export function LocationContactForm({
               id="countryCode"
               name="countryCode"
               value={country}
-              onChange={(e) => { setCountry(e.target.value); setGeoCoords(null); }}
+              onChange={(e) => { setCountry(e.target.value); setGeoCoords(null); setGeoStatus("idle"); }}
               className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
             >
               <option value="">—</option>
@@ -131,7 +137,7 @@ export function LocationContactForm({
               name="postalCode"
               type="text"
               value={postalValue}
-              onChange={(e) => { setPostalValue(e.target.value); setGeoCoords(null); }}
+              onChange={(e) => { setPostalValue(e.target.value); setGeoCoords(null); setGeoStatus("idle"); }}
               placeholder="75001"
               autoComplete="postal-code"
             />

@@ -14,8 +14,9 @@ import {
   conversationMessages,
   conversationThreads,
   deletionLog,
+  geocodedLocations,
 } from "@/db/schema";
-import { eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, isNull } from "drizzle-orm";
 import { createHash } from "crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -406,6 +407,18 @@ export async function retryGeocodeLocationAction() {
   if (!profile?.countryCode || !profile?.postalCode) {
     redirect("/account?error=location_incomplete");
   }
+
+  // Clear any negative cache entry so Nominatim is always called fresh on retry.
+  // (Negative entries block re-lookup for 24h; the user explicitly asked us to retry.)
+  await db
+    .delete(geocodedLocations)
+    .where(
+      and(
+        eq(geocodedLocations.countryCode, profile.countryCode),
+        eq(geocodedLocations.postalCode, profile.postalCode),
+        isNull(geocodedLocations.latitude),
+      )
+    );
 
   const resolved = await geocode({
     countryCode: profile.countryCode,
