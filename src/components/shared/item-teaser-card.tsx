@@ -4,6 +4,11 @@ import Image from "next/image";
 import { ImageOff, Heart, Eye } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { BLUR_PLACEHOLDER } from "@/lib/image/placeholders";
+import {
+  isCurrencyCode,
+  convertApprox,
+  type CurrencyCode,
+} from "@/lib/currency";
 
 interface ItemTeaserCardProps {
   title: string;
@@ -18,6 +23,7 @@ interface ItemTeaserCardProps {
   isReservedForCurrentUser?: boolean;
   price?: number | null;
   currency?: string;
+  viewerCurrency?: CurrencyCode;
 }
 
 export function ItemTeaserCard({
@@ -33,6 +39,7 @@ export function ItemTeaserCard({
   isReservedForCurrentUser,
   price,
   currency,
+  viewerCurrency,
 }: ItemTeaserCardProps) {
   const t = useTranslations("item");
 
@@ -90,13 +97,27 @@ export function ItemTeaserCard({
       <CardContent className="p-2.5">
         <h3 className="font-medium text-sm line-clamp-2 group-hover:text-orange-600 transition-colors">{title}</h3>
         {price != null && (
-          <p className="text-sm font-bold text-orange-600 dark:text-orange-400 mt-1">
-            {new Intl.NumberFormat(undefined, {
-              style: "currency",
-              currency: currency ?? "USD",
-              maximumFractionDigits: 0,
-            }).format(price)}
-          </p>
+          <div className="mt-1">
+            <p className="text-sm font-bold text-orange-600 dark:text-orange-400">
+              {new Intl.NumberFormat(undefined, {
+                style: "currency",
+                currency: currency ?? "USD",
+                maximumFractionDigits: 0,
+              }).format(price)}
+            </p>
+            {viewerCurrency &&
+              isCurrencyCode(currency) &&
+              viewerCurrency !== currency && (
+                <p className="text-xs text-muted-foreground">
+                  ~
+                  {new Intl.NumberFormat(undefined, {
+                    style: "currency",
+                    currency: viewerCurrency,
+                    maximumFractionDigits: 0,
+                  }).format(convertApprox(price, currency, viewerCurrency))}
+                </p>
+              )}
+          </div>
         )}
         <div className="mt-1 flex items-center justify-between gap-2">
           {formattedDate ? (

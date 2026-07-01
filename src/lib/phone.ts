@@ -1,9 +1,6 @@
-/**
- * E.164 dial-in prefixes per country we currently support. US and CA
- * share +1 (NANP). Used by the account page to validate that a saved
- * phone matches the user's location country — protects us from local-
- * format numbers we couldn't reach reliably from email/SMS reminders.
- */
+import { isValidPhoneNumber, parsePhoneNumberWithError, type CountryCode } from "libphonenumber-js";
+
+// Used by the UI to show a prefix hint (e.g., "+33") next to the phone input.
 export const COUNTRY_PHONE_PREFIXES = {
   US: ["+1"],
   CA: ["+1"],
@@ -12,26 +9,32 @@ export const COUNTRY_PHONE_PREFIXES = {
 
 export type SupportedPhoneCountry = keyof typeof COUNTRY_PHONE_PREFIXES;
 
+const SUPPORTED_COUNTRIES = new Set<CountryCode>(["US", "CA", "FR"]);
+
 /**
- * Strip whitespace, dashes, dots, and parentheses but keep the
- * leading + sign so prefix checks still work.
+ * Returns true when the phone number is valid for the given country, or
+ * when the phone is empty (optional field) or the country is unsupported.
  */
-export function normalizePhoneInput(raw: string): string {
-  return raw.replace(/[\s\-().]/g, "");
+export function phoneMatchesCountry(phone: string, country: string): boolean {
+  if (!phone.trim()) return true;
+  if (!SUPPORTED_COUNTRIES.has(country as CountryCode)) return true;
+  try {
+    return isValidPhoneNumber(phone, country as CountryCode);
+  } catch {
+    return false;
+  }
 }
 
-export function phoneMatchesCountry(
-  phone: string,
-  country: string
-): boolean {
-  const normalized = normalizePhoneInput(phone);
-  if (!normalized) return true; // empty phone is always OK
-  const prefixes =
-    country in COUNTRY_PHONE_PREFIXES
-      ? COUNTRY_PHONE_PREFIXES[country as SupportedPhoneCountry]
-      : null;
-  if (!prefixes) return true; // unknown country → don't block
-  return (prefixes as readonly string[]).some((p) =>
-    normalized.startsWith(p)
-  );
+/**
+ * Normalises a phone number to E.164 format (e.g. "+33612345678").
+ * Returns the original string unchanged if parsing fails — this keeps
+ * the save from being blocked while still storing the best format we can.
+ */
+export function normalizePhone(phone: string, country: string): string {
+  if (!phone.trim()) return phone;
+  try {
+    return parsePhoneNumberWithError(phone, country as CountryCode).format("E.164");
+  } catch {
+    return phone;
+  }
 }

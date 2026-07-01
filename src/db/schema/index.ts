@@ -662,6 +662,31 @@ export const passwordResetTokens = pgTable("password_reset_tokens", {
     .notNull(),
 });
 
+// ─── Project Collaborators ───────────────────────────────────────────────────
+
+export const projectCollaborators = pgTable(
+  "project_collaborators",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    sellerAccountId: uuid("seller_account_id")
+      .notNull()
+      .references(() => sellerAccounts.id, { onDelete: "cascade" }),
+    invitedBy: uuid("invited_by").references(() => sellerAccounts.id),
+    invitedAt: timestamp("invited_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [
+    uniqueIndex("project_collaborators_project_seller_idx").on(
+      t.projectId,
+      t.sellerAccountId
+    ),
+  ]
+);
+
 // ─── Relations ──────────────────────────────────────────────────────────────
 
 export const profilesRelations = relations(profiles, ({ many }) => ({
@@ -689,6 +714,9 @@ export const sellerAccountsRelations = relations(
       references: [profiles.id],
     }),
     projects: many(projects),
+    collaborations: many(projectCollaborators, {
+      relationName: "collaborations",
+    }),
   })
 );
 
@@ -705,7 +733,23 @@ export const projectsRelations = relations(projects, ({ one, many }) => ({
   invitations: many(projectInvitations),
   accessGrants: many(projectAccessGrants),
   accessRequests: many(projectAccessRequests),
+  collaborators: many(projectCollaborators),
 }));
+
+export const projectCollaboratorsRelations = relations(
+  projectCollaborators,
+  ({ one }) => ({
+    project: one(projects, {
+      fields: [projectCollaborators.projectId],
+      references: [projects.id],
+    }),
+    sellerAccount: one(sellerAccounts, {
+      fields: [projectCollaborators.sellerAccountId],
+      references: [sellerAccounts.id],
+      relationName: "collaborations",
+    }),
+  })
+);
 
 export const projectInvitationsRelations = relations(
   projectInvitations,

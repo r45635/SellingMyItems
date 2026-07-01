@@ -9,7 +9,7 @@ import {
   profiles,
   projects,
 } from "@/db/schema";
-import { and, desc, eq, inArray, isNotNull, isNull } from "drizzle-orm";
+import { and, count, desc, eq, inArray, isNotNull, isNull } from "drizzle-orm";
 import { Link } from "@/i18n/navigation";
 import { getSellerAccountIdsForUser } from "@/lib/seller-accounts";
 import { ReserveItemsForm } from "@/features/intents/components/reserve-items-form";
@@ -20,7 +20,11 @@ import {
 import { EmptyState } from "@/components/shared/empty-state";
 import { LocalizedDateTime } from "@/components/shared/localized-date-time";
 import { cn } from "@/lib/utils";
-import { Inbox, MessageSquare, Phone } from "lucide-react";
+import { Download, Inbox, MessageSquare, Phone } from "lucide-react";
+import { Pagination } from "@/components/shared/pagination";
+import { Suspense } from "react";
+
+const PAGE_SIZE = 20;
 
 const STATUSES = [
   "submitted",
@@ -47,7 +51,7 @@ const STATUS_PILL: Record<IntentStatus, string> = {
 export default async function SellerIntentsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string; status?: string }>;
+  searchParams: Promise<{ tab?: string; status?: string; page?: string }>;
 }) {
   const sp = await searchParams;
   const tab: "active" | "archived" = sp.tab === "archived" ? "archived" : "active";
@@ -55,6 +59,8 @@ export default async function SellerIntentsPage({
     sp.status && STATUSES.includes(sp.status as IntentStatus)
       ? (sp.status as IntentStatus)
       : "all";
+  const page = Math.max(1, Number(sp.page ?? 1));
+  const offset = (page - 1) * PAGE_SIZE;
 
   const t = await getTranslations("seller");
   const tIntent = await getTranslations("intent");
@@ -115,14 +121,22 @@ export default async function SellerIntentsPage({
       ? isNotNull(buyerIntents.archivedAt)
       : isNull(buyerIntents.archivedAt);
 
-  const intents = await db.query.buyerIntents.findMany({
-    where: and(
-      inArray(buyerIntents.projectId, projectIds),
-      tabCondition,
-      statusCondition
-    ),
-    orderBy: [desc(buyerIntents.createdAt)],
-  });
+  const [[{ currentTabTotal }], intents] = await Promise.all([
+    db
+      .select({ currentTabTotal: count() })
+      .from(buyerIntents)
+      .where(and(inArray(buyerIntents.projectId, projectIds), tabCondition, statusCondition)),
+    db.query.buyerIntents.findMany({
+      where: and(
+        inArray(buyerIntents.projectId, projectIds),
+        tabCondition,
+        statusCondition
+      ),
+      orderBy: [desc(buyerIntents.createdAt)],
+      limit: PAGE_SIZE,
+      offset,
+    }),
+  ]);
 
   const enrichedIntents = await Promise.all(
     intents.map(async (intent) => {
@@ -198,7 +212,16 @@ export default async function SellerIntentsPage({
 
   return (
     <div>
-      <h1 className="text-heading-2 mb-4">{t("intents")}</h1>
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-heading-2">{t("intents")}</h1>
+        <a
+          href="/api/seller/export-intents"
+          className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-background px-2.5 text-sm font-medium hover:bg-muted"
+        >
+          <Download className="h-3.5 w-3.5" />
+          {t("exportCsv")}
+        </a>
+      </div>
 
       {/* Tab row: Active / Archived */}
       <div className="mb-3 inline-flex items-center gap-1 rounded-full border bg-muted/40 p-0.5">
@@ -403,6 +426,14 @@ export default async function SellerIntentsPage({
           })}
         </div>
       )}
+      <Suspense>
+        <Pagination
+          currentPage={page}
+          totalPages={Math.ceil(Number(currentTabTotal) / PAGE_SIZE)}
+          totalItems={Number(currentTabTotal)}
+          pageSize={PAGE_SIZE}
+        />
+      </Suspense>
     </div>
   );
 }

@@ -475,6 +475,9 @@
     "pdfSelectReserved": "Reserved only",
     "pdfSelectNone": "Clear",
     "viewPublic": "View public page",
+    "exportCsv": "Export CSV",
+    "seoIndexable": "Enable search engine indexing (SEO)",
+    "seoIndexableHint": "When enabled, this project will appear in Google and other search engine results. Requires the project to be approved first.",
     "publishStatus": {
       "draft": "Draft",
       "pending": "Pending review",

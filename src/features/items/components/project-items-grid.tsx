@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/select";
 import { Package, Search, SlidersHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { CurrencyCode } from "@/lib/currency";
 
 export interface ProjectItem {
   id: string;
@@ -35,6 +36,7 @@ interface ProjectItemsGridProps {
   userId?: string;
   initialStatusFilter?: StatusFilter;
   wishlistedItemIds: string[];
+  viewerCurrency?: CurrencyCode;
   labels: {
     addToFavorites: string;
     removeFromFavorites: string;
@@ -64,6 +66,7 @@ export function ProjectItemsGrid({
   userId,
   initialStatusFilter = "all",
   wishlistedItemIds,
+  viewerCurrency,
   labels,
 }: ProjectItemsGridProps) {
   const t = useTranslations("project");
@@ -304,6 +307,7 @@ export function ProjectItemsGrid({
               viewCount={item.viewCount}
               price={item.price}
               currency={item.currency}
+              viewerCurrency={viewerCurrency}
               href={`/project/${slug}/item/${item.id}`}
               isWishlisted={wishlistedSet.has(item.id)}
               isReservedForCurrentUser={

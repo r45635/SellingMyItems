@@ -1,13 +1,14 @@
 import { getTranslations } from "next-intl/server";
 import { ProjectForm } from "@/features/projects/components/project-form";
+import { CoSellersSection } from "@/features/projects/components/co-sellers-section";
 import { Link } from "@/i18n/navigation";
 import { ArrowLeft } from "lucide-react";
 import { requireSeller } from "@/lib/auth";
 import { db } from "@/db";
-import { sellerAccounts } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { profiles, projectCollaborators, sellerAccounts } from "@/db/schema";
+import { and, eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
-import { findSellerProject } from "@/lib/seller-accounts";
+import { findSellerProject, isProjectOwner } from "@/lib/seller-accounts";
 
 export default async function EditProjectPage({
   params,
@@ -33,6 +34,23 @@ export default async function EditProjectPage({
     notFound();
   }
 
+  const ownerFlag = await isProjectOwner(sellerAccount.id, project.id);
+
+  const collaboratorRows = await db
+    .select({
+      sellerAccountId: projectCollaborators.sellerAccountId,
+      displayName: profiles.displayName,
+      email: profiles.email,
+    })
+    .from(projectCollaborators)
+    .innerJoin(sellerAccounts, eq(projectCollaborators.sellerAccountId, sellerAccounts.id))
+    .innerJoin(profiles, eq(sellerAccounts.userId, profiles.id))
+    .where(
+      and(
+        eq(projectCollaborators.projectId, project.id)
+      )
+    );
+
   return (
     <div className="max-w-2xl">
       <Link
@@ -57,8 +75,16 @@ export default async function EditProjectPage({
             | undefined,
           postalCode: project.postalCode ?? "",
           radiusKm: project.radiusKm ?? undefined,
+          isSeoIndexable: project.isSeoIndexable,
         }}
       />
+      <div className="mt-6">
+        <CoSellersSection
+          projectId={project.id}
+          isOwner={ownerFlag}
+          collaborators={collaboratorRows}
+        />
+      </div>
     </div>
   );
 }

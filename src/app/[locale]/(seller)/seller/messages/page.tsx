@@ -7,15 +7,27 @@ import {
   profiles,
   projects,
 } from "@/db/schema";
-import { desc, inArray } from "drizzle-orm";
+import { count, desc, inArray } from "drizzle-orm";
 import { Link } from "@/i18n/navigation";
-import { MessageSquare, Package } from "lucide-react";
+import { Download, MessageSquare, Package } from "lucide-react";
 import { EmptyState } from "@/components/shared/empty-state";
 import { LocalizedDateTime } from "@/components/shared/localized-date-time";
 import { MessageAvatar } from "@/features/messages/components/message-avatar";
 import { getSellerAccountIdsForUser } from "@/lib/seller-accounts";
+import { Pagination } from "@/components/shared/pagination";
+import { Suspense } from "react";
 
-export default async function SellerMessagesPage() {
+const PAGE_SIZE = 20;
+
+export default async function SellerMessagesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
+  const sp = await searchParams;
+  const page = Math.max(1, Number(sp.page ?? 1));
+  const offset = (page - 1) * PAGE_SIZE;
+
   const t = await getTranslations("messages");
   const user = await requireSeller();
   const profileId = user.id;
@@ -56,10 +68,18 @@ export default async function SellerMessagesPage() {
     );
   }
 
-  const threads = await db.query.conversationThreads.findMany({
-    where: inArray(conversationThreads.projectId, projectIds),
-    orderBy: [desc(conversationThreads.updatedAt)],
-  });
+  const [[{ total: threadTotal }], threads] = await Promise.all([
+    db
+      .select({ total: count() })
+      .from(conversationThreads)
+      .where(inArray(conversationThreads.projectId, projectIds)),
+    db.query.conversationThreads.findMany({
+      where: inArray(conversationThreads.projectId, projectIds),
+      orderBy: [desc(conversationThreads.updatedAt)],
+      limit: PAGE_SIZE,
+      offset,
+    }),
+  ]);
 
   const buyerIds = [...new Set(threads.map((thread) => thread.buyerId))];
 
@@ -169,7 +189,16 @@ export default async function SellerMessagesPage() {
 
   return (
     <div className="max-w-3xl">
-      <h1 className="text-heading-2 mb-6">{t("title")}</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-heading-2">{t("title")}</h1>
+        <a
+          href="/api/seller/export-conversations"
+          className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-background px-2.5 text-sm font-medium hover:bg-muted"
+        >
+          <Download className="h-3.5 w-3.5" />
+          Export CSV
+        </a>
+      </div>
 
       {groupedThreads.length === 0 ? (
         <EmptyState
@@ -178,6 +207,7 @@ export default async function SellerMessagesPage() {
           description={t("noThreadsSellerDesc")}
         />
       ) : (
+        <>
         <div className="space-y-5">
           {groupedThreads.map((group) => (
             <section key={group.projectId} className="space-y-2">
@@ -258,6 +288,15 @@ export default async function SellerMessagesPage() {
             </section>
           ))}
         </div>
+        <Suspense>
+          <Pagination
+            currentPage={page}
+            totalPages={Math.ceil(Number(threadTotal) / PAGE_SIZE)}
+            totalItems={Number(threadTotal)}
+            pageSize={PAGE_SIZE}
+          />
+        </Suspense>
+        </>
       )}
     </div>
   );

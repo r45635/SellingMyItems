@@ -3,16 +3,28 @@ import { Link } from "@/i18n/navigation";
 import { Plus, FolderOpen, MapPinOff } from "lucide-react";
 import { requireSeller } from "@/lib/auth";
 import { db } from "@/db";
-import { projects } from "@/db/schema";
-import { and, desc, inArray, isNull } from "drizzle-orm";
+import { projectCollaborators, projects } from "@/db/schema";
+import { and, count, desc, inArray, isNull } from "drizzle-orm";
 import { getSellerAccountIdsForUser } from "@/lib/seller-accounts";
 import { EmptyState } from "@/components/shared/empty-state";
 import {
   PublishStatusBadge,
   SubmitForReviewButton,
 } from "@/features/projects/components/publish-status-controls";
+import { Pagination } from "@/components/shared/pagination";
+import { Suspense } from "react";
 
-export default async function SellerProjectsPage() {
+const PAGE_SIZE = 20;
+
+export default async function SellerProjectsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
+  const sp = await searchParams;
+  const page = Math.max(1, Number(sp.page ?? 1));
+  const offset = (page - 1) * PAGE_SIZE;
+
   const t = await getTranslations("seller");
   const user = await requireSeller();
 
@@ -20,31 +32,60 @@ export default async function SellerProjectsPage() {
 
   const sellerAccountIds = await getSellerAccountIdsForUser(profileId);
 
-  const sellerProjects = sellerAccountIds.length > 0
-    ? await db
-        .select({
-          id: projects.id,
-          name: projects.name,
-          slug: projects.slug,
-          cityArea: projects.cityArea,
-          createdAt: projects.createdAt,
-          publishStatus: projects.publishStatus,
-          reviewerNote: projects.reviewerNote,
-          // Coords drive whether the project shows up in radius
-          // searches. NULL = invisible to "Near me" filters even if
-          // cityArea is set, so we want to flag this on the card.
-          latitude: projects.latitude,
-          longitude: projects.longitude,
-        })
-        .from(projects)
-        .where(
-          and(
-            inArray(projects.sellerId, sellerAccountIds),
-            isNull(projects.deletedAt)
-          )
-        )
-        .orderBy(desc(projects.createdAt))
-    : [];
+  // Collect IDs of projects the user co-manages (not as primary owner)
+  const collabRows =
+    sellerAccountIds.length > 0
+      ? await db
+          .select({ projectId: projectCollaborators.projectId })
+          .from(projectCollaborators)
+          .where(inArray(projectCollaborators.sellerAccountId, sellerAccountIds))
+      : [];
+
+  // Get all project IDs the user owns (not deleted)
+  const ownedIds =
+    sellerAccountIds.length > 0
+      ? (
+          await db
+            .select({ id: projects.id })
+            .from(projects)
+            .where(
+              and(inArray(projects.sellerId, sellerAccountIds), isNull(projects.deletedAt))
+            )
+        ).map((r) => r.id)
+      : [];
+
+  const combinedIds = [
+    ...new Set([...ownedIds, ...collabRows.map((r) => r.projectId)]),
+  ];
+
+  const combinedWhere =
+    combinedIds.length > 0
+      ? and(inArray(projects.id, combinedIds), isNull(projects.deletedAt))
+      : undefined;
+
+  const [[{ total }], sellerProjects] =
+    combinedIds.length > 0
+      ? await Promise.all([
+          db.select({ total: count() }).from(projects).where(combinedWhere),
+          db
+            .select({
+              id: projects.id,
+              name: projects.name,
+              slug: projects.slug,
+              cityArea: projects.cityArea,
+              createdAt: projects.createdAt,
+              publishStatus: projects.publishStatus,
+              reviewerNote: projects.reviewerNote,
+              latitude: projects.latitude,
+              longitude: projects.longitude,
+            })
+            .from(projects)
+            .where(combinedWhere)
+            .orderBy(desc(projects.createdAt))
+            .limit(PAGE_SIZE)
+            .offset(offset),
+        ])
+      : [[{ total: 0 }], []];
 
   return (
     <div>
@@ -75,6 +116,7 @@ export default async function SellerProjectsPage() {
           }
         />
       ) : (
+        <>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 stagger-fade-in">
           {sellerProjects.map((project) => (
             <div
@@ -124,6 +166,15 @@ export default async function SellerProjectsPage() {
             </div>
           ))}
         </div>
+        <Suspense>
+          <Pagination
+            currentPage={page}
+            totalPages={Math.ceil(Number(total) / PAGE_SIZE)}
+            totalItems={Number(total)}
+            pageSize={PAGE_SIZE}
+          />
+        </Suspense>
+        </>
       )}
     </div>
   );

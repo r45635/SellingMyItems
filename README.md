@@ -90,11 +90,14 @@ A user can hold multiple capabilities simultaneously (e.g. a seller is also a bu
 
 > Selling isn't gated by a separate role anymore. Any signed-in account can hit `/seller` and create a project; the `seller_accounts` row is lazily minted on first project creation. Public visibility is gated by an admin approval workflow instead.
 
-- **Project management** — create/edit/soft-delete projects (name, slug, city/area, description, visibility public/invitation-only, country + postal code for radius matching, optional `radius_km` to restrict visibility to nearby buyers)
+- **Project management** — create/edit/soft-delete projects (name, slug, city/area, description, visibility public/invitation-only, country + postal code for radius matching, optional `radius_km` to restrict visibility to nearby buyers, **SEO toggle** per-project `isSeoIndexable`)
 - **Publication workflow** — every project starts as `draft`; user submits for review → `pending` → admin **Approve** / **Reject (with reason)** → `approved` (live) or `rejected` (with reviewer note shown back to the seller)
+- **Co-sellers** — invite other seller accounts to co-manage a project (edit items, reply to buyers); only the project owner can invite/revoke; co-managed projects appear in co-seller's `/seller/projects` dashboard
 - **Category management** — custom categories per project with sort order; chip-row filter on the public project page
 - **Item management** — full CRUD: title, brand, description, condition (6 levels), age, price, original price, currency (`USD/EUR/CAD` enum, defaulted from the seller's profile preference), notes, status, cover image
 - **Purchase intent inbox** — `/seller/intents` with Active / Archived tabs, status filter chips, per-thread "Message buyer" deep-link, "Decline with note" inline composer, item-level reserve subset
+- **Export CSV** — download items (with wishlist + intent counts), intents (with buyer info), or conversations as RFC 4180-compliant CSV from the seller dashboard
+- **Pagination** — all seller list pages (projects, items, intents, messages) paginated at 20 rows, URL-based (`?page=N`)
 - **Multi-image upload** — up to 10 images per item, drag-reorder, auto-convert to WebP
 - **External links** — reference URLs per item (rendered in the PDF recap too)
 - **Status management** — inline status select: available → pending → reserved → sold → hidden
@@ -123,16 +126,18 @@ A user can hold multiple capabilities simultaneously (e.g. a seller is also a bu
 - **Visual identity** — Syne (display) + DM Sans (body) Google Fonts via next/font; oklch-based color tokens; subtle dotted backdrop pattern; per-section colour palette (orange / rose / emerald / sky / violet / amber / indigo / red)
 - **Email privacy** — per-user `email_visibility` (hidden default / direct) masks real addresses across public + seller surfaces; "Contact seller" routes through in-app messaging
 - **i18n** — full English and French translations. Outgoing emails are sent in the **recipient's** preferred locale (`profiles.preferred_locale`) — not the sender's URL locale — so a French buyer always gets French emails even when an English-speaking seller triggers them.
-- **Multi-currency** — USD, EUR, CAD as a proper DB enum. Each item is priced in the seller's chosen currency; buyers see prices unchanged (no conversion). Aggregations (seller dashboard, PDF recap) group by currency rather than picking arbitrarily.
+- **Multi-currency** — USD, EUR, CAD as a proper DB enum. Each item is priced in the seller's chosen currency; buyers see prices unchanged (no conversion). An approximate secondary price in the viewer's currency (`~92 €`) is shown in grey when currencies differ — derived from hardcoded `FX_RATES` in `src/lib/currency.ts`, display-only. Aggregations (seller dashboard, PDF recap) group by currency rather than picking arbitrarily.
 - **Geographic matching** — buyers and sellers store an approximate location (country + postal code resolved to city centroid via Nominatim/OSM, cached in `geocoded_locations`). Powers the homepage "Near me" radius filter and the optional seller-side `radius_km` restriction. `cube` + `earthdistance` postgres extensions handle the haversine queries with a GiST index on project coords.
 - **Dark mode** — system-preference-based theming, orange accent preserved in dark
 - **Image optimization** — dual-resolution upload: standard 1024 px WebP (quality 72) for normal display + HD 1920 px WebP (quality 80) lazy-loaded on zoom. EXIF stripping on all variants.
 - **Accent-insensitive search** — homepage project search uses PostgreSQL `unaccent` extension (server-side); in-project item search uses a client-side `normalizeSearch()` helper. Both strip diacritics so "mosaique" finds "mosaïque".
+- **Phone validation** — phone numbers validated against the country's dial-in rules via `libphonenumber-js` (US/CA/FR supported) and stored in E.164 format (e.g. `+33612345678`)
 - **Rate limiting** — in-memory rate limiting on auth actions (sign up/in/forgot/reset/change), uploads, messages, intents; Nominatim geocoding gated to 1 req/s globally per Node process
 - **HTTP security headers** — `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, and `Permissions-Policy` (camera/mic/geo off) on all routes
 - **GDPR compliance** — cookie notice on login/signup; Privacy Policy (`/privacy`) and Terms of Use (`/terms`) pages (EN + FR); account deletion with password confirmation (cascades all data, removes uploaded files, purges email logs); email logs auto-purged after **90 days** on each deploy
 - **Email notifications** — welcome, message notification (throttled 1/5min), intent received, intent status change, message copy, password reset, reservation recap, project invitation/access events
 - **Auto migrations on deploy** — `scripts/run-migrations.sh` applies any new `src/db/migrations/*.sql` between `docker compose up` and the `/api/health` curl, with a `_applied_migrations` tracking table so re-runs are no-ops
+- **Automated tests** — Vitest 4 (unit, 38 tests) covering `format.ts`, `currency.ts`, `phone.ts`, `csv.ts`; Playwright (E2E) for golden-path public flows (`npm run test` / `npm run test:e2e`)
 
 ---
 
@@ -299,15 +304,19 @@ SellingMyItems/
 │   │   └── admin-dashboard/    # Admin actions + sidebar (actions + components)
 │   ├── db/
 │   │   ├── index.ts            # Drizzle client initialization
-│   │   ├── schema/index.ts     # Complete Drizzle schema (25 tables, 13 enums)
-│   │   └── migrations/         # SQL migrations (0000–0018)
+│   │   ├── schema/index.ts     # Complete Drizzle schema (26 tables, 13 enums)
+│   │   └── migrations/         # SQL migrations (0000–0028)
 │   ├── lib/
 │   │   ├── auth/               # Authentication
 │   │   │   ├── index.ts        # Session management, role guards
 │   │   │   └── actions.ts      # Sign up, sign in, sign out, password reset
 │   │   ├── email.ts            # Resend email service (~13 email types, localized)
 │   │   ├── pdf/                # @react-pdf/renderer recap document + sharp normalization
-│   │   ├── seller-accounts.ts  # Seller account helper
+│   │   ├── seller-accounts.ts  # findSellerProject (owner + collaborators), isProjectOwner
+│   │   ├── currency.ts         # CurrencyCode enum, FX_RATES, convertApprox, localeToCurrency
+│   │   ├── csv.ts              # RFC 4180-compliant toCsv() helper
+│   │   ├── phone.ts            # E.164 validation + normalization via libphonenumber-js
+│   │   ├── format.ts           # formatPrice(), formatDistance() — single source of truth
 │   │   ├── validations.ts      # Zod schemas for all forms
 │   │   ├── utils.ts            # Tailwind merge utility
 │   │   ├── image/              # Image placeholders
@@ -320,12 +329,16 @@ SellingMyItems/
 │   │   └── navigation.ts       # Typed navigation helpers
 │   ├── types/index.ts          # Shared TypeScript types
 │   └── config/index.ts         # Site configuration
+├── __tests__/lib/              # Vitest unit tests (format, currency, phone, csv)
+├── e2e/                        # Playwright E2E tests
 ├── docker-compose.yml          # Docker services (app + db)
 ├── Dockerfile                  # 3-stage build (deps → builder → runner)
 ├── drizzle.config.ts           # Drizzle Kit configuration
 ├── next.config.ts              # Next.js config (standalone, i18n, build info)
 ├── package.json                # Dependencies and scripts
+├── playwright.config.ts        # Playwright E2E config
 ├── tsconfig.json               # TypeScript configuration
+├── vitest.config.mts           # Vitest unit test config
 └── ROADMAP.md                  # Planned features
 ```
 
@@ -412,7 +425,7 @@ SellingMyItems/
 | `email_type` | `welcome`, `message_notification`, `message_copy`, `intent_received`, `intent_status`, `password_reset`, `reservation_recap`, `invitation_sent`, `access_granted`, `access_declined`, `access_revoked`, `access_requested`, `inbound_relay` (kept, unused) |
 | `email_status` | `sent`, `failed` |
 
-### Tables (25)
+### Tables (26)
 
 Core domain:
 
@@ -422,6 +435,7 @@ Core domain:
 | `sessions` | token (unique), userId, expiresAt | Auth sessions (30-day TTL) |
 | `password_reset_tokens` | token (unique), userId, expiresAt, usedAt | Password reset tokens (1h TTL) |
 | `seller_accounts` | userId, isActive | Lazy-minted on first project creation |
+| `project_collaborators` | projectId, sellerAccountId, invitedBy, invitedAt | Co-seller relationships. A seller in this table can manage the project but cannot delete it or invite others — only the primary `projects.seller_id` owner can. |
 | `projects` | sellerId, name, slug (unique), cityArea, description, isPublic, visibility, publishStatus, reviewerNote, submittedAt, reviewedAt, **countryCode**, **postalCode**, **latitude**, **longitude**, **radiusKm**, deletedAt | Seller projects. `radiusKm` (nullable) restricts visibility to buyers within that distance from the project's centroid; NULL means unrestricted. |
 | `project_categories` | projectId, name, sortOrder | Custom categories per project |
 | `items` | projectId, title, price, originalPrice, currency, status, coverImageUrl, reservedForUserId, soldToUserId, reservedAt, soldAt, viewCount, deletedAt | Items for sale |
@@ -487,6 +501,7 @@ Numbered SQL files in `src/db/migrations/`. Notable steps:
 | `0025` | GDPR Art. 20: add `last_data_export_at timestamptz` to `profiles` for per-user export rate-limiting (max 1 export/24 h). |
 | `0026` | GDPR Art. 17: create `deletion_log` audit table (SHA-256 hashed email + entity counts) so account deletions are traceable without re-identification. |
 | `0027` | Add `hd_url` column to `item_images` — enables progressive HD loading: standard 1024 px WebP for normal display, 1920 px WebP loaded on fullscreen zoom. |
+| `0028` | Add `project_collaborators` table — co-seller support. Unique constraint on `(project_id, seller_account_id)`. Indexes on both FK columns. |
 
 ---
 
@@ -714,6 +729,9 @@ Use this checklist when transferring the project to a different VPS or GitHub ac
 | `npm run build` | Production build |
 | `npm run start` | Start production server |
 | `npm run lint` | ESLint |
+| `npm run test` | Run Vitest unit tests (one-shot) |
+| `npm run test:watch` | Run Vitest in watch mode |
+| `npm run test:e2e` | Run Playwright E2E tests (requires running server) |
 | `npx drizzle-kit push` | Push schema changes to database (dev) |
 | `npx drizzle-kit generate` | Generate SQL migration from schema diff |
 | `npx tsc --noEmit` | TypeScript type-check without emitting |

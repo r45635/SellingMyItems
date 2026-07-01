@@ -475,6 +475,9 @@
     "pdfSelectReserved": "Réservés seulement",
     "pdfSelectNone": "Effacer",
     "viewPublic": "Voir la page publique",
+    "exportCsv": "Exporter en CSV",
+    "seoIndexable": "Activer l'indexation par les moteurs de recherche (SEO)",
+    "seoIndexableHint": "Si activé, ce projet apparaîtra dans les résultats Google et autres moteurs de recherche. Nécessite une approbation admin préalable.",
     "publishStatus": {
       "draft": "Brouillon",
       "pending": "En attente",

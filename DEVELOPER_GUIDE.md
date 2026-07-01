@@ -21,7 +21,7 @@ Complete technical documentation for developers who need to maintain, extend, or
 - [Component Architecture](#component-architecture)
 - [Feature Module Pattern](#feature-module-pattern)
 - [Configuration](#configuration)
-- [Testing & Type-checking](#testing--type-checking)
+- [Testing & Type-checking](#testing--type-checking) (Vitest + Playwright)
 - [Docker & Deployment](#docker--deployment)
 - [Extending the Application](#extending-the-application)
 - [Troubleshooting](#troubleshooting)
@@ -289,7 +289,7 @@ export const db = drizzle(client, { schema });
 
 All schema definitions are in `src/db/schema/index.ts`. This is a single large file containing:
 - 6 enum definitions (pgEnum)
-- 26 table definitions (pgTable)
+- 26 table definitions (pgTable) — latest addition: `project_collaborators` (migration 0028)
 - Full relation definitions (for Drizzle relational queries)
 
 ### Enums
@@ -298,7 +298,7 @@ All schema definitions are in `src/db/schema/index.ts`. This is a single large f
 |---|---|
 | `item_condition` | `new`, `like_new`, `very_good`, `good`, `acceptable`, `for_parts` |
 | `item_status` | `available`, `pending`, `reserved`, `sold`, `hidden` |
-| `intent_status` | `submitted`, `reviewed`, `accepted`, `declined` |
+| `intent_status` | `submitted`, `reviewed`, `accepted`, `declined`, `cancelled` |
 | `project_publish_status` | `draft`, `pending`, `approved`, `rejected` |
 | `access_grant_source` | `targeted_invitation`, `generic_request`, `seller_manual`, `share_link` |
 | `email_type` | `welcome`, `message_notification`, `message_copy`, `intent_received`, `intent_status`, `password_reset` |
@@ -358,6 +358,7 @@ npx drizzle-kit push
 | `0025` | GDPR Art. 20: add `last_data_export_at timestamptz` to `profiles` for per-user export rate-limiting |
 | `0026` | GDPR Art. 17: create `deletion_log` audit table (hashed email + entity counts) |
 | `0027` | Add `hd_url text` to `item_images` — progressive HD loading (standard 1024 px + HD 1920 px on zoom) |
+| `0028` | Add `project_collaborators` table — co-seller relationships (project_id, seller_account_id, invited_by, invited_at). Unique on (project_id, seller_account_id). |
 
 ### Query Patterns
 
@@ -448,6 +449,7 @@ export async function createItemAction(formData: FormData) {
 | `src/features/intents/actions.ts` | submitIntent, updateIntentStatus, reserveItemsFromIntent |
 | `src/features/messages/actions.ts` | sendMessage, notifyRecipient, sendCopyToSender |
 | `src/features/items/share-actions.ts` | createItemShareLink, revokeItemShareLink, claimShareLink, getProjectShareLinks |
+| `src/features/projects/co-seller-actions.ts` | **inviteCoSellerAction** (owner-only; resolves email → sellerAccount → insert), **removeCoSellerAction** (owner-only) |
 | `src/features/account/actions.ts` | updateProfile, changePassword, **deleteAccountAction** (password-verified; cascades DB rows + removes uploaded files) |
 | `src/features/admin-dashboard/actions.ts` | toggleProfileActive, toggleProjectPublic, updateResendApiKey |
 
@@ -698,7 +700,10 @@ Every server action validates:
    actions check `profiles.is_admin`; seller actions verify the user
    owns the target `seller_account` / `project` (lazily minted on first
    project creation, no separate role)
-3. **Ownership**: the user owns the resource they're modifying
+3. **Ownership or co-seller access**: `findSellerProject(sellerAccountId, projectId)` in
+   `src/lib/seller-accounts.ts` accepts requests from the primary owner (`projects.seller_id`)
+   **OR** any row in `project_collaborators`. Use `isProjectOwner()` when the action is
+   restricted to the owner only (e.g. delete project, invite/revoke co-sellers).
 
 ---
 
@@ -739,7 +744,8 @@ src/features/
 │   ├── share-item-dialog.tsx       # Generate/copy/revoke share links (client dialog)
 │   └── ...
 ├── projects/components/
-│   ├── project-form.tsx            # Create/edit project form
+│   ├── project-form.tsx            # Create/edit project form (SEO toggle, visibility, etc.)
+│   ├── co-sellers-section.tsx      # Co-seller invite/revoke UI (client component, owner-only)
 │   └── ...
 ├── intents/components/
 │   ├── intent-list.tsx             # Intent cards with accept/decline
@@ -829,9 +835,39 @@ npx tsc --noEmit  # Full type-check without emitting files
 npm run lint  # ESLint with next.js recommended rules
 ```
 
-### No Test Framework (Yet)
+### Unit Tests (Vitest)
 
-The project does not currently include a test framework. Adding one is tracked in the roadmap. Recommended: **Vitest** + **React Testing Library** for unit/integration tests, **Playwright** for E2E.
+**Stack**: `vitest@4` + `@vitejs/plugin-react` + `jsdom` + `@testing-library/react` + `vite-tsconfig-paths`
+
+Config: `vitest.config.mts` at project root — `environment: "jsdom"`, `globals: true`, tsconfig paths resolved.
+
+```bash
+npm run test        # One-shot run (CI-friendly)
+npm run test:watch  # Interactive watch mode
+```
+
+Tests live in `__tests__/lib/` (38 tests as of initial setup):
+
+| File | Coverage |
+|---|---|
+| `format.test.ts` | `formatPrice()`, `formatDistance()` |
+| `currency.test.ts` | `convertApprox()`, `defaultCurrencyForCountry()`, `localeToCurrency()`, `isCurrencyCode()` |
+| `phone.test.ts` | `phoneMatchesCountry()`, `normalizePhone()` for US/CA/FR |
+| `csv.test.ts` | `toCsv()` — empty arrays, commas, quotes, newlines, null values |
+
+> **Async Server Components are NOT supported by Vitest.** Test those via Playwright E2E only.
+
+### E2E Tests (Playwright)
+
+**Stack**: `@playwright/test@1.61` — Chromium only in CI.
+
+Config: `playwright.config.ts` at project root — `baseURL: http://localhost:3000`, `webServer` starts `npm run start`.
+
+```bash
+npm run test:e2e  # Requires a built app (`npm run build && npm run start`)
+```
+
+E2E specs live in `e2e/`.
 
 ---
 

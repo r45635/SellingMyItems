@@ -153,15 +153,113 @@ Audit complet de sécurité et de conformité GDPR, résultat d'un audit interne
 
 ---
 
-- [ ] SEO : activer `isSeoIndexable` par projet pour le référencement public
-- [ ] Analytics seller : vues, wishlists, intents par projet/item
-- [ ] Export CSV des items, intents, conversations (seller dashboard)
-- [ ] Co-sellers : inviter d'autres utilisateurs à gérer un projet
-- [ ] Pagination : admin tables + listes de projets/items
+---
+
+## Analytics seller (vues, wishlists, intents) — ✅ Livré
+
+**Statut** : implémenté (juin 2026, sans migration)
+
+- Dashboard `/seller` : chaque carte projet affiche une ligne d'engagement (icône œil + vues totales, cœur + wishlists, panier + intents) sous la health bar, conditionnelle (masquée si 0 vues)
+- Liste d'items `/seller/projects/[id]/items` : chaque item montre son `viewCount` (œil), le nombre de wishlists (cœur rose) et d'intents (panier ambre), conditionnels si > 0
+- Implémenté via deux requêtes agrégées en `Promise.all()` — pas de changement de schéma
+
+---
+
+## Géolocalisation dynamique (Browser GPS) — ✅ Livré
+
+**Statut** : implémenté (juin 2026, sans migration)
+
+- Bouton "Utiliser ma position actuelle" / "Use my current location" dans le formulaire `/account` et le formulaire de projet seller — `navigator.geolocation.getCurrentPosition()`
+- Reverse geocoding via `GET /api/geocode/reverse?lat=&lng=` → Nominatim `zoom=10` (niveau ville) passant par le gate `nominatimSerialized` ; rate-limit 5 req/min par user
+- Coordonnées GPS stockées directement côté serveur (arrondies à 4 décimales ≈ 11 m), Nominatim skippé quand les coords browser sont présentes
+- Label du champ postal étendu : "Code postal ou ville" / "Postal code or city"
+- Messages d'erreur inline pour permission refusée / géolocalisation indisponible
+
+---
+
+## SEO toggle par projet — ✅ Livré
+
+**Statut** : implémenté (juillet 2026, sans migration)
+
+- Checkbox "Activer l'indexation par les moteurs de recherche" dans le formulaire d'édition de projet (section isolée, visible uniquement en mode édition)
+- La colonne `projects.is_seo_indexable` existait déjà et était consommée par `sitemap.ts` et `generateMetadata()` — l'UI manquait
+- Clés i18n ajoutées : `seller.seoIndexable` + `seller.seoIndexableHint` (EN + FR)
+
+---
+
+## Pagination seller — ✅ Livré
+
+**Statut** : implémenté (juillet 2026)
+
+- Pages `/seller/projects`, `/seller/projects/[id]/items`, `/seller/intents`, `/seller/messages` : pagination URL-based (`?page=N`), `PAGE_SIZE=20`
+- Composant `<Pagination>` existant réutilisé (URL-based, compatible App Router `searchParams`)
+- Requêtes avec `count(*) over ()` (window function) ou `Promise.all` pour count + data en parallèle
+
+---
+
+## Export CSV — ✅ Livré
+
+**Statut** : implémenté (juillet 2026)
+
+- `src/lib/csv.ts` : helper `toCsv()` RFC 4180-compliant (pas de dépendance npm)
+- Route `GET /api/seller/projects/[projectId]/export-items` : items d'un projet avec wishlists + intents counts
+- Route `GET /api/seller/export-intents` : tous les intents du seller
+- Route `GET /api/seller/export-conversations` : tous les threads du seller
+- Boutons "Export CSV" (icône Download) sur les pages items, intents, messages
+
+---
+
+## Phone E.164 — ✅ Livré
+
+**Statut** : implémenté (juillet 2026)
+
+- `libphonenumber-js` ajouté (tree-shakeable, ~25 kB gzippé)
+- `src/lib/phone.ts` réécrit : `phoneMatchesCountry()` via `isValidPhoneNumber()`, `normalizePhone()` via `parsePhoneNumberWithError().format("E.164")`
+- Numéros normalisés avant save dans `src/features/account/actions.ts`
+- Format E.164 stocké en DB (ex. `+33612345678` au lieu de `06 12 34 56 78`)
+
+---
+
+## FX Rates UI — ✅ Livré
+
+**Statut** : implémenté (juillet 2026, sans migration)
+
+- `FX_RATES`, `convertApprox()`, `localeToCurrency()` ajoutés à `src/lib/currency.ts`
+- Prop `viewerCurrency?: CurrencyCode` sur `ItemTeaserCard` et `ProjectItemsGrid`
+- Prix secondaire `~XX €` en gris affiché sous le prix principal quand les devises diffèrent
+- `viewerCurrency` dérivée du `locale` dans le server component page projet (`fr` → EUR, `en` → USD)
+
+---
+
+## Co-sellers — ✅ Livré
+
+**Statut** : implémenté (juillet 2026, migration 0028)
+
+- Migration `0028_project-collaborators.sql` : table `project_collaborators (id, project_id, seller_account_id, invited_by, invited_at)` avec contrainte unique
+- Schema Drizzle : table + relations `projectCollaborators`
+- `findSellerProject()` mis à jour : vérifie `projects.seller_id = sellerAccountId` OU existence dans `project_collaborators` — propagation automatique dans tous les server actions existants
+- `isProjectOwner()` helper pour distinguer propriétaire vs collaborateur
+- Server actions dans `src/features/projects/co-seller-actions.ts` : `inviteCoSellerAction`, `removeCoSellerAction`
+- UI `CoSellersSection` dans la page d'édition projet : liste des co-sellers, invite par email, révocation
+- Liste seller `/seller/projects` inclut désormais les projets co-gérés
+
+---
+
+## Tests automatiques (Vitest + Playwright) — ✅ Livré
+
+**Statut** : implémenté (juillet 2026)
+
+- `vitest@4`, `@vitejs/plugin-react`, `jsdom`, `@testing-library/react`, `vite-tsconfig-paths` installés
+- `@playwright/test@1.61` installé
+- `vitest.config.mts` + `playwright.config.ts` créés
+- Scripts : `npm run test` (Vitest run), `npm run test:watch`, `npm run test:e2e`
+- Suite initiale : 38 tests unitaires dans `__tests__/lib/` couvrant `format.ts`, `currency.ts`, `phone.ts`, `csv.ts`
+- Spec Playwright dans `e2e/public-browse.spec.ts` pour le golden path public
+
+---
+
+## Améliorations futures (à prioriser)
+
 - [ ] i18n admin : traduire le dashboard admin (actuellement EN uniquement)
 - [ ] Élargir la liste des pays supportés (US/CA/FR aujourd'hui) — ajouter UK, DE, ES, IT, BE, NL minima
-- [ ] FX rates pour comparaison cross-devise (UI seulement, pas de conversion stockée)
 - [ ] Image storage scaling : passer du local FS à un object store (S3/R2) pour mieux scaler
-- [ ] Phone international : E.164 strict avec libphonenumber pour validations plus robustes
-- [ ] Browser Geolocation API en option pour auto-fill du postal code (avec consent explicite)
-- [ ] Framework de tests : Vitest + React Testing Library (unit/integration) + Playwright (E2E)

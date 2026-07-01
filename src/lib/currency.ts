@@ -42,3 +42,24 @@ export function defaultCurrencyForCountry(
   if (!countryCode) return "USD";
   return COUNTRY_DEFAULT_CURRENCY[countryCode.toUpperCase()] ?? "USD";
 }
+
+// Exchange rates updated manually ~monthly. Used for display hints only —
+// no stored conversions, sellers always price in their own currency.
+export const FX_RATES: Record<CurrencyCode, Record<CurrencyCode, number>> = {
+  USD: { USD: 1, EUR: 0.92, CAD: 1.36 },
+  EUR: { USD: 1.09, EUR: 1,   CAD: 1.48 },
+  CAD: { USD: 0.74, EUR: 0.68, CAD: 1 },
+};
+
+export function convertApprox(
+  amount: number,
+  from: CurrencyCode,
+  to: CurrencyCode
+): number {
+  return Math.round(amount * FX_RATES[from][to]);
+}
+
+export function localeToCurrency(locale: string): CurrencyCode {
+  if (locale === "fr") return "EUR";
+  return "USD";
+}

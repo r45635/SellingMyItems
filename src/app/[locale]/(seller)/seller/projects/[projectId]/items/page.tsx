@@ -1,6 +1,6 @@
 import { getTranslations, getLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
-import { Plus, ArrowLeft, ImageOff, Eye, ClipboardList, KeyRound, Package, Share2, Heart, ShoppingCart } from "lucide-react";
+import { Plus, ArrowLeft, ImageOff, Eye, ClipboardList, KeyRound, Package, Share2, Heart, ShoppingCart, Download } from "lucide-react";
 import { EmptyState } from "@/components/shared/empty-state";
 import { requireSeller } from "@/lib/auth";
 import { db } from "@/db";
@@ -13,13 +13,22 @@ import { LinkBuyerForm } from "@/features/items/components/link-buyer-form";
 import { ItemsExportControls } from "@/features/items/components/items-export-controls";
 import { BLUR_PLACEHOLDER } from "@/lib/image/placeholders";
 import { findSellerProject } from "@/lib/seller-accounts";
+import { Pagination } from "@/components/shared/pagination";
+import { Suspense } from "react";
+
+const PAGE_SIZE = 20;
 
 export default async function ProjectItemsPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ projectId: string }>;
+  searchParams: Promise<{ page?: string }>;
 }) {
   const { projectId } = await params;
+  const sp = await searchParams;
+  const page = Math.max(1, Number(sp.page ?? 1));
+  const offset = (page - 1) * PAGE_SIZE;
   const t = await getTranslations("seller");
   const locale = await getLocale();
   const user = await requireSeller();
@@ -36,7 +45,7 @@ export default async function ProjectItemsPage({
     notFound();
   }
 
-  const [projectItems, wishlistCountsRaw, intentCountsRaw] = project
+  const [itemsPage, wishlistCountsRaw, intentCountsRaw] = project
     ? await Promise.all([
         db
           .select({
@@ -52,6 +61,7 @@ export default async function ProjectItemsPage({
             soldToUserId: items.soldToUserId,
             reservedForEmail: sql<string | null>`rp.email`.as("reservedForEmail"),
             soldToEmail: sql<string | null>`sp.email`.as("soldToEmail"),
+            total: sql<number>`count(*) over ()`.as("total"),
           })
           .from(items)
           .leftJoin(
@@ -63,12 +73,9 @@ export default async function ProjectItemsPage({
             sql`sp.id = ${items.soldToUserId}`
           )
           .where(and(eq(items.projectId, project.id), isNull(items.deletedAt)))
-          // Stable order: items don't jump when their status (and updatedAt)
-          // changes. Matches the public project page sort. sortOrder is
-          // currently 0 for everyone but is reserved for a future
-          // drag-reorder UI; createdAt desc keeps newest items on top until
-          // then.
-          .orderBy(asc(items.sortOrder), desc(items.createdAt)),
+          .orderBy(asc(items.sortOrder), desc(items.createdAt))
+          .limit(PAGE_SIZE)
+          .offset(offset),
 
         // Wishlist count per item in this project
         db
@@ -87,6 +94,9 @@ export default async function ProjectItemsPage({
           .groupBy(buyerIntentItems.itemId),
       ])
     : [[], [], []];
+
+  const projectItems = itemsPage;
+  const itemTotal = Number(itemsPage[0]?.total ?? 0);
 
   const wishlistMap = new Map(wishlistCountsRaw.map((r) => [r.itemId, r.cnt]));
   const intentMap = new Map(intentCountsRaw.map((r) => [r.itemId, r.cnt]));
@@ -131,6 +141,13 @@ export default async function ProjectItemsPage({
           >
             {t("editProject")}
           </Link>
+          <a
+            href={`/api/seller/projects/${projectId}/export-items`}
+            className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-border bg-background px-2.5 text-sm font-medium transition-all hover:bg-muted hover:text-foreground"
+          >
+            <Download className="h-3.5 w-3.5" />
+            {t("exportCsv")}
+          </a>
           <Link
             href={`/seller/projects/${projectId}/items/new`}
             className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg bg-primary px-2.5 text-sm font-medium text-primary-foreground transition-all hover:bg-primary/80"
@@ -281,6 +298,14 @@ export default async function ProjectItemsPage({
             );
           })}
         </div>
+        <Suspense>
+          <Pagination
+            currentPage={page}
+            totalPages={Math.ceil(itemTotal / PAGE_SIZE)}
+            totalItems={itemTotal}
+            pageSize={PAGE_SIZE}
+          />
+        </Suspense>
         </>
       )}
     </div>

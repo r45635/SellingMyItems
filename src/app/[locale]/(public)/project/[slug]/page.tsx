@@ -13,6 +13,7 @@ import { Link } from "@/i18n/navigation";
 import { getUser } from "@/lib/auth";
 import { computeProjectAccessState } from "@/lib/access";
 import { getTranslations } from "next-intl/server";
+import { localeToCurrency } from "@/lib/currency";
 
 import { siteConfig } from "@/config";
 
@@ -133,6 +134,8 @@ export default async function ProjectPage({
       }
     }
   }
+
+  const viewerCurrency = localeToCurrency(locale);
 
   const t = await getTranslations("project");
   const tWishlist = await getTranslations("wishlist");
@@ -352,6 +355,7 @@ export default async function ProjectPage({
                 userId={user.id}
                 initialStatusFilter={initialStatusFilter}
                 wishlistedItemIds={Array.from(wishlistedItemIds)}
+                viewerCurrency={viewerCurrency}
                 labels={{
                   addToFavorites: tWishlist("addToFavorites"),
                   removeFromFavorites: tWishlist("removeFromFavorites"),

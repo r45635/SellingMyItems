@@ -22,7 +22,7 @@ import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { isCurrencyCode, type CurrencyCode } from "@/lib/currency";
 import { geocode, type GeocodeFailureReason } from "@/lib/geocoding";
-import { phoneMatchesCountry } from "@/lib/phone";
+import { normalizePhone, phoneMatchesCountry } from "@/lib/phone";
 import bcrypt from "bcryptjs";
 import { unlink } from "fs/promises";
 import path from "path";
@@ -186,13 +186,14 @@ export async function updateLocationContactAction(formData: FormData) {
   if (phoneRaw && country && !phoneMatchesCountry(phoneRaw, country)) {
     redirect("/account?error=phone_country_mismatch");
   }
+  const phone = phoneRaw ? normalizePhone(phoneRaw, country ?? "") : null;
 
   // Both location fields blank → explicit clear.
   if (!country && !postal) {
     await db
       .update(profiles)
       .set({
-        phone: phoneRaw || null,
+        phone: phone,
         countryCode: null,
         postalCode: null,
         latitude: null,
@@ -210,7 +211,7 @@ export async function updateLocationContactAction(formData: FormData) {
     await db
       .update(profiles)
       .set({
-        phone: phoneRaw || null,
+        phone: phone,
         countryCode: country ?? null,
         postalCode: postal || null,
         latitude: null,
@@ -261,7 +262,7 @@ export async function updateLocationContactAction(formData: FormData) {
     await db
       .update(profiles)
       .set({
-        phone: phoneRaw || null,
+        phone: phone,
         countryCode: country,
         postalCode: postal || null,
         distanceUnit,

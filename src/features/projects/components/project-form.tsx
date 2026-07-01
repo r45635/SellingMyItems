@@ -14,7 +14,7 @@ import { useState } from "react";
 import { LocateFixed } from "lucide-react";
 
 interface ProjectFormProps {
-  defaultValues?: Partial<ProjectFormValues>;
+  defaultValues?: Partial<ProjectFormValues> & { isSeoIndexable?: boolean };
   projectId?: string;
 }
 
@@ -31,6 +31,9 @@ export function ProjectForm({ defaultValues, projectId }: ProjectFormProps) {
   );
   const [geoStatus, setGeoStatus] = useState<"idle" | "loading" | "denied" | "error">("idle");
   const [geoCoords, setGeoCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [seoIndexable, setSeoIndexable] = useState<boolean>(
+    defaultValues?.isSeoIndexable ?? false
+  );
 
   async function handleUseMyLocation() {
     if (!navigator.geolocation) { setGeoStatus("error"); return; }
@@ -97,6 +100,7 @@ export function ProjectForm({ defaultValues, projectId }: ProjectFormProps) {
       formData.set("geoLat", String(geoCoords.lat));
       formData.set("geoLng", String(geoCoords.lng));
     }
+    formData.set("isSeoIndexable", seoIndexable ? "true" : "false");
     if (projectId) {
       formData.set("projectId", projectId);
       const result = await updateProjectAction(formData);
@@ -248,6 +252,23 @@ export function ProjectForm({ defaultValues, projectId }: ProjectFormProps) {
               </p>
             )}
           </div>
+
+          {isEdit && (
+            <div className="rounded-lg border bg-muted/20 p-3 space-y-1.5">
+              <label className="flex items-center gap-2 text-sm font-medium cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={seoIndexable}
+                  onChange={(e) => setSeoIndexable(e.target.checked)}
+                  className="rounded"
+                />
+                {t("seller.seoIndexable")}
+              </label>
+              <p className="text-xs text-muted-foreground pl-6">
+                {t("seller.seoIndexableHint")}
+              </p>
+            </div>
+          )}
 
           {!isEdit && (
             <div className="space-y-2">

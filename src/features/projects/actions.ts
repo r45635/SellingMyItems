@@ -185,6 +185,8 @@ export async function updateProjectAction(formData: FormData) {
           longitude: ownedProject.longitude,
         });
 
+  const isSeoIndexable = formData.get("isSeoIndexable") === "true";
+
   try {
     await db
       .update(projects)
@@ -198,6 +200,7 @@ export async function updateProjectAction(formData: FormData) {
         latitude: coords.latitude,
         longitude: coords.longitude,
         radiusKm: validated.data.radiusKm ?? null,
+        isSeoIndexable,
         updatedAt: new Date(),
       })
       .where(eq(projects.id, ownedProject.id));
