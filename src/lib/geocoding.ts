@@ -236,6 +236,111 @@ async function callNominatim(
   return { ok: true, latitude: lat, longitude: lon, city, source: "upstream" };
 }
 
+// ---------------------------------------------------------------------------
+// Reverse geocoding
+// ---------------------------------------------------------------------------
+
+const NOMINATIM_REVERSE_ENDPOINT =
+  "https://nominatim.openstreetmap.org/reverse";
+
+export type ReverseGeocodeResult =
+  | {
+      ok: true;
+      countryCode: string;
+      postalCode: string | null;
+      city: string | null;
+      latitude: number;
+      longitude: number;
+    }
+  | { ok: false };
+
+/**
+ * Convert lat/lng (from the browser Geolocation API) to approximate
+ * country + postal code + city. Uses Nominatim /reverse at zoom=10
+ * (town/city level — not street level) to avoid storing a precise
+ * address. Goes through the same nominatimSerialized gate to honour
+ * the 1 req/s Nominatim policy. Not cached — each set of coordinates
+ * is unique to the user's device.
+ */
+export async function reverseGeocode(
+  lat: number,
+  lng: number
+): Promise<ReverseGeocodeResult> {
+  const url = new URL(NOMINATIM_REVERSE_ENDPOINT);
+  url.searchParams.set("lat", String(lat));
+  url.searchParams.set("lon", String(lng));
+  url.searchParams.set("format", "json");
+  url.searchParams.set("zoom", "10"); // city level
+  url.searchParams.set("addressdetails", "1");
+
+  return nominatimSerialized(async () => {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+    let res: Response;
+    try {
+      res = await fetch(url, {
+        headers: { "User-Agent": USER_AGENT, Accept: "application/json" },
+        signal: controller.signal,
+      });
+    } catch (err) {
+      console.error("[reverse-geocode] fetch failed:", err instanceof Error ? err.message : err);
+      return { ok: false } as ReverseGeocodeResult;
+    } finally {
+      clearTimeout(timeout);
+    }
+
+    if (!res.ok) {
+      console.error(`[reverse-geocode] non-2xx: HTTP ${res.status}`);
+      return { ok: false } as ReverseGeocodeResult;
+    }
+
+    let body: {
+      lat?: string;
+      lon?: string;
+      address?: {
+        country_code?: string;
+        postcode?: string;
+        city?: string;
+        town?: string;
+        village?: string;
+        municipality?: string;
+        county?: string;
+      };
+    };
+    try {
+      body = await res.json();
+    } catch {
+      console.error("[reverse-geocode] JSON parse failed");
+      return { ok: false } as ReverseGeocodeResult;
+    }
+
+    const a = body.address ?? {};
+    const countryCode = a.country_code?.toUpperCase().slice(0, 2);
+    if (!countryCode) {
+      console.warn("[reverse-geocode] no country_code in response");
+      return { ok: false } as ReverseGeocodeResult;
+    }
+
+    const latitude = Number(body.lat ?? lat);
+    const longitude = Number(body.lon ?? lng);
+    const city = a.city ?? a.town ?? a.village ?? a.municipality ?? a.county ?? null;
+
+    return {
+      ok: true,
+      countryCode,
+      postalCode: a.postcode ?? null,
+      city,
+      latitude,
+      longitude,
+    };
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Forward geocoding (country + postal code)
+// ---------------------------------------------------------------------------
+
 /**
  * Resolve (country, postal code) to approximate coordinates.
  *

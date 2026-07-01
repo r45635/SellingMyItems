@@ -240,6 +240,41 @@ export async function updateLocationContactAction(formData: FormData) {
     ? profile?.distanceUnit
     : COUNTRY_DEFAULT_DISTANCE_UNIT[country];
 
+  // When the client supplies browser GPS coordinates (user clicked "Use my
+  // location"), store them directly and skip the Nominatim forward-geocode.
+  // The browser already asked the user for permission; we round to 4 decimal
+  // places (~11 m precision) which is still city-level — comparable to postal
+  // code centroids.
+  const geoLatRaw = formData.get("geoLat");
+  const geoLngRaw = formData.get("geoLng");
+  const geoLat = geoLatRaw != null ? parseFloat(String(geoLatRaw)) : null;
+  const geoLng = geoLngRaw != null ? parseFloat(String(geoLngRaw)) : null;
+  const hasBrowserCoords =
+    geoLat != null &&
+    geoLng != null &&
+    Number.isFinite(geoLat) &&
+    Number.isFinite(geoLng) &&
+    Math.abs(geoLat) <= 90 &&
+    Math.abs(geoLng) <= 180;
+
+  if (hasBrowserCoords) {
+    await db
+      .update(profiles)
+      .set({
+        phone: phoneRaw || null,
+        countryCode: country,
+        postalCode: postal || null,
+        distanceUnit,
+        latitude: Math.round(geoLat! * 1e4) / 1e4,
+        longitude: Math.round(geoLng! * 1e4) / 1e4,
+        locationUpdatedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(profiles.id, user.id));
+    revalidatePath("/account");
+    return;
+  }
+
   await db
     .update(profiles)
     .set({

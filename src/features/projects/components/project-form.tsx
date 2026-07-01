@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { createProjectAction, updateProjectAction } from "../actions";
 import { useState } from "react";
+import { LocateFixed } from "lucide-react";
 
 interface ProjectFormProps {
   defaultValues?: Partial<ProjectFormValues>;
@@ -28,9 +29,37 @@ export function ProjectForm({ defaultValues, projectId }: ProjectFormProps) {
   const [restrict, setRestrict] = useState<boolean>(
     Boolean(defaultValues?.radiusKm)
   );
+  const [geoStatus, setGeoStatus] = useState<"idle" | "loading" | "denied" | "error">("idle");
+  const [geoCoords, setGeoCoords] = useState<{ lat: number; lng: number } | null>(null);
+
+  async function handleUseMyLocation() {
+    if (!navigator.geolocation) { setGeoStatus("error"); return; }
+    setGeoStatus("loading");
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const res = await fetch(
+            `/api/geocode/reverse?lat=${pos.coords.latitude}&lng=${pos.coords.longitude}`
+          );
+          if (!res.ok) { setGeoStatus("error"); return; }
+          const data = await res.json();
+          // Patch react-hook-form fields
+          setValue("countryCode", data.countryCode ?? "");
+          setValue("postalCode", data.postalCode ?? "");
+          setGeoCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+          setGeoStatus("idle");
+        } catch {
+          setGeoStatus("error");
+        }
+      },
+      (err) => setGeoStatus(err.code === 1 ? "denied" : "error"),
+      { timeout: 10_000, maximumAge: 300_000 }
+    );
+  }
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<ProjectFormValues>({
     resolver: zodResolver(projectFormSchema),
@@ -62,6 +91,11 @@ export function ProjectForm({ defaultValues, projectId }: ProjectFormProps) {
     });
     if (!isEdit) {
       formData.set("visibility", visibility);
+    }
+    // Browser GPS coords — server stores them directly, skips Nominatim
+    if (geoCoords) {
+      formData.set("geoLat", String(geoCoords.lat));
+      formData.set("geoLng", String(geoCoords.lng));
     }
     if (projectId) {
       formData.set("projectId", projectId);
@@ -122,12 +156,32 @@ export function ProjectForm({ defaultValues, projectId }: ProjectFormProps) {
               <p>{t("seller.locationMissingBody")}</p>
             </div>
           )}
+          {/* Browser geolocation shortcut */}
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={handleUseMyLocation}
+              disabled={geoStatus === "loading"}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-medium transition-all hover:bg-muted disabled:opacity-60"
+            >
+              <LocateFixed className="h-3.5 w-3.5 text-orange-500" />
+              {geoStatus === "loading" ? t("account.geoLocating") : t("account.useMyLocation")}
+            </button>
+            {geoStatus === "denied" && (
+              <p className="text-xs text-amber-700 dark:text-amber-300">{t("account.geoLocationDenied")}</p>
+            )}
+            {geoStatus === "error" && (
+              <p className="text-xs text-destructive">{t("account.geoLocationError")}</p>
+            )}
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label htmlFor="countryCode">{t("seller.projectCountry")}</Label>
               <select
                 id="countryCode"
                 {...register("countryCode")}
+                onChange={() => setGeoCoords(null)}
                 className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
               >
                 <option value="">—</option>
@@ -140,7 +194,7 @@ export function ProjectForm({ defaultValues, projectId }: ProjectFormProps) {
               <Label htmlFor="postalCode">{t("seller.projectPostal")}</Label>
               <Input
                 id="postalCode"
-                {...register("postalCode")}
+                {...register("postalCode", { onChange: () => setGeoCoords(null) })}
                 placeholder="75001"
                 autoComplete="postal-code"
               />

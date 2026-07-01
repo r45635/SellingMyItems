@@ -53,6 +53,27 @@ async function resolveProjectCoords(
   return { latitude: result.latitude, longitude: result.longitude };
 }
 
+function readBrowserCoords(
+  formData: FormData
+): { latitude: number; longitude: number } | null {
+  const latRaw = formData.get("geoLat");
+  const lngRaw = formData.get("geoLng");
+  if (latRaw == null || lngRaw == null) return null;
+  const lat = parseFloat(String(latRaw));
+  const lng = parseFloat(String(lngRaw));
+  if (
+    !Number.isFinite(lat) ||
+    !Number.isFinite(lng) ||
+    Math.abs(lat) > 90 ||
+    Math.abs(lng) > 180
+  )
+    return null;
+  return {
+    latitude: Math.round(lat * 1e4) / 1e4,
+    longitude: Math.round(lng * 1e4) / 1e4,
+  };
+}
+
 function readRadiusKm(formData: FormData): number | undefined {
   const raw = formData.get("radiusKm");
   if (raw == null || raw === "") return undefined;
@@ -84,7 +105,7 @@ export async function createProjectAction(formData: FormData) {
     return { error: { form: ["Could not initialize selling account"] } };
   }
 
-  const coords = await resolveProjectCoords(
+  const coords = readBrowserCoords(formData) ?? await resolveProjectCoords(
     validated.data.countryCode,
     validated.data.postalCode
   );
@@ -145,20 +166,24 @@ export async function updateProjectAction(formData: FormData) {
     return { error: { form: ["Project not found or unauthorized"] } };
   }
 
-  // Only re-geocode when the (country, postal) pair actually changed,
-  // to avoid hammering Nominatim on every project edit.
+  // Browser GPS takes priority. Otherwise only re-geocode when the
+  // (country, postal) pair actually changed, to avoid hammering Nominatim
+  // on every project edit.
+  const browserCoords = readBrowserCoords(formData);
   const locationChanged =
     (validated.data.countryCode ?? null) !== ownedProject.countryCode ||
     (validated.data.postalCode ?? null) !== ownedProject.postalCode;
-  const coords = locationChanged
-    ? await resolveProjectCoords(
-        validated.data.countryCode,
-        validated.data.postalCode
-      )
-    : {
-        latitude: ownedProject.latitude,
-        longitude: ownedProject.longitude,
-      };
+  const coords =
+    browserCoords ??
+    (locationChanged
+      ? await resolveProjectCoords(
+          validated.data.countryCode,
+          validated.data.postalCode
+        )
+      : {
+          latitude: ownedProject.latitude,
+          longitude: ownedProject.longitude,
+        });
 
   try {
     await db
