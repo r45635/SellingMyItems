@@ -190,7 +190,7 @@
     "exportData": "Download my data",
     "exportDataDesc": "Download a JSON archive of all your personal data: profile, listings, messages, intents, wishlist, and email history. GDPR Art. 20 — right to data portability.",
     "exportDataButton": "Download my data",
-    "exportDataLoading": "Preparing\u2026",
+    "exportDataLoading": "Preparing…",
     "exportDataRateLimit": "You already requested an export recently. Please wait {hours, plural, one {1 hour} other {{hours} hours}} before requesting another.",
     "exportDataError": "An error occurred. Please try again."
   },
@@ -628,20 +628,20 @@
     "terms": "Terms of Use"
   },
   "cookieNotice": {
-    "text": "By signing in you agree to our {privacy} and our use of a session cookie to keep you authenticated."
+    "text": "By using SellingMyItems you agree to our {privacy} and our use of a strictly necessary session cookie to keep you authenticated."
   },
   "privacy": {
     "title": "Privacy Policy",
-    "lastUpdated": "Last updated: June 2025",
+    "lastUpdated": "Last updated: July 2026",
     "intro": "SellingMyItems is committed to protecting your personal data. This policy explains what we collect, why, and what rights you have under the GDPR and applicable law.",
     "controllerTitle": "Data Controller",
     "controllerText": "The data controller is the operator of this SellingMyItems instance. For data requests, contact the administrator via the address in transactional emails you receive.",
     "dataTitle": "Data We Collect",
-    "dataText": "Account data (email, display name, password hash, phone number); location data (country, postal code, approximate coordinates via OpenStreetMap); usage data (listings, intents, messages, wishlist); session token in an httpOnly cookie; email notification logs (retained 90 days).",
+    "dataText": "Account data (email, display name, password hash, phone number); location data (country, city or postal code, approximate coordinates via OpenStreetMap); usage data (listings, purchase intents, messages, wishlist, share link tokens); session token in an httpOnly cookie; email notification logs (retained 90 days); deletion audit log (your email stored as a non-reversible SHA-256 hash only, retained for GDPR Art.†17 compliance).",
     "purposeTitle": "Why We Process Your Data",
     "purposeText": "Authentication and session management (contract); displaying listings and connecting buyers/sellers (contract); transactional emails (contract/legitimate interests); proximity search geocoding (contract); abuse prevention (legitimate interests).",
     "thirdPartyTitle": "Third-Party Processors",
-    "thirdPartyText": "Resend (resend.com) — email delivery. Your email is transmitted solely to deliver emails you trigger. Resend is GDPR-compliant and acts as a data processor. OpenStreetMap/Nominatim — postal code geocoding. Your country and postal code are sent to the public Nominatim API; no personal identifiers are included.",
+    "thirdPartyText": "Resend (resend.com) — email delivery. Your email is transmitted solely to deliver emails you trigger. Resend is GDPR-compliant and acts as a data processor under our instructions. OpenStreetMap/Nominatim — geocoding. When you enter a country and postal code or city name, they are sent to the public Nominatim API to derive approximate coordinates. When you use the ‘Use my current location’ button, your device’s GPS coordinates are sent to Nominatim to derive an approximate location — no personal identifiers are included in either case and the data is not stored by Nominatim beyond their standard server logs.",
     "retentionTitle": "Retention",
     "retentionText": "Account data is kept until you delete your account. Sessions expire after 30 days. Email logs are purged after 90 days. Listings are kept until deleted by you or an administrator.",
     "rightsTitle": "Your Rights (GDPR)",
@@ -653,15 +653,15 @@
   },
   "terms": {
     "title": "Terms of Use",
-    "lastUpdated": "Last updated: June 2025",
+    "lastUpdated": "Last updated: July 2026",
     "acceptanceTitle": "Acceptance",
     "acceptanceText": "By creating an account or using SellingMyItems you agree to these terms. If you do not agree, do not use the Service.",
     "descriptionTitle": "Service Description",
-    "descriptionText": "SellingMyItems is a private marketplace platform for sellers to list items and buyers to browse and contact sellers. The Service is provided as-is for personal, non-commercial use.",
+    "descriptionText": "SellingMyItems is a private marketplace platform where sellers list items and buyers browse and contact sellers. Sellers may use the Service to sell personal or second-hand items. The Service is provided as-is.",
     "accountTitle": "Accounts",
-    "accountText": "Provide accurate information when creating an account. You are responsible for your credentials. Do not create accounts for others without their consent.",
+    "accountText": "Provide accurate information when creating an account. You are responsible for your credentials. Do not create accounts for others without their consent. Project owners may invite other sellers as co-managers (“co-sellers”) of a project; co-sellers can edit the project and its items but cannot delete the project or manage other co-sellers.",
     "contentTitle": "User Content",
-    "contentText": "You retain ownership of your content (descriptions, photos). By posting, you grant the Service a limited licence to display your content to other users. Do not post illegal, offensive, or infringing content.",
+    "contentText": "You retain ownership of your content (descriptions, photos). By posting, you grant the Service a limited licence to display your content to other users. Do not post illegal, offensive, or infringing content. The operator may remove content that violates these terms without prior notice. Project owners may generate time-limited share links to grant specific buyers access to private projects; these links expire after 30 days and can be revoked at any time.",
     "prohibitedTitle": "Prohibited Uses",
     "prohibitedText": "You may not use the Service to violate any law, send spam, attempt unauthorised access to any account or system, or scrape data automatically.",
     "liabilityTitle": "Limitation of Liability",
