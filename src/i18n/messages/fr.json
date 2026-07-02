@@ -68,7 +68,9 @@
     "noSearchResults": "Aucun projet ne correspond à votre recherche",
     "noSearchResultsDesc": "Essayez un autre mot-clé ou effacez votre recherche pour voir tous les projets.",
     "clearSearch": "Effacer la recherche",
-    "searchResultsFor": "Résultats pour « {q} »"
+    "searchResultsFor": "Résultats pour « {q} »",
+    "countryFilter": "Pays :",
+    "countryAny": "Tous les pays"
   },
   "auth": {
     "signIn": "Se connecter",

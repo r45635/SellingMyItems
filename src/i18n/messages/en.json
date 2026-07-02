@@ -68,7 +68,9 @@
     "noSearchResults": "No projects match your search",
     "noSearchResultsDesc": "Try a different keyword or clear your search to see all projects.",
     "clearSearch": "Clear search",
-    "searchResultsFor": "Results for \"{q}\""
+    "searchResultsFor": "Results for \"{q}\"",
+    "countryFilter": "Country:",
+    "countryAny": "All countries"
   },
   "auth": {
     "signIn": "Sign in",

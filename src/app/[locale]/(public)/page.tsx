@@ -4,12 +4,16 @@ import { Link } from "@/i18n/navigation";
 import { db } from "@/db";
 import { profiles, projects, sellerAccounts, items, buyerWishlists, buyerWishlistItems } from "@/db/schema";
 import { and, count, desc, eq, isNull, isNotNull, max, min, ne, inArray, sql } from "drizzle-orm";
-import { MapPin, Package, Heart, MapPinned, HandCoins, Tag, Navigation } from "lucide-react";
+import { MapPin, Package, Heart, MapPinned, HandCoins, Tag, Navigation, Globe } from "lucide-react";
 import { SearchBar } from "@/components/shared/search-bar";
 import { EmptyState } from "@/components/shared/empty-state";
 import { getUser, getUserCapabilities } from "@/lib/auth";
 import { formatDistance, type DistanceUnit } from "@/lib/format";
 import { cn } from "@/lib/utils";
+
+function countryFlag(code: string): string {
+  return [...code.toUpperCase()].map((c) => String.fromCodePoint(c.charCodeAt(0) + 127397)).join("");
+}
 
 function formatCurrency(value: number, currency: string = "USD") {
   try {
@@ -41,9 +45,9 @@ export async function generateMetadata({
 export default async function HomePage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; radius?: string }>;
+  searchParams: Promise<{ q?: string; radius?: string; country?: string }>;
 }) {
-  const { q: searchQuery, radius: radiusRaw } = await searchParams;
+  const { q: searchQuery, radius: radiusRaw, country: countryFilter } = await searchParams;
   const t = await getTranslations("home");
 
   const user = await getUser();
@@ -121,32 +125,52 @@ export default async function HomePage({
       ) < ${radiusKm * 1000}`
     : undefined;
 
-  const publicProjects =
+  const countryFilterCondition = countryFilter
+    ? eq(projects.countryCode, countryFilter)
+    : undefined;
+
+  const baseProjectConditions = and(
+    eq(projects.isPublic, true),
+    eq(projects.publishStatus, "approved"),
+    isNull(projects.deletedAt),
     activeSellerIdSet.length > 0
-      ? await db
+      ? inArray(projects.sellerId, activeSellerIdSet)
+      : undefined,
+    searchFilter,
+    sellerRestrictionFilter,
+  );
+
+  const [publicProjects, availableCountriesRows] = await Promise.all([
+    activeSellerIdSet.length > 0
+      ? db
           .select({
             id: projects.id,
             name: projects.name,
             slug: projects.slug,
             cityArea: projects.cityArea,
+            countryCode: projects.countryCode,
             description: projects.description,
             distanceMeters: distanceExpr,
           })
           .from(projects)
-          .where(
-            and(
-              eq(projects.isPublic, true),
-              eq(projects.publishStatus, "approved"),
-              isNull(projects.deletedAt),
-              inArray(projects.sellerId, activeSellerIdSet),
-              searchFilter,
-              sellerRestrictionFilter,
-              radiusFilter
-            )
-          )
+          .where(and(baseProjectConditions, radiusFilter, countryFilterCondition))
           .orderBy(desc(projects.createdAt))
           .limit(12)
-      : [];
+      : Promise.resolve([]),
+    // Distinct countries for the filter chips (ignoring active country/radius filter
+    // so all options stay visible)
+    activeSellerIdSet.length > 0
+      ? db
+          .selectDistinct({ countryCode: projects.countryCode })
+          .from(projects)
+          .where(and(baseProjectConditions, isNotNull(projects.countryCode)))
+      : Promise.resolve([]),
+  ]);
+
+  const countryList = availableCountriesRows
+    .map((r) => r.countryCode!)
+    .filter(Boolean)
+    .sort();
 
   const itemCounts = await db
     .select({
@@ -302,10 +326,48 @@ export default async function HomePage({
             )}
           </div>
 
+          {/* Country filter chips — shown when projects from 2+ countries exist */}
+          {countryList.length > 1 && (
+            <div className="mb-3 flex flex-wrap items-center gap-1.5">
+              <Globe className="h-3.5 w-3.5 text-orange-500" />
+              <span className="text-xs font-medium text-muted-foreground">
+                {t("countryFilter")}
+              </span>
+              {(["any", ...countryList] as const).map((opt) => {
+                const isActive =
+                  opt === "any" ? !countryFilter : countryFilter === opt;
+                const params = new URLSearchParams();
+                if (searchQuery?.trim()) params.set("q", searchQuery.trim());
+                if (radiusKm) params.set("radius", String(radiusKm));
+                if (opt !== "any") params.set("country", opt);
+                const qs = params.toString();
+                const href = qs ? `/?${qs}` : "/";
+                const label =
+                  opt === "any"
+                    ? t("countryAny")
+                    : `${countryFlag(opt)} ${opt}`;
+                return (
+                  <Link
+                    key={opt}
+                    href={href}
+                    className={cn(
+                      "inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-medium ring-1 transition-colors",
+                      isActive
+                        ? "bg-foreground text-background ring-foreground"
+                        : "bg-background text-muted-foreground ring-border hover:text-foreground"
+                    )}
+                  >
+                    {label}
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+
           {/* Radius filter row — only meaningful for buyers with a
               saved location. Otherwise we offer a quick CTA to /account
-              so they can set one. The chip URLs preserve ?q= when set
-              so radius and search compose naturally. */}
+              so they can set one. The chip URLs preserve ?q= and ?country=
+              when set so radius, country, and search compose naturally. */}
           {buyerHasLocation ? (
             <div className="mb-4 flex flex-wrap items-center gap-1.5">
               <Navigation className="h-3.5 w-3.5 text-orange-500" />
@@ -318,6 +380,7 @@ export default async function HomePage({
                 const params = new URLSearchParams();
                 if (searchQuery?.trim()) params.set("q", searchQuery.trim());
                 if (opt !== "any") params.set("radius", String(opt));
+                if (countryFilter) params.set("country", countryFilter);
                 const qs = params.toString();
                 const href = qs ? `/?${qs}` : "/";
                 return (
@@ -394,6 +457,11 @@ export default async function HomePage({
                       <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
                         {project.cityArea && (
                           <span className="inline-flex items-center gap-1">
+                            {project.countryCode && (
+                              <span aria-label={project.countryCode}>
+                                {countryFlag(project.countryCode)}
+                              </span>
+                            )}
                             <MapPin className="h-3 w-3" />
                             {project.cityArea}
                           </span>
