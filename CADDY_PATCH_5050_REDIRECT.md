@@ -80,7 +80,7 @@ cd /opt/trystbrief
 docker exec caddy caddy reload --config /etc/caddy/Caddyfile
 
 # If reload fails (e.g. new port requires container restart):
-echo '+gnE/->...' | sudo -S docker compose up -d caddy
+sudo docker compose up -d caddy
 ```
 
 ---
@@ -88,11 +88,11 @@ echo '+gnE/->...' | sudo -S docker compose up -d caddy
 ## 4. Verify firewall
 
 ```bash
-echo '+gnE/->...' | sudo -S ufw status
+sudo ufw status
 # Should list:  5050/tcp   ALLOW
 # If missing:
-echo '+gnE/->...' | sudo -S ufw allow 5050/tcp
-echo '+gnE/->...' | sudo -S ufw reload
+sudo ufw allow 5050/tcp
+sudo ufw reload
 ```
 
 ---
