@@ -932,62 +932,35 @@ networks:
     external: true
 ```
 
-### VPS Access
+### Runtime topology
 
-| Method | Command |
-|---|---|
-| SSH alias | `ssh vultr` |
-| Full command | `ssh -i ~/.ssh/id_ed25519_vultr_r45635 r45635@45.32.220.152` |
+One Docker stack, three containers (not multiple app instances): the Next.js app
+(internal port 3000, no host binding), PostgreSQL, and Redis, on a shared Docker
+network. A reverse proxy (Caddy) in a sibling compose terminates HTTPS and proxies
+to the app container; it also serves a 301 redirect from the plain-HTTP port.
 
-> **Note:** Both manual ops and GitHub Actions use `r45635` (in `sudo` + `docker` groups). The app lives at `/home/r45635/sellingmyitems/`.
-
-### Running Containers
-
-One stack, three containers — **not** multiple app instances:
-
-| Container | Image | Port |
-|---|---|---|
-| `sellingmyitems-app` | Next.js app (built from repo) | internal (3000) — no host binding |
-| `sellingmyitems-db-1` | postgres:16-alpine | internal |
-| `sellingmyitems-redis-1` | redis:7-alpine | internal |
-
-Useful commands (run as `r45635`):
+Common host ops:
 
 ```bash
-# Live logs
-docker logs sellingmyitems-app -f
-
-# Shell into app
-docker exec -it sellingmyitems-app sh
-
-# Restart only the app (no rebuild)
-cd ~/sellingmyitems && docker compose restart app
+docker logs <app-container> -f       # live logs
+docker exec -it <app-container> sh   # shell in
+docker compose restart app           # restart app, no rebuild
 ```
 
-### GitHub Actions Deploy
+### GitHub Actions deploy
 
-On push to `main`, `.github/workflows/deploy.yml` runs (as `r45635`, in `/home/r45635/sellingmyitems`):
+On push to `main`, `.github/workflows/deploy.yml` deploys over SSH:
 
-1. Acquire deploy lock (`/tmp/sellingmyitems-deploy.lock`)
-2. Prune Docker images/containers if disk < 4 GB free
-3. Abort if disk < 1 GB free
-4. Ensure `shared-proxy` network exists
-5. `git clone` via HTTPS (first deploy) or `git pull origin main`
-6. `docker compose build --pull`
-7. `docker compose up -d --force-recreate --remove-orphans`
-8. Run DB migrations (`scripts/run-migrations.sh`) — also installs extensions (`unaccent`, `cube`, `earthdistance`) idempotently before applying SQL files
-9. Health check — retries `docker exec sellingmyitems-app wget -qO- http://127.0.0.1:3000/api/health` up to 12× (5 s apart, 60 s total) to allow for container startup
-10. Post-deploy prune (dangling images + builder cache)
+1. Acquire a deploy lock; prune Docker if disk is low; abort if < 1 GB free
+2. Ensure the shared Docker network exists
+3. `git pull origin main` (or first-deploy clone)
+4. `docker compose build --pull` → `up -d --force-recreate --remove-orphans`
+5. Run migrations (`scripts/run-migrations.sh`) — installs `unaccent` / `cube` /
+   `earthdistance` idempotently, then applies pending SQL
+6. Health check — retry `GET /api/health` up to 12× (60 s total)
+7. Post-deploy prune
 
-Required GitHub secrets: `VPS_HOST`, `VPS_USER` (`r45635`), `VPS_SSH_KEY`, optionally `VPS_PORT`, `VPS_APP_DIR` (default `$HOME/sellingmyitems`).
-
-### Caddy Reverse Proxy
-
-Caddy runs in a separate Docker Compose at `/opt/trystbrief/` and shares the `shared-proxy` network. It:
-- Terminates HTTPS on port 5055 and proxies to `sellingmyitems-app:3000`
-- Serves a permanent 301 redirect on port 5050 (HTTP → HTTPS :5055)
-
-See `CADDY_PATCH_5050_REDIRECT.md` for the exact Caddyfile blocks and the required manual steps to apply on the server.
+Required secrets: `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY`, optional `VPS_PORT`, `VPS_APP_DIR`.
 
 ---
 

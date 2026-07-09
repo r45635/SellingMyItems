@@ -3,6 +3,10 @@ name: Deploy to VPS
 on:
   push:
     branches: [main]
+    # Doc-only changes don't affect the build — skip the deploy for them.
+    paths-ignore:
+      - '**.md'
+      - 'LICENSE'
 
 concurrency:
   group: deploy-${{ github.ref }}

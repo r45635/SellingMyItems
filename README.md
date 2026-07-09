@@ -228,12 +228,7 @@ docker compose up db -d
 npx drizzle-kit push
 ```
 
-**Production** — migrations in `src/db/migrations/` are applied manually:
-
-```bash
-# Copy migration SQL into the running container and execute
-docker exec -i sellingmyitems-db-1 psql -U sellingmyitems -d sellingmyitems < src/db/migrations/0013_add-item-reservation-sold-tracking.sql
-```
+**Production** — migrations in `src/db/migrations/` are applied automatically on deploy by `scripts/run-migrations.sh` (see [Deployment](#deployment)).
 
 ### 4. Run locally
 
@@ -258,9 +253,7 @@ docker exec sellingmyitems-db-1 psql -U sellingmyitems -d sellingmyitems \
 docker compose up -d --build
 ```
 
-The app container binds internally on port 3000. A reverse proxy (Caddy/Nginx) handles TLS and forwards traffic — see `CADDY_PATCH_5050_REDIRECT.md` for the production Caddy setup.
-
-> **Port transition note:** HTTP `:5050` redirects permanently (301) to HTTPS `:5055`. Direct HTTP access is no longer served by the app container.
+The app container binds internally on port 3000. A reverse proxy (Caddy/Nginx) terminates TLS and forwards traffic to it.
 
 ---
 
@@ -467,41 +460,9 @@ Geo + messaging + invitations + admin:
 | `item_share_links` | itemId, projectId, token (unique), createdBy, expiresAt, revokedAt, revokedBy | Per-item share link tokens (30-day validity). Claiming a link auto-grants the viewer access to the parent project (`access_grant_source = 'share_link'`). |
 | `app_settings` | key (unique), value, updatedBy | Admin-managed settings (e.g. Resend API key) |
 
-### Migrations (29 files)
+### Migrations
 
-Migrations are auto-applied on deploy by [`scripts/run-migrations.sh`](scripts/run-migrations.sh) — drop a new `*.sql` file in `src/db/migrations/`, push, and the workflow runner picks it up. Tracking lives in the `_applied_migrations` table.
-
-Numbered SQL files in `src/db/migrations/`. Notable steps:
-
-| Range | Description |
-|---|---|
-| `0000` – `0002` | Initial schema and early adjustments |
-| `0003` | Add `user_role` enum to profiles |
-| `0004` | Local auth with PostgreSQL sessions |
-| `0005` | Demo account disable support |
-| `0006` | Add `admin` to user role enum |
-| `0007` | Item view count tracking |
-| `0008` | Conversation read tracking timestamps |
-| `0009` | Password reset tokens table |
-| `0010` | Email logging table |
-| `0011` | App settings table |
-| `0012` | Add `message_copy` email type |
-| `0013` | Item reservation + sold tracking (reservedForUserId, soldToUserId, reservedAt, soldAt); reservation recap email type |
-| `0014` | Project invitations + access grants + access requests + notifications |
-| `0015` | Add invitation-related email types |
-| `0016` | Add `email_visibility` enum + `profiles.email_visibility`; thread aliases (later dropped) + `inbound_relay` email type |
-| `0017` | Drop `thread_aliases` (inbound relay rolled back in favor of in-app messaging) |
-| `0018` | Unify roles: drop `seller`-role gating; add `project_publish_status` enum + `publish_status`/`reviewer_note`/`submitted_at`/`reviewed_at` columns; grandfather public projects → `approved` |
-| `0019` | Drop legacy `user_role` enum + `profiles.role` column; replace with `profiles.is_admin` boolean. Buyer/seller capabilities now derived from data (signed-in = buyer; row in `seller_accounts` = seller). |
-| `0020` | Intents redesign: `archived_at` + `archived_by` + `reviewer_note` on `buyer_intents`, `intent_id` FK on `conversation_threads`, hot-path indexes, `cancelled` value added to `intent_status` enum. |
-| `0021` | Promote `items.currency` from text to a `currency_code` enum (USD/EUR/CAD). Add per-user communication prefs on `profiles`: `preferred_locale`, `distance_unit`, `default_currency`. |
-| `0022` | Enable `cube` + `earthdistance` extensions. Location columns (`country_code`, `postal_code`, `latitude`, `longitude`) on `profiles` and `projects`, plus `radius_km` on `projects`. New `geocoded_locations` cache table. GiST index on project coords for fast radius queries. |
-| `0023` | Add `share_link` to `access_grant_source` enum. New `item_share_links` table (UUID PK, item/project/user FKs, unique token, expiry + revocation timestamps). |
-| `0024` | Create `purge_old_email_logs()` PostgreSQL function and run an initial purge. Email logs older than 90 days are removed on each deploy (`scripts/run-migrations.sh`). |
-| `0025` | GDPR Art. 20: add `last_data_export_at timestamptz` to `profiles` for per-user export rate-limiting (max 1 export/24 h). |
-| `0026` | GDPR Art. 17: create `deletion_log` audit table (SHA-256 hashed email + entity counts) so account deletions are traceable without re-identification. |
-| `0027` | Add `hd_url` column to `item_images` — enables progressive HD loading: standard 1024 px WebP for normal display, 1920 px WebP loaded on fullscreen zoom. |
-| `0028` | Add `project_collaborators` table — co-seller support. Unique constraint on `(project_id, seller_account_id)`. Indexes on both FK columns. |
+Numbered SQL files in `src/db/migrations/` (`NNNN_*.sql` with `IF [NOT] EXISTS` guards). Auto-applied on deploy by [`scripts/run-migrations.sh`](scripts/run-migrations.sh) and tracked in `_applied_migrations`, so re-runs are no-ops. Add one by dropping a new `NNNN_*.sql` and pushing — the file history is the changelog.
 
 ---
 
@@ -605,17 +566,7 @@ Outbound notifications fire as usual (new message, intent received, reservation 
 
 ## Deployment
 
-### Infrastructure
-
-| Component | Detail |
-|---|---|
-| **VPS** | Vultr (45.32.220.152) |
-| **Domain** | `sellingmyitems.toprecipes.best:5055` |
-| **Reverse proxy** | Caddy 2 Alpine at `/opt/trystbrief/` |
-| **Docker network** | `shared-proxy` (external, cross-compose connectivity) |
-| **App container** | `sellingmyitems-app` on port 3000 (internal only — Caddy proxies via `shared-proxy` network) |
-| **DB container** | `sellingmyitems-db-1` (PostgreSQL 16) |
-| **Uploads** | Docker named volume `uploads` → `/app/public/uploads` |
+The app is containerized (`Dockerfile`, 3-stage build) and runs behind a reverse proxy that terminates TLS and forwards to the app container on internal port 3000. PostgreSQL and Redis run as sibling containers on a shared Docker network; uploads live in a named Docker volume mounted at `/app/public/uploads`.
 
 ### CI/CD Pipeline
 
@@ -636,88 +587,19 @@ GitHub Actions (deploy.yml)
        └── Post-deploy: prune unused images
 ```
 
-### Manual Operations
+### Required GitHub Actions secrets
 
-```bash
-# Run a migration on VPS
-docker exec -i sellingmyitems-db-1 psql -U sellingmyitems -d sellingmyitems < migration.sql
+`VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY`, and optionally `VPS_PORT` (default 22) and `VPS_APP_DIR`.
 
-# Promote user to admin (the only role flip that still requires SQL —
-# selling is open to every signed-in user, no seller flip needed)
-docker exec sellingmyitems-db-1 psql -U sellingmyitems -d sellingmyitems \
-  -c "UPDATE profiles SET is_admin = true WHERE email = 'admin@example.com';"
+### Self-hosting
 
-# Check app health
-ssh root@VPS_IP "docker exec sellingmyitems-app wget -qO- http://localhost:3000/api/health"
+1. Provision Docker + a reverse proxy on your host; create the shared Docker network.
+2. Add a deploy key so the host can `git clone`/`pull` your fork, and set the GitHub Actions secrets above.
+3. Create a production `.env`: `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB`, `NEXT_PUBLIC_APP_URL`, `RESEND_API_KEY`, `RESEND_FROM_EMAIL` (verified Resend domain).
+4. Run `bash scripts/vps-setup.sh`, then push to `main` to trigger the deploy.
+5. Promote an admin (`UPDATE profiles SET is_admin = true WHERE email = '…'`) and set the Resend key + sender in `/admin/emails`.
 
-# Database backup
-docker exec sellingmyitems-db-1 pg_dump -U sellingmyitems sellingmyitems > backup.sql
-```
-
-### Admin operations
-
-#### Apply a new schema change
-
-The deploy workflow runs [`scripts/run-migrations.sh`](scripts/run-migrations.sh) automatically between `docker compose up` and the `/api/health` curl. To add a new schema change:
-
-1. Edit `src/db/schema/index.ts`.
-2. Add a hand-rolled SQL file in `src/db/migrations/` (next sequential prefix, e.g. `0020_add_X.sql`).
-3. Use `IF NOT EXISTS` / `IF EXISTS` guards so a second run is a no-op.
-4. Push to `main`. The next deploy applies it inside a single transaction (`psql -1 -v ON_ERROR_STOP=1`); a failure rolls back and fails the deploy.
-
-Tracking lives in a `_applied_migrations` table inside the same DB. The first run on an existing DB bootstraps the table by marking all current migration files as already applied (since the schema is already up to date) — no SQL is re-run on bootstrap.
-
-To run migrations manually outside a deploy:
-```bash
-ssh root@VPS_IP "cd /root/sellingmyitems && ./scripts/run-migrations.sh"
-```
-
-### Deploy On Another VPS / Another Account
-
-Use this checklist when transferring the project to a different VPS or GitHub account.
-
-1. Provision VPS prerequisites
-  - Install Docker and Docker Compose
-  - Create Docker network: `docker network create shared-proxy`
-  - Install Caddy (or equivalent reverse proxy) and route domain to `sellingmyitems-app:3000`
-
-2. Prepare repository access from the new account
-  - Add deploy SSH key on VPS (`~/.ssh/id_ed25519_github`)
-  - Add the public key as a deploy key on the new repository
-  - Confirm `git clone` works from VPS
-
-3. Configure GitHub Actions secrets on the new repository
-  - `VPS_HOST`
-  - `VPS_USER`
-  - `VPS_SSH_KEY`
-  - `VPS_PORT` (optional, default 22)
-  - `VPS_APP_DIR` (optional, default `$HOME/sellingmyitems`)
-
-4. Configure production `.env` on the new VPS
-  - `POSTGRES_USER`
-  - `POSTGRES_PASSWORD`
-  - `POSTGRES_DB`
-  - `APP_PORT`
-  - `NEXT_PUBLIC_APP_URL`
-  - `RESEND_API_KEY`
-  - `RESEND_FROM_EMAIL` (must use a verified Resend domain)
-
-5. Bootstrap and deploy
-  - Run: `bash scripts/vps-setup.sh`
-  - Push to `main` to trigger GitHub Actions deploy
-  - Verify health: `docker exec sellingmyitems-app wget -qO- http://localhost:3000/api/health`
-
-6. Admin handoff checks (in-app)
-  - Create or promote one admin user (`/admin` access)
-  - In `/admin/emails`, set/update:
-    - Resend API key
-    - Sender address (From)
-  - Confirm email logs show `sent` status in `/admin/emails`
-
-7. Optional data migration from old VPS
-  - Backup old DB: `pg_dump`
-  - Restore on new VPS DB container before go-live
-  - Copy uploads volume/files from old VPS to new VPS
+To migrate data to a new host, `pg_dump` the database and copy the uploads volume before go-live.
 
 ---
 
@@ -766,7 +648,6 @@ Use this checklist when transferring the project to a different VPS or GitHub ac
 | [USER_GUIDE.md](USER_GUIDE.md) | Complete guide for buyers, sellers, and admins |
 | [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md) | Architecture deep-dive, code conventions, extending the app |
 | [ROADMAP.md](ROADMAP.md) | Planned features and improvements |
-| [COPILOT_INSTRUCTIONS.md](COPILOT_INSTRUCTIONS.md) | AI assistant coding conventions for this project |
 
 ---
 
