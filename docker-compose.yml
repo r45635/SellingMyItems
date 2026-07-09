@@ -36,7 +36,7 @@ services:
     container_name: sellingmyitems-app
     restart: unless-stopped
     # Port 3000 is only reachable by Caddy via the shared-proxy network.
-    # HTTP :5050 is now handled by Caddy (301 → HTTPS :5055). See CADDY_PATCH_5050_REDIRECT.md.
+    # HTTP :5050 is handled by the reverse proxy (301 → HTTPS :5055).
     expose:
       - "3000"
     environment:
