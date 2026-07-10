@@ -1,6 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
+import { useTranslations } from "next-intl";
 import { toggleProfileActiveAction } from "@/features/admin-dashboard/actions";
 
 export function ToggleActiveButton({
@@ -10,6 +11,7 @@ export function ToggleActiveButton({
   profileId: string;
   isActive: boolean;
 }) {
+  const t = useTranslations("admin.accounts");
   const [isPending, startTransition] = useTransition();
 
   return (
@@ -27,10 +29,10 @@ export function ToggleActiveButton({
       }
     >
       {isPending
-        ? "..."
+        ? t("loading")
         : isActive
-          ? "Disable"
-          : "Enable"}
+          ? t("disable")
+          : t("enable")}
     </button>
   );
 }

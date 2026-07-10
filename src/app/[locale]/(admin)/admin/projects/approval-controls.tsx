@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { CheckCircle2, XCircle, Loader2, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -22,6 +23,7 @@ export function ApprovalControls({
   isPublic: boolean;
 }) {
   const router = useRouter();
+  const t = useTranslations("admin");
   const [isPending, startTransition] = useTransition();
   const [rejectingOpen, setRejectingOpen] = useState(false);
   const [note, setNote] = useState("");
@@ -29,9 +31,11 @@ export function ApprovalControls({
   function handleApprove() {
     startTransition(async () => {
       const r = await approveProjectAction(projectId);
+      // approveProjectAction lives in projects/actions.ts and returns a
+      // ready-to-display message, so we surface it as-is.
       if ("error" in r && r.error) toast.error(r.error);
       else {
-        toast.success("Project approved");
+        toast.success(t("projects.approvedToast"));
         router.refresh();
       }
     });
@@ -42,7 +46,7 @@ export function ApprovalControls({
       const r = await rejectProjectAction(projectId, note);
       if ("error" in r && r.error) toast.error(r.error);
       else {
-        toast.success("Project rejected");
+        toast.success(t("projects.rejectedToast"));
         setRejectingOpen(false);
         setNote("");
         router.refresh();
@@ -53,7 +57,8 @@ export function ApprovalControls({
   function handleTogglePublic() {
     startTransition(async () => {
       const r = await toggleProjectPublicAction(projectId);
-      if ("error" in r && r.error) toast.error(r.error);
+      // Admin-dashboard actions return an i18n error code we translate here.
+      if ("error" in r && r.error) toast.error(t(`errors.${r.error}`));
       else router.refresh();
     });
   }
@@ -73,7 +78,7 @@ export function ApprovalControls({
             ) : (
               <CheckCircle2 className="h-3 w-3" />
             )}
-            Approve
+            {t("projects.approve")}
           </button>
           <button
             type="button"
@@ -82,7 +87,7 @@ export function ApprovalControls({
             className="inline-flex h-7 items-center gap-1 rounded border border-border px-2 text-[11px] font-medium hover:bg-muted"
           >
             <XCircle className="h-3 w-3" />
-            Reject
+            {t("projects.reject")}
           </button>
         </div>
         {rejectingOpen && (
@@ -90,7 +95,7 @@ export function ApprovalControls({
             <textarea
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              placeholder="Reason (optional, shared with seller)"
+              placeholder={t("projects.rejectReasonPlaceholder")}
               rows={2}
               maxLength={500}
               className="w-full rounded border bg-background px-2 py-1 text-[11px]"
@@ -102,7 +107,7 @@ export function ApprovalControls({
                 disabled={isPending}
                 className="inline-flex h-6 items-center rounded bg-red-600 px-2 text-[11px] font-medium text-white hover:bg-red-700 disabled:opacity-60"
               >
-                Confirm reject
+                {t("projects.confirmReject")}
               </button>
               <button
                 type="button"
@@ -112,7 +117,7 @@ export function ApprovalControls({
                 }}
                 className="inline-flex h-6 items-center rounded border px-2 text-[11px]"
               >
-                Cancel
+                {t("projects.cancel")}
               </button>
             </div>
           </div>
@@ -128,7 +133,7 @@ export function ApprovalControls({
       onClick={handleTogglePublic}
       disabled={isPending}
       className="inline-flex h-7 items-center gap-1 rounded border border-border px-2 text-[11px] font-medium hover:bg-muted disabled:opacity-60"
-      title={isPublic ? "Unpublish (hide from public)" : "Republish"}
+      title={isPublic ? t("projects.unpublishTitle") : t("projects.republishTitle")}
     >
       {isPending ? (
         <Loader2 className="h-3 w-3 animate-spin" />
@@ -137,7 +142,7 @@ export function ApprovalControls({
       ) : (
         <Eye className="h-3 w-3" />
       )}
-      {isPublic ? "Unpublish" : "Republish"}
+      {isPublic ? t("projects.unpublish") : t("projects.republish")}
     </button>
   );
 }

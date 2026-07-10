@@ -1,6 +1,7 @@
 "use client";
 
 import { Link, usePathname } from "@/i18n/navigation";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
@@ -13,18 +14,19 @@ import {
 const adminNavItems: readonly {
   href: string;
   icon: typeof LayoutDashboard;
-  label: string;
+  labelKey: "overview" | "accounts" | "projects" | "emails";
   exact?: boolean;
   color: string;
 }[] = [
-  { href: "/admin", icon: LayoutDashboard, label: "Overview", exact: true, color: "text-orange-600" },
-  { href: "/admin/accounts", icon: Users, label: "Accounts", color: "text-violet-600" },
-  { href: "/admin/projects", icon: FolderOpen, label: "Projects", color: "text-sky-600" },
-  { href: "/admin/emails", icon: Mail, label: "Emails", color: "text-emerald-600" },
+  { href: "/admin", icon: LayoutDashboard, labelKey: "overview", exact: true, color: "text-orange-600" },
+  { href: "/admin/accounts", icon: Users, labelKey: "accounts", color: "text-violet-600" },
+  { href: "/admin/projects", icon: FolderOpen, labelKey: "projects", color: "text-sky-600" },
+  { href: "/admin/emails", icon: Mail, labelKey: "emails", color: "text-emerald-600" },
 ];
 
 export function AdminSidebar() {
   const pathname = usePathname();
+  const t = useTranslations("admin.sidebar");
 
   return (
     <aside className="hidden md:flex w-64 flex-col border-r bg-muted/30">
@@ -33,10 +35,10 @@ export function AdminSidebar() {
           <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-red-100 text-red-600 dark:bg-red-950/50 dark:text-red-400">
             <Shield className="h-4 w-4" />
           </span>
-          <span className="font-bold text-sm">Admin</span>
+          <span className="font-bold text-sm">{t("brand")}</span>
         </Link>
         <p className="text-xs text-muted-foreground mt-1.5 ml-9">
-          Admin dashboard
+          {t("subtitle")}
         </p>
       </div>
       <nav className="flex-1 px-3 py-3 space-y-1">
@@ -62,7 +64,7 @@ export function AdminSidebar() {
                   isActive ? "text-orange-600 dark:text-orange-400" : item.color
                 )}
               />
-              <span>{item.label}</span>
+              <span>{t(item.labelKey)}</span>
             </Link>
           );
         })}

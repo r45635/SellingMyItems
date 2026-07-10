@@ -672,5 +672,147 @@
     "terminationText": "Nous pouvons suspendre ou supprimer les comptes violant ces conditions. Vous pouvez supprimer votre compte a tout moment depuis vos parametres.",
     "changesTitle": "Modifications",
     "changesText": "Nous pouvons mettre a jour ces conditions. La poursuite de l'utilisation vaut acceptation."
+  },
+  "admin": {
+    "eyebrow": "Admin",
+    "overviewTitle": "Vue d'ensemble de la plateforme",
+    "catalogValue": "Valeur du catalogue ({currency})",
+    "catalogSubtitle": "Sur {count, plural, one {# article disponible} other {# articles disponibles}}",
+    "sections": {
+      "accounts": "Comptes",
+      "projects": "Projets",
+      "items": "Articles",
+      "engagement": "Engagement"
+    },
+    "stat": {
+      "total": "Total",
+      "sellers": "Vendeurs",
+      "active": "Actifs",
+      "inactive": "Inactifs",
+      "public": "Publics",
+      "draft": "Brouillons",
+      "deleted": "Supprimés",
+      "available": "Disponibles",
+      "reserved": "Réservés",
+      "sold": "Vendus",
+      "hidden": "Masqués"
+    },
+    "purchaseIntents": "Intentions d'achat",
+    "conversations": "Conversations",
+    "adminBuyerNote": "{count, plural, one {# admin} other {# admins}} · toute personne connectée est un acheteur",
+    "sidebar": {
+      "brand": "Admin",
+      "subtitle": "Tableau de bord admin",
+      "overview": "Vue d'ensemble",
+      "accounts": "Comptes",
+      "projects": "Projets",
+      "emails": "Emails"
+    },
+    "projects": {
+      "title": "Gestion des projets",
+      "totalCount": "{count, plural, one {# projet au total} other {# projets au total}}",
+      "pendingReview": "{count} en attente de validation",
+      "table": {
+        "project": "Projet",
+        "seller": "Vendeur",
+        "items": "Articles",
+        "status": "Statut",
+        "submitted": "Soumis le",
+        "action": "Action"
+      },
+      "deleted": "Supprimé",
+      "status": {
+        "draft": "Brouillon",
+        "pending": "En attente de validation",
+        "approved": "Approuvé · public",
+        "rejected": "Refusé"
+      },
+      "approve": "Approuver",
+      "reject": "Refuser",
+      "confirmReject": "Confirmer le refus",
+      "cancel": "Annuler",
+      "rejectReasonPlaceholder": "Motif (facultatif, communiqué au vendeur)",
+      "unpublish": "Dépublier",
+      "republish": "Republier",
+      "unpublishTitle": "Dépublier (masquer au public)",
+      "republishTitle": "Republier",
+      "approvedToast": "Projet approuvé",
+      "rejectedToast": "Projet refusé"
+    },
+    "accounts": {
+      "title": "Gestion des comptes",
+      "totalCount": "{count, plural, one {# compte au total} other {# comptes au total}}",
+      "table": {
+        "email": "Email",
+        "name": "Nom",
+        "capabilities": "Rôles",
+        "status": "Statut",
+        "created": "Créé le",
+        "lastLogin": "Dernière connexion",
+        "action": "Action"
+      },
+      "buyer": "Acheteur",
+      "seller": "Vendeur",
+      "admin": "Admin",
+      "active": "Actif",
+      "inactive": "Inactif",
+      "never": "Jamais",
+      "disable": "Désactiver",
+      "enable": "Activer",
+      "loading": "…"
+    },
+    "emails": {
+      "title": "Emails",
+      "subtitle": "Surveiller les envois d'emails et gérer la configuration API Resend",
+      "emailsToday": "Emails aujourd'hui",
+      "failedToday": "Échecs aujourd'hui",
+      "apiKey": "Clé API",
+      "usingEnvVariable": "(via la variable d'environnement)",
+      "updated": "Mis à jour le : {date}",
+      "todayByType": "Aujourd'hui par type",
+      "last30Days": "30 derniers jours",
+      "date": "Date",
+      "sent": "Envoyés",
+      "failed": "Échecs",
+      "logsTitle": "Journal des emails ({count})",
+      "noEmails": "Aucun email envoyé pour l'instant.",
+      "table": {
+        "to": "Destinataire",
+        "type": "Type",
+        "subject": "Objet",
+        "status": "Statut",
+        "date": "Date"
+      },
+      "statusSent": "Envoyé",
+      "statusFailed": "Échec",
+      "type": {
+        "welcome": "Bienvenue",
+        "message_notification": "Notification de message",
+        "message_copy": "Copie de message",
+        "intent_received": "Intention reçue",
+        "intent_status": "Statut d'intention",
+        "password_reset": "Réinitialisation du mot de passe"
+      },
+      "updateKeyTitle": "Mettre à jour la clé API Resend",
+      "updateKeyDesc": "Mettez à jour la clé API Resend utilisée pour l'envoi des emails. Prise en compte immédiate (mise en cache jusqu'à 5 minutes).",
+      "updateKeyPlaceholder": "re_xxxxxxx…",
+      "updateKeyButton": "Mettre à jour la clé",
+      "keyUpdatedSuccess": "Clé API mise à jour avec succès",
+      "updateFromTitle": "Mettre à jour l'adresse d'expéditeur (From)",
+      "currentSender": "Expéditeur actuel :",
+      "updateFromDesc": "Utilisez une adresse d'expéditeur au domaine vérifié (par exemple : SellingMyItems '<'noreply@votredomaine.com'>').",
+      "updateFromPlaceholder": "SellingMyItems '<'noreply@votredomaine.com'>'",
+      "updateFromButton": "Mettre à jour l'expéditeur",
+      "fromUpdatedSuccess": "Adresse d'expéditeur mise à jour avec succès",
+      "updating": "Mise à jour…"
+    },
+    "errors": {
+      "profileNotFound": "Profil introuvable ou non modifiable",
+      "projectNotFound": "Projet introuvable",
+      "apiKeyRequired": "La clé API est requise",
+      "invalidApiKeyFormat": "Format de clé API Resend invalide (doit commencer par re_)",
+      "fromEmailRequired": "L'adresse d'expéditeur est requise",
+      "invalidFromFormat": "Format invalide. Utilisez email@domaine.com ou Nom affiché '<'email@domaine.com'>'"
+    }
   }
 }

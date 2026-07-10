@@ -16,7 +16,7 @@ export async function toggleProfileActiveAction(profileId: string) {
   });
 
   if (!profile || profile.isAdmin) {
-    return { error: "Profile not found or not editable" };
+    return { error: "profileNotFound" };
   }
 
   await db
@@ -37,7 +37,7 @@ export async function toggleProjectPublicAction(projectId: string) {
   });
 
   if (!project) {
-    return { error: "Project not found" };
+    return { error: "projectNotFound" };
   }
 
   await db
@@ -54,11 +54,11 @@ export async function updateResendApiKeyAction(formData: FormData) {
   const newKey = String(formData.get("apiKey") ?? "").trim();
 
   if (!newKey) {
-    return { error: "API key is required" };
+    return { error: "apiKeyRequired" };
   }
 
   if (!newKey.startsWith("re_")) {
-    return { error: "Invalid Resend API key format (should start with re_)" };
+    return { error: "invalidApiKeyFormat" };
   }
 
   // Upsert into app_settings
@@ -91,7 +91,7 @@ export async function updateResendFromEmailAction(formData: FormData) {
   const fromEmail = String(formData.get("fromEmail") ?? "").trim();
 
   if (!fromEmail) {
-    return { error: "From email is required" };
+    return { error: "fromEmailRequired" };
   }
 
   const hasAt = fromEmail.includes("@");
@@ -99,10 +99,7 @@ export async function updateResendFromEmailAction(formData: FormData) {
     (fromEmail.includes("<") && fromEmail.includes(">")) || !fromEmail.includes("<");
 
   if (!hasAt || !hasAngleBrackets) {
-    return {
-      error:
-        "Invalid format. Use either email@domain.com or Display Name <email@domain.com>",
-    };
+    return { error: "invalidFromFormat" };
   }
 
   const existing = await db.query.appSettings.findFirst({

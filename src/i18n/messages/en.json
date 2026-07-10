@@ -672,5 +672,147 @@
     "terminationText": "We may suspend or terminate accounts that violate these terms. You may delete your account at any time from account settings.",
     "changesTitle": "Changes",
     "changesText": "We may update these terms. Continued use after changes constitutes acceptance."
+  },
+  "admin": {
+    "eyebrow": "Admin",
+    "overviewTitle": "Platform Overview",
+    "catalogValue": "Catalog value ({currency})",
+    "catalogSubtitle": "Across {count, plural, one {# available item} other {# available items}}",
+    "sections": {
+      "accounts": "Accounts",
+      "projects": "Projects",
+      "items": "Items",
+      "engagement": "Engagement"
+    },
+    "stat": {
+      "total": "Total",
+      "sellers": "Sellers",
+      "active": "Active",
+      "inactive": "Inactive",
+      "public": "Public",
+      "draft": "Draft",
+      "deleted": "Deleted",
+      "available": "Available",
+      "reserved": "Reserved",
+      "sold": "Sold",
+      "hidden": "Hidden"
+    },
+    "purchaseIntents": "Purchase intents",
+    "conversations": "Conversations",
+    "adminBuyerNote": "{count, plural, one {# admin} other {# admins}} · everyone signed in is a buyer",
+    "sidebar": {
+      "brand": "Admin",
+      "subtitle": "Admin dashboard",
+      "overview": "Overview",
+      "accounts": "Accounts",
+      "projects": "Projects",
+      "emails": "Emails"
+    },
+    "projects": {
+      "title": "Projects management",
+      "totalCount": "{count, plural, one {# project total} other {# projects total}}",
+      "pendingReview": "{count} pending review",
+      "table": {
+        "project": "Project",
+        "seller": "Seller",
+        "items": "Items",
+        "status": "Status",
+        "submitted": "Submitted",
+        "action": "Action"
+      },
+      "deleted": "Deleted",
+      "status": {
+        "draft": "Draft",
+        "pending": "Pending review",
+        "approved": "Approved · public",
+        "rejected": "Rejected"
+      },
+      "approve": "Approve",
+      "reject": "Reject",
+      "confirmReject": "Confirm reject",
+      "cancel": "Cancel",
+      "rejectReasonPlaceholder": "Reason (optional, shared with seller)",
+      "unpublish": "Unpublish",
+      "republish": "Republish",
+      "unpublishTitle": "Unpublish (hide from public)",
+      "republishTitle": "Republish",
+      "approvedToast": "Project approved",
+      "rejectedToast": "Project rejected"
+    },
+    "accounts": {
+      "title": "Accounts management",
+      "totalCount": "{count, plural, one {# account total} other {# accounts total}}",
+      "table": {
+        "email": "Email",
+        "name": "Name",
+        "capabilities": "Capabilities",
+        "status": "Status",
+        "created": "Created",
+        "lastLogin": "Last login",
+        "action": "Action"
+      },
+      "buyer": "Buyer",
+      "seller": "Seller",
+      "admin": "Admin",
+      "active": "Active",
+      "inactive": "Inactive",
+      "never": "Never",
+      "disable": "Disable",
+      "enable": "Enable",
+      "loading": "…"
+    },
+    "emails": {
+      "title": "Emails",
+      "subtitle": "Monitor email sending and manage Resend API configuration",
+      "emailsToday": "Emails Today",
+      "failedToday": "Failed Today",
+      "apiKey": "API Key",
+      "usingEnvVariable": "(using environment variable)",
+      "updated": "Updated: {date}",
+      "todayByType": "Today by Type",
+      "last30Days": "Last 30 Days",
+      "date": "Date",
+      "sent": "Sent",
+      "failed": "Failed",
+      "logsTitle": "Email Logs ({count})",
+      "noEmails": "No emails sent yet.",
+      "table": {
+        "to": "To",
+        "type": "Type",
+        "subject": "Subject",
+        "status": "Status",
+        "date": "Date"
+      },
+      "statusSent": "Sent",
+      "statusFailed": "Failed",
+      "type": {
+        "welcome": "Welcome",
+        "message_notification": "Message Notification",
+        "message_copy": "Message Copy",
+        "intent_received": "Intent Received",
+        "intent_status": "Intent Status",
+        "password_reset": "Password Reset"
+      },
+      "updateKeyTitle": "Update Resend API Key",
+      "updateKeyDesc": "Update the Resend API key used for sending emails. This takes effect immediately (cached for up to 5 minutes).",
+      "updateKeyPlaceholder": "re_xxxxxxx…",
+      "updateKeyButton": "Update Key",
+      "keyUpdatedSuccess": "API key updated successfully",
+      "updateFromTitle": "Update Sender Address (From)",
+      "currentSender": "Current sender:",
+      "updateFromDesc": "Use a verified domain sender (for example: SellingMyItems '<'noreply@yourdomain.com'>').",
+      "updateFromPlaceholder": "SellingMyItems '<'noreply@yourdomain.com'>'",
+      "updateFromButton": "Update Sender",
+      "fromUpdatedSuccess": "From email updated successfully",
+      "updating": "Updating…"
+    },
+    "errors": {
+      "profileNotFound": "Profile not found or not editable",
+      "projectNotFound": "Project not found",
+      "apiKeyRequired": "API key is required",
+      "invalidApiKeyFormat": "Invalid Resend API key format (should start with re_)",
+      "fromEmailRequired": "From email is required",
+      "invalidFromFormat": "Invalid format. Use either email@domain.com or Display Name '<'email@domain.com'>'"
+    }
   }
 }

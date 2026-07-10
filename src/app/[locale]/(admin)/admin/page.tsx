@@ -8,6 +8,7 @@ import {
   conversationThreads,
 } from "@/db/schema";
 import { count, eq, isNull, isNotNull, and, sql } from "drizzle-orm";
+import { getTranslations } from "next-intl/server";
 import { cn } from "@/lib/utils";
 
 type Accent = "green" | "red" | "blue" | "purple" | "amber" | "neutral";
@@ -37,6 +38,7 @@ function formatCurrency(value: number, currency: string = "USD") {
 }
 
 export default async function AdminOverviewPage() {
+  const t = await getTranslations("admin");
   const [
     totalProfiles,
     sellerCount,
@@ -112,21 +114,21 @@ export default async function AdminOverviewPage() {
   return (
     <div className="space-y-6">
       <div>
-        <p className="text-eyebrow text-orange-500 mb-1">Admin</p>
-        <h1 className="text-heading-2">Platform Overview</h1>
+        <p className="text-eyebrow text-orange-500 mb-1">{t("eyebrow")}</p>
+        <h1 className="text-heading-2">{t("overviewTitle")}</h1>
       </div>
 
       {/* Hero metric — catalog value */}
       <div className="rounded-2xl bg-gradient-to-br from-orange-500 to-orange-700 text-white p-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between shadow-lg shadow-orange-200 dark:shadow-orange-950">
         <div>
           <p className="text-xs font-bold uppercase tracking-widest text-white/70 mb-2">
-            Catalog value ({heroCurrency})
+            {t("catalogValue", { currency: heroCurrency })}
           </p>
           <p className="text-5xl font-extrabold tracking-tight font-heading">
             {formatCurrency(heroValue, heroCurrency)}
           </p>
           <p className="text-sm text-white/70 mt-2">
-            Across {availableCount} available item{availableCount === 1 ? "" : "s"}
+            {t("catalogSubtitle", { count: availableCount })}
           </p>
         </div>
         {otherCurrencies.length > 0 && (
@@ -151,36 +153,36 @@ export default async function AdminOverviewPage() {
       {/* Sections */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Accounts */}
-        <Section title="Accounts">
+        <Section title={t("sections.accounts")}>
           <div className="grid grid-cols-2 gap-3">
-            <StatCard label="Total" value={totalProfiles[0].value} accent="purple" />
-            <StatCard label="Sellers" value={sellerCount[0].value} accent="purple" />
-            <StatCard label="Active" value={activeProfiles[0].value} accent="green" />
-            <StatCard label="Inactive" value={inactiveProfiles[0].value} accent="red" />
+            <StatCard label={t("stat.total")} value={totalProfiles[0].value} accent="purple" />
+            <StatCard label={t("stat.sellers")} value={sellerCount[0].value} accent="purple" />
+            <StatCard label={t("stat.active")} value={activeProfiles[0].value} accent="green" />
+            <StatCard label={t("stat.inactive")} value={inactiveProfiles[0].value} accent="red" />
           </div>
           <p className="text-xs text-muted-foreground mt-3">
-            {adminCount[0].value} admin{adminCount[0].value === 1 ? "" : "s"} · everyone signed in is a buyer
+            {t("adminBuyerNote", { count: adminCount[0].value })}
           </p>
         </Section>
 
         {/* Projects */}
-        <Section title="Projects">
+        <Section title={t("sections.projects")}>
           <div className="grid grid-cols-2 gap-3">
-            <StatCard label="Total" value={totalProjects[0].value} accent="neutral" />
-            <StatCard label="Public" value={publicProjects[0].value} accent="blue" />
-            <StatCard label="Draft" value={draftProjectsCount} accent="amber" />
-            <StatCard label="Deleted" value={deletedProjects[0].value} accent="red" />
+            <StatCard label={t("stat.total")} value={totalProjects[0].value} accent="neutral" />
+            <StatCard label={t("stat.public")} value={publicProjects[0].value} accent="blue" />
+            <StatCard label={t("stat.draft")} value={draftProjectsCount} accent="amber" />
+            <StatCard label={t("stat.deleted")} value={deletedProjects[0].value} accent="red" />
           </div>
         </Section>
 
         {/* Items — full width with status breakdown bar */}
-        <Section title="Items" className="md:col-span-2">
+        <Section title={t("sections.items")} className="md:col-span-2">
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-            <StatCard label="Total" value={totalItems[0].value} accent="neutral" />
-            <StatCard label="Available" value={availableCount} accent="green" />
-            <StatCard label="Reserved" value={reservedCount} accent="red" />
-            <StatCard label="Sold" value={soldCount} accent="neutral" />
-            <StatCard label="Hidden" value={hiddenCount} accent="amber" />
+            <StatCard label={t("stat.total")} value={totalItems[0].value} accent="neutral" />
+            <StatCard label={t("stat.available")} value={availableCount} accent="green" />
+            <StatCard label={t("stat.reserved")} value={reservedCount} accent="red" />
+            <StatCard label={t("stat.sold")} value={soldCount} accent="neutral" />
+            <StatCard label={t("stat.hidden")} value={hiddenCount} accent="amber" />
           </div>
           {totalNonDeletedItems > 0 && (
             <div className="mt-4">
@@ -212,16 +214,16 @@ export default async function AdminOverviewPage() {
               </div>
               <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-muted-foreground">
                 <span>
-                  <span className="font-bold text-emerald-600">{availableCount}</span> Available
+                  <span className="font-bold text-emerald-600">{availableCount}</span> {t("stat.available")}
                 </span>
                 <span>
-                  <span className="font-bold text-red-600">{reservedCount}</span> Reserved
+                  <span className="font-bold text-red-600">{reservedCount}</span> {t("stat.reserved")}
                 </span>
                 <span>
-                  <span className="font-bold text-gray-500">{soldCount}</span> Sold
+                  <span className="font-bold text-gray-500">{soldCount}</span> {t("stat.sold")}
                 </span>
                 <span>
-                  <span className="font-bold text-amber-600">{hiddenCount}</span> Hidden
+                  <span className="font-bold text-amber-600">{hiddenCount}</span> {t("stat.hidden")}
                 </span>
               </div>
             </div>
@@ -229,15 +231,15 @@ export default async function AdminOverviewPage() {
         </Section>
 
         {/* Engagement */}
-        <Section title="Engagement" className="md:col-span-2">
+        <Section title={t("sections.engagement")} className="md:col-span-2">
           <div className="grid grid-cols-2 gap-3">
             <StatCard
-              label="Purchase intents"
+              label={t("purchaseIntents")}
               value={totalIntents[0].value}
               accent="purple"
             />
             <StatCard
-              label="Conversations"
+              label={t("conversations")}
               value={totalThreads[0].value}
               accent="blue"
             />

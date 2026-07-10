@@ -1,6 +1,7 @@
 import { db } from "@/db";
 import { emailLogs, appSettings } from "@/db/schema";
 import { count, eq, sql, and, gte, desc } from "drizzle-orm";
+import { getTranslations, getLocale } from "next-intl/server";
 import { Mail, AlertTriangle, CheckCircle, Key } from "lucide-react";
 import { UpdateResendKeyForm } from "@/features/admin-dashboard/components/update-resend-key-form";
 import { UpdateResendFromEmailForm } from "@/features/admin-dashboard/components/update-resend-from-email-form";
@@ -14,6 +15,8 @@ export default async function AdminEmailsPage({
   searchParams: Promise<{ page?: string }>;
 }) {
   const { page: pageParam } = await searchParams;
+  const t = await getTranslations("admin.emails");
+  const locale = await getLocale();
   const currentPage = Math.max(1, Number(pageParam) || 1);
   const logOffset = (currentPage - 1) * LOG_PAGE_SIZE;
   const now = new Date();
@@ -104,33 +107,29 @@ export default async function AdminEmailsPage({
   const totalLogItems = Number(totalLogCountResult[0]?.count ?? 0);
   const totalLogPages = Math.ceil(totalLogItems / LOG_PAGE_SIZE);
 
-  const typeLabels: Record<string, string> = {
-    welcome: "Welcome",
-    message_notification: "Message Notification",
-    message_copy: "Message Copy",
-    intent_received: "Intent Received",
-    intent_status: "Intent Status",
-    password_reset: "Password Reset",
-  };
+  // Email types come from a fixed enum; unknown values fall back to the raw
+  // key so a new type never renders blank before its label is translated.
+  const typeLabel = (type: string) =>
+    t.has(`type.${type}`) ? t(`type.${type}`) : type;
 
   const statusBadge = (status: string) => {
     if (status === "sent") {
       return (
         <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400">
-          <CheckCircle className="h-3 w-3" /> Sent
+          <CheckCircle className="h-3 w-3" /> {t("statusSent")}
         </span>
       );
     }
     return (
       <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700 dark:bg-red-900/30 dark:text-red-400">
-        <AlertTriangle className="h-3 w-3" /> Failed
+        <AlertTriangle className="h-3 w-3" /> {t("statusFailed")}
       </span>
     );
   };
 
   const maskedKey = resendKeySetting?.value
     ? resendKeySetting.value.slice(0, 8) + "••••••••" + resendKeySetting.value.slice(-4)
-    : "(using environment variable)";
+    : t("usingEnvVariable");
 
   const fromEmailValue =
     resendFromEmailSetting?.value ??
@@ -140,9 +139,9 @@ export default async function AdminEmailsPage({
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold">Emails</h1>
+        <h1 className="text-2xl font-bold">{t("title")}</h1>
         <p className="text-muted-foreground text-sm mt-1">
-          Monitor email sending and manage Resend API configuration
+          {t("subtitle")}
         </p>
       </div>
 
@@ -152,7 +151,7 @@ export default async function AdminEmailsPage({
           <div className="flex items-center gap-3 mb-3">
             <Mail className="h-5 w-5 text-blue-500" />
             <h3 className="text-sm font-medium text-muted-foreground">
-              Emails Today
+              {t("emailsToday")}
             </h3>
           </div>
           <p className="text-3xl font-bold">{todayTotal}</p>
@@ -162,7 +161,7 @@ export default async function AdminEmailsPage({
           <div className="flex items-center gap-3 mb-3">
             <AlertTriangle className="h-5 w-5 text-red-500" />
             <h3 className="text-sm font-medium text-muted-foreground">
-              Failed Today
+              {t("failedToday")}
             </h3>
           </div>
           <p className="text-3xl font-bold">{todayFailedCount}</p>
@@ -172,13 +171,17 @@ export default async function AdminEmailsPage({
           <div className="flex items-center gap-3 mb-3">
             <Key className="h-5 w-5 text-amber-500" />
             <h3 className="text-sm font-medium text-muted-foreground">
-              API Key
+              {t("apiKey")}
             </h3>
           </div>
           <p className="text-sm font-mono truncate">{maskedKey}</p>
           {resendKeySetting?.updatedAt && (
             <p className="text-xs text-muted-foreground mt-1">
-              Updated: {new Date(resendKeySetting.updatedAt).toLocaleDateString()}
+              {t("updated", {
+                date: new Date(resendKeySetting.updatedAt).toLocaleDateString(
+                  locale
+                ),
+              })}
             </p>
           )}
         </div>
@@ -187,12 +190,12 @@ export default async function AdminEmailsPage({
       {/* Today by Type */}
       {todayByType.length > 0 && (
         <div className="rounded-xl border bg-card p-5 shadow-sm">
-          <h3 className="text-sm font-semibold mb-3">Today by Type</h3>
+          <h3 className="text-sm font-semibold mb-3">{t("todayByType")}</h3>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             {todayByType.map((row) => (
               <div key={row.type} className="text-center p-2 rounded-lg bg-muted/50">
                 <p className="text-xs text-muted-foreground">
-                  {typeLabels[row.type] ?? row.type}
+                  {typeLabel(row.type)}
                 </p>
                 <p className="text-xl font-bold mt-1">{Number(row.count)}</p>
               </div>
@@ -204,14 +207,14 @@ export default async function AdminEmailsPage({
       {/* Last 30 days */}
       {last30DaysDaily.length > 0 && (
         <div className="rounded-xl border bg-card p-5 shadow-sm">
-          <h3 className="text-sm font-semibold mb-3">Last 30 Days</h3>
+          <h3 className="text-sm font-semibold mb-3">{t("last30Days")}</h3>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b text-xs text-muted-foreground">
-                  <th className="text-left py-2 pr-4">Date</th>
-                  <th className="text-right py-2 px-2">Sent</th>
-                  <th className="text-right py-2 pl-2">Failed</th>
+                  <th className="text-left py-2 pr-4">{t("date")}</th>
+                  <th className="text-right py-2 px-2">{t("sent")}</th>
+                  <th className="text-right py-2 pl-2">{t("failed")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -234,19 +237,21 @@ export default async function AdminEmailsPage({
 
       {/* Recent Email Logs */}
       <div className="rounded-xl border bg-card p-5 shadow-sm">
-        <h3 className="text-sm font-semibold mb-3">Email Logs ({totalLogItems})</h3>
+        <h3 className="text-sm font-semibold mb-3">
+          {t("logsTitle", { count: totalLogItems })}
+        </h3>
         {recentLogs.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No emails sent yet.</p>
+          <p className="text-sm text-muted-foreground">{t("noEmails")}</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b text-xs text-muted-foreground">
-                  <th className="text-left py-2 pr-2">To</th>
-                  <th className="text-left py-2 px-2">Type</th>
-                  <th className="text-left py-2 px-2">Subject</th>
-                  <th className="text-left py-2 px-2">Status</th>
-                  <th className="text-right py-2 pl-2">Date</th>
+                  <th className="text-left py-2 pr-2">{t("table.to")}</th>
+                  <th className="text-left py-2 px-2">{t("table.type")}</th>
+                  <th className="text-left py-2 px-2">{t("table.subject")}</th>
+                  <th className="text-left py-2 px-2">{t("table.status")}</th>
+                  <th className="text-right py-2 pl-2">{t("table.date")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -256,14 +261,14 @@ export default async function AdminEmailsPage({
                       {log.toEmail}
                     </td>
                     <td className="py-1.5 px-2 text-xs">
-                      {typeLabels[log.type] ?? log.type}
+                      {typeLabel(log.type)}
                     </td>
                     <td className="py-1.5 px-2 max-w-[200px] truncate text-xs">
                       {log.subject}
                     </td>
                     <td className="py-1.5 px-2">{statusBadge(log.status)}</td>
                     <td className="text-right py-1.5 pl-2 text-xs text-muted-foreground whitespace-nowrap">
-                      {new Date(log.createdAt).toLocaleString()}
+                      {new Date(log.createdAt).toLocaleString(locale)}
                     </td>
                   </tr>
                 ))}
@@ -283,10 +288,10 @@ export default async function AdminEmailsPage({
       <div className="rounded-xl border bg-card p-5 shadow-sm">
         <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
           <Key className="h-4 w-4" />
-          Update Resend API Key
+          {t("updateKeyTitle")}
         </h3>
         <p className="text-xs text-muted-foreground mb-4">
-          Update the Resend API key used for sending emails. This takes effect immediately (cached for up to 5 minutes).
+          {t("updateKeyDesc")}
         </p>
         <UpdateResendKeyForm />
       </div>
@@ -295,13 +300,13 @@ export default async function AdminEmailsPage({
       <div className="rounded-xl border bg-card p-5 shadow-sm">
         <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
           <Mail className="h-4 w-4" />
-          Update Sender Address (From)
+          {t("updateFromTitle")}
         </h3>
         <p className="text-xs text-muted-foreground mb-2">
-          Current sender: <span className="font-mono">{fromEmailValue}</span>
+          {t("currentSender")} <span className="font-mono">{fromEmailValue}</span>
         </p>
         <p className="text-xs text-muted-foreground mb-4">
-          Use a verified domain sender (for example: SellingMyItems &lt;noreply@yourdomain.com&gt;).
+          {t("updateFromDesc")}
         </p>
         <UpdateResendFromEmailForm />
       </div>

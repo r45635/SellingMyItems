@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { updateResendApiKeyAction } from "@/features/admin-dashboard/actions";
 
 export function UpdateResendKeyForm() {
+  const t = useTranslations("admin");
   const [message, setMessage] = useState<{
     type: "success" | "error";
     text: string;
@@ -17,9 +19,9 @@ export function UpdateResendKeyForm() {
     const result = await updateResendApiKeyAction(formData);
 
     if (result.error) {
-      setMessage({ type: "error", text: result.error });
+      setMessage({ type: "error", text: t(`errors.${result.error}`) });
     } else {
-      setMessage({ type: "success", text: "API key updated successfully" });
+      setMessage({ type: "success", text: t("emails.keyUpdatedSuccess") });
     }
     setPending(false);
   }
@@ -30,7 +32,7 @@ export function UpdateResendKeyForm() {
         <input
           type="password"
           name="apiKey"
-          placeholder="re_xxxxxxx..."
+          placeholder={t("emails.updateKeyPlaceholder")}
           className="flex-1 rounded-md border bg-background px-3 py-2 text-sm"
           required
         />
@@ -39,7 +41,7 @@ export function UpdateResendKeyForm() {
           disabled={pending}
           className="rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background hover:bg-foreground/90 disabled:opacity-50"
         >
-          {pending ? "Updating..." : "Update Key"}
+          {pending ? t("emails.updating") : t("emails.updateKeyButton")}
         </button>
       </div>
       {message && (
