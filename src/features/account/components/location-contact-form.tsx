@@ -6,6 +6,7 @@ import { LocateFixed, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { COUNTRY_PHONE_PREFIXES } from "@/lib/phone";
+import { SUPPORTED_COUNTRIES } from "@/lib/countries";
 import {
   updateLocationContactAction,
   retryGeocodeLocationAction,
@@ -27,6 +28,7 @@ export function LocationContactForm({
   longitude,
 }: LocationContactFormProps) {
   const t = useTranslations("account");
+  const tCountries = useTranslations("countries");
   const [country, setCountry] = useState<string>(defaultCountry ?? "");
   const [postalValue, setPostalValue] = useState<string>(defaultPostalCode ?? "");
   const [geoStatus, setGeoStatus] = useState<"idle" | "loading" | "success" | "denied" | "error">("idle");
@@ -121,9 +123,11 @@ export function LocationContactForm({
               className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
             >
               <option value="">—</option>
-              <option value="US">United States</option>
-              <option value="CA">Canada</option>
-              <option value="FR">France</option>
+              {SUPPORTED_COUNTRIES.map((c) => (
+                <option key={c.code} value={c.code}>
+                  {tCountries(c.code)}
+                </option>
+              ))}
             </select>
           </div>
 

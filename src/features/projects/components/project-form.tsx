@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { createProjectAction, updateProjectAction } from "../actions";
+import { SUPPORTED_COUNTRIES } from "@/lib/countries";
 import { useState } from "react";
 import { LocateFixed } from "lucide-react";
 
@@ -21,6 +22,7 @@ interface ProjectFormProps {
 export function ProjectForm({ defaultValues, projectId }: ProjectFormProps) {
   const t = useTranslations();
   const tInv = useTranslations("invitations");
+  const tCountries = useTranslations("countries");
   const [serverError, setServerError] = useState("");
   const [visibility, setVisibility] = useState<"public" | "invitation_only">(
     defaultValues?.visibility ?? "public"
@@ -189,9 +191,11 @@ export function ProjectForm({ defaultValues, projectId }: ProjectFormProps) {
                 className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
               >
                 <option value="">—</option>
-                <option value="US">United States</option>
-                <option value="CA">Canada</option>
-                <option value="FR">France</option>
+                {SUPPORTED_COUNTRIES.map((c) => (
+                  <option key={c.code} value={c.code}>
+                    {tCountries(c.code)}
+                  </option>
+                ))}
               </select>
             </div>
             <div className="space-y-2">

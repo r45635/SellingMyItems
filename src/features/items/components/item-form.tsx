@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { itemFormSchema, ITEM_CONDITIONS, type ItemFormValues } from "@/lib/validations";
+import { type CurrencyCode } from "@/lib/currency";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -29,7 +30,7 @@ interface ItemFormProps {
   existingImages?: { url: string; hdUrl?: string | null; altText?: string | null }[];
   existingLinks?: { url: string; label?: string | null }[];
   /** Defaults to the seller's profile-level preference; falls back to USD. */
-  fallbackCurrency?: "USD" | "EUR" | "CAD";
+  fallbackCurrency?: CurrencyCode;
 }
 
 export function ItemForm({
@@ -204,7 +205,7 @@ export function ItemForm({
               <Label>{t("item.currency")}</Label>
               <Select
                 onValueChange={(value) =>
-                  setValue("currency", value as "USD" | "EUR" | "CAD")
+                  setValue("currency", value as CurrencyCode)
                 }
                 defaultValue={watch("currency")}
               >
@@ -215,6 +216,7 @@ export function ItemForm({
                   <SelectItem value="USD">USD ($)</SelectItem>
                   <SelectItem value="EUR">EUR (€)</SelectItem>
                   <SelectItem value="CAD">CAD (C$)</SelectItem>
+                  <SelectItem value="GBP">GBP (£)</SelectItem>
                 </SelectContent>
               </Select>
             </div>

@@ -814,5 +814,16 @@
       "fromEmailRequired": "L'adresse d'expéditeur est requise",
       "invalidFromFormat": "Format invalide. Utilisez email@domaine.com ou Nom affiché '<'email@domaine.com'>'"
     }
+  },
+  "countries": {
+    "US": "États-Unis",
+    "CA": "Canada",
+    "FR": "France",
+    "GB": "Royaume-Uni",
+    "DE": "Allemagne",
+    "ES": "Espagne",
+    "IT": "Italie",
+    "BE": "Belgique",
+    "NL": "Pays-Bas"
   }
 }

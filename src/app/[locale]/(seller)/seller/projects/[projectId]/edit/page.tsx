@@ -9,6 +9,7 @@ import { profiles, projectCollaborators, sellerAccounts } from "@/db/schema";
 import { and, eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { findSellerProject, isProjectOwner } from "@/lib/seller-accounts";
+import { type CountryCode } from "@/lib/countries";
 
 export default async function EditProjectPage({
   params,
@@ -69,9 +70,7 @@ export default async function EditProjectPage({
           cityArea: project.cityArea,
           description: project.description ?? "",
           countryCode: (project.countryCode ?? undefined) as
-            | "US"
-            | "CA"
-            | "FR"
+            | CountryCode
             | undefined,
           postalCode: project.postalCode ?? "",
           radiusKm: project.radiusKm ?? undefined,

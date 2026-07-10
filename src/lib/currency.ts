@@ -5,7 +5,7 @@
  * new currency.
  */
 
-export const CURRENCY_CODES = ["USD", "EUR", "CAD"] as const;
+export const CURRENCY_CODES = ["USD", "EUR", "CAD", "GBP"] as const;
 
 export type CurrencyCode = (typeof CURRENCY_CODES)[number];
 
@@ -20,6 +20,7 @@ const COUNTRY_DEFAULT_CURRENCY: Record<string, CurrencyCode> = {
   US: "USD",
   CA: "CAD",
   FR: "EUR",
+  GB: "GBP",
   DE: "EUR",
   ES: "EUR",
   IT: "EUR",
@@ -46,9 +47,10 @@ export function defaultCurrencyForCountry(
 // Exchange rates updated manually ~monthly. Used for display hints only —
 // no stored conversions, sellers always price in their own currency.
 export const FX_RATES: Record<CurrencyCode, Record<CurrencyCode, number>> = {
-  USD: { USD: 1, EUR: 0.92, CAD: 1.36 },
-  EUR: { USD: 1.09, EUR: 1,   CAD: 1.48 },
-  CAD: { USD: 0.74, EUR: 0.68, CAD: 1 },
+  USD: { USD: 1, EUR: 0.92, CAD: 1.36, GBP: 0.79 },
+  EUR: { USD: 1.09, EUR: 1,   CAD: 1.48, GBP: 0.86 },
+  CAD: { USD: 0.74, EUR: 0.68, CAD: 1,   GBP: 0.58 },
+  GBP: { USD: 1.27, EUR: 1.17, CAD: 1.72, GBP: 1 },
 };
 
 export function convertApprox(

@@ -19,6 +19,18 @@ describe("convertApprox", () => {
     expect(convertApprox(100, "EUR", "USD")).toBe(109);
   });
 
+  it("GBP→USD converts", () => {
+    expect(convertApprox(100, "GBP", "USD")).toBe(127);
+  });
+
+  it("USD→GBP converts", () => {
+    expect(convertApprox(100, "USD", "GBP")).toBe(79);
+  });
+
+  it("GBP→GBP returns same amount", () => {
+    expect(convertApprox(100, "GBP", "GBP")).toBe(100);
+  });
+
   it("rounds to integer", () => {
     expect(Number.isInteger(convertApprox(99, "USD", "EUR"))).toBe(true);
   });
@@ -28,6 +40,8 @@ describe("defaultCurrencyForCountry", () => {
   it("US → USD", () => expect(defaultCurrencyForCountry("US")).toBe("USD"));
   it("CA → CAD", () => expect(defaultCurrencyForCountry("CA")).toBe("CAD"));
   it("FR → EUR", () => expect(defaultCurrencyForCountry("FR")).toBe("EUR"));
+  it("GB → GBP", () => expect(defaultCurrencyForCountry("GB")).toBe("GBP"));
+  it("DE → EUR", () => expect(defaultCurrencyForCountry("DE")).toBe("EUR"));
   it("unknown → USD", () => expect(defaultCurrencyForCountry("XX")).toBe("USD"));
   it("null → USD", () => expect(defaultCurrencyForCountry(null)).toBe("USD"));
 });
@@ -43,10 +57,11 @@ describe("isCurrencyCode", () => {
     expect(isCurrencyCode("USD")).toBe(true);
     expect(isCurrencyCode("EUR")).toBe(true);
     expect(isCurrencyCode("CAD")).toBe(true);
+    expect(isCurrencyCode("GBP")).toBe(true);
   });
 
   it("rejects invalid values", () => {
-    expect(isCurrencyCode("GBP")).toBe(false);
+    expect(isCurrencyCode("JPY")).toBe(false);
     expect(isCurrencyCode(42)).toBe(false);
     expect(isCurrencyCode(null)).toBe(false);
   });

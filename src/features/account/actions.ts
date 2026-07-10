@@ -22,6 +22,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { isCurrencyCode, type CurrencyCode } from "@/lib/currency";
+import { isCountryCode, type CountryCode } from "@/lib/countries";
 import { geocode, type GeocodeFailureReason } from "@/lib/geocoding";
 import { normalizePhone, phoneMatchesCountry } from "@/lib/phone";
 import bcrypt from "bcryptjs";
@@ -50,19 +51,24 @@ function geocodeReasonToErrorSlug(reason: GeocodeFailureReason): string {
 
 const SUPPORTED_LOCALES = ["en", "fr"] as const;
 const SUPPORTED_DISTANCE_UNITS = ["km", "mi"] as const;
-const SUPPORTED_COUNTRIES = ["US", "CA", "FR"] as const;
-type CountryCode = (typeof SUPPORTED_COUNTRIES)[number];
 
 function clampCountry(value: unknown): CountryCode | null {
-  return SUPPORTED_COUNTRIES.includes(value as CountryCode)
-    ? (value as CountryCode)
-    : null;
+  return isCountryCode(value) ? value : null;
 }
 
+// Distance unit shown by default per country. Exhaustive over the
+// canonical CountryCode set — TS errors if a new country is added
+// without a unit. Imperial only for US + GB; metric everywhere else.
 const COUNTRY_DEFAULT_DISTANCE_UNIT: Record<CountryCode, "km" | "mi"> = {
   US: "mi",
   CA: "km",
   FR: "km",
+  GB: "mi",
+  DE: "km",
+  ES: "km",
+  IT: "km",
+  BE: "km",
+  NL: "km",
 };
 
 type AppLocale = (typeof SUPPORTED_LOCALES)[number];

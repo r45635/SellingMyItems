@@ -814,5 +814,16 @@
       "fromEmailRequired": "From email is required",
       "invalidFromFormat": "Invalid format. Use either email@domain.com or Display Name '<'email@domain.com'>'"
     }
+  },
+  "countries": {
+    "US": "United States",
+    "CA": "Canada",
+    "FR": "France",
+    "GB": "United Kingdom",
+    "DE": "Germany",
+    "ES": "Spain",
+    "IT": "Italy",
+    "BE": "Belgium",
+    "NL": "Netherlands"
   }
 }

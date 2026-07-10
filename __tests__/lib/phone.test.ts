@@ -22,8 +22,24 @@ describe("phoneMatchesCountry", () => {
     expect(phoneMatchesCountry("+16135550111", "CA")).toBe(true);
   });
 
-  it("returns true for unsupported country (no validation)", () => {
+  it("validates a valid UK number", () => {
     expect(phoneMatchesCountry("+44 7911 123456", "GB")).toBe(true);
+  });
+
+  it("rejects a truncated UK number", () => {
+    expect(phoneMatchesCountry("+4479", "GB")).toBe(false);
+  });
+
+  it("validates a valid German number", () => {
+    expect(phoneMatchesCountry("+49 151 23456789", "DE")).toBe(true);
+  });
+
+  it("rejects a truncated German number", () => {
+    expect(phoneMatchesCountry("+491", "DE")).toBe(false);
+  });
+
+  it("returns true for unsupported country (no validation)", () => {
+    expect(phoneMatchesCountry("+81 3 1234 5678", "JP")).toBe(true);
   });
 });
 

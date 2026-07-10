@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { SUPPORTED_COUNTRY_CODES } from "@/lib/countries";
+import { CURRENCY_CODES } from "@/lib/currency";
 
 // ─── Project Schemas ────────────────────────────────────────────────────────
 
@@ -15,7 +17,7 @@ export const projectFormSchema = z.object({
   // Approximate location for radius matching. countryCode + postalCode
   // are user-entered and resolved server-side via Nominatim. radiusKm
   // is optional — empty/null means "no seller-side restriction".
-  countryCode: z.enum(["US", "CA", "FR"]).optional(),
+  countryCode: z.enum(SUPPORTED_COUNTRY_CODES).optional(),
   postalCode: z.string().max(20).optional(),
   radiusKm: z.number().int().min(1).max(500).optional(),
 });
@@ -59,7 +61,7 @@ export const itemFormSchema = z.object({
   approximateAge: z.string().max(100).optional(),
   price: z.number().int().min(0).optional(),
   originalPrice: z.number().int().min(0).optional(),
-  currency: z.enum(["USD", "EUR", "CAD"]),
+  currency: z.enum(CURRENCY_CODES),
   notes: z.string().max(2000).optional(),
   categoryId: z.string().uuid().optional(),
   status: z.enum(ITEM_STATUSES),

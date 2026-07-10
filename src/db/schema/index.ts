@@ -84,7 +84,12 @@ export const emailVisibilityEnum = pgEnum("email_visibility", [
   "direct",
 ]);
 
-export const currencyCodeEnum = pgEnum("currency_code", ["USD", "EUR", "CAD"]);
+export const currencyCodeEnum = pgEnum("currency_code", [
+  "USD",
+  "EUR",
+  "CAD",
+  "GBP",
+]);
 
 // ─── Users / Profiles ───────────────────────────────────────────────────────
 
