@@ -10,6 +10,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { findSellerProject } from "@/lib/seller-accounts";
 import { siteConfig } from "@/config";
+import { getStorage, keyFromUrl } from "@/lib/storage";
 
 function revalidateSellerItemsPaths(projectIdOrSlug: string) {
   // Revalidate both the unlocalized path and every localized variant so the
@@ -195,19 +196,23 @@ export async function updateItemAction(formData: FormData) {
     hdUrlMap.set(url, submittedHdUrls[idx] || null);
   });
 
-  // Fetch current images from DB
+  // Fetch current images from DB. Include hdUrl so that, for rows we're about
+  // to remove, we can also delete their orphaned HD file from storage after
+  // the transaction commits.
   const currentImages = await db
-    .select({ id: itemImages.id, url: itemImages.url })
+    .select({ id: itemImages.id, url: itemImages.url, hdUrl: itemImages.hdUrl })
     .from(itemImages)
     .where(eq(itemImages.itemId, itemId));
 
   const currentUrlSet = new Set(currentImages.map((img) => img.url));
   const submittedUrlSet = new Set(submittedUrls);
 
-  // Images to remove (in DB but not in submitted list)
-  const toRemoveIds = currentImages
-    .filter((img) => !submittedUrlSet.has(img.url))
-    .map((img) => img.id);
+  // Images to remove (in DB but not in submitted list). Capture the full rows
+  // (url + hdUrl) BEFORE the delete so we still know which files to clean up.
+  const imagesToRemove = currentImages.filter(
+    (img) => !submittedUrlSet.has(img.url)
+  );
+  const toRemoveIds = imagesToRemove.map((img) => img.id);
 
   // Images to add (in submitted list but not in DB)
   const toAdd = submittedUrls.filter((url) => !currentUrlSet.has(url));
@@ -241,6 +246,26 @@ export async function updateItemAction(formData: FormData) {
         );
     }
   });
+
+  // Delete the removed images' files (STD + HD) from storage AFTER the
+  // transaction commits — never inside the tx, so a rollback can't leave the
+  // DB referencing files we already deleted. Best-effort: swallow errors.
+  if (imagesToRemove.length > 0) {
+    const storage = getStorage();
+    for (const img of imagesToRemove) {
+      const keys = [keyFromUrl(img.url)];
+      if (img.hdUrl) keys.push(keyFromUrl(img.hdUrl));
+      for (const key of keys) {
+        if (key && key !== "." && key !== "..") {
+          try {
+            await storage.delete(key);
+          } catch {
+            // File already gone or never existed — not a fatal error.
+          }
+        }
+      }
+    }
+  }
 
   // Update cover image
   if (submittedUrls.length > 0) {

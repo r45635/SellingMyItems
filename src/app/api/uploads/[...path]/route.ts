@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { readFile, stat } from "fs/promises";
 import path from "path";
+import { getStorage, keyFromUrl } from "@/lib/storage";
 
 const MIME_TYPES: Record<string, string> = {
   ".png": "image/png",
@@ -27,6 +28,12 @@ export async function GET(
   const mime = MIME_TYPES[ext];
   if (!mime) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  // Object store: redirect to the object's public URL. (With S3 the DB stores
+  // absolute URLs, so this route is mostly a compatibility fallback.)
+  if (process.env.STORAGE_PROVIDER === "s3") {
+    return NextResponse.redirect(getStorage().url(keyFromUrl(filename)), 302);
   }
 
   const filePath = path.join(process.cwd(), "public", "uploads", filename);

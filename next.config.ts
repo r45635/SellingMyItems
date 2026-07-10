@@ -17,6 +17,29 @@ const gitHash = (() => {
 })();
 const buildDate = `${new Date().toISOString().slice(0, 16).replace("T", " ")} UTC`;
 
+// When images are served from an object store (STORAGE_PROVIDER=s3), stored
+// URLs are absolute. Whitelist that host so next/image accepts them. Stays
+// empty for local storage (relative /uploads URLs need no remotePattern).
+const imageRemotePatterns: Array<{
+  protocol?: "http" | "https";
+  hostname: string;
+  port?: string;
+  pathname?: string;
+}> = [];
+if (process.env.STORAGE_PUBLIC_BASE_URL) {
+  try {
+    const base = new URL(process.env.STORAGE_PUBLIC_BASE_URL);
+    imageRemotePatterns.push({
+      protocol: base.protocol.replace(/:$/, "") as "http" | "https",
+      hostname: base.hostname,
+      port: base.port || undefined,
+      pathname: "/**",
+    });
+  } catch {
+    // Malformed STORAGE_PUBLIC_BASE_URL — leave remotePatterns empty.
+  }
+}
+
 const nextConfig: NextConfig = {
   output: "standalone",
   env: {
@@ -24,7 +47,7 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_BUILD_DATE: buildDate,
   },
   images: {
-    remotePatterns: [],
+    remotePatterns: imageRemotePatterns,
   },
   async headers() {
     return [

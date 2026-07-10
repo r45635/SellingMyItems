@@ -1,6 +1,5 @@
-import path from "path";
-import { readFile } from "fs/promises";
 import sharp from "sharp";
+import { getStorage, keyFromUrl } from "@/lib/storage";
 
 /**
  * Load an image referenced by `url` (typically `/uploads/<file>`) and return
@@ -38,9 +37,8 @@ async function readRawImage(
   if (url.startsWith("/uploads/")) {
     const rel = url.slice("/uploads/".length);
     if (rel.includes("..") || rel.includes("~")) return null;
-    const abs = path.join(process.cwd(), "public", "uploads", rel);
     try {
-      return await readFile(abs);
+      return await getStorage().get(keyFromUrl(url));
     } catch {
       return null;
     }

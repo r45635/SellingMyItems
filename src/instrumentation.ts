@@ -9,6 +9,19 @@ export async function register() {
 
   const required: string[] = ["DATABASE_URL"];
 
+  // Object-store storage needs its full config. Local storage (the default)
+  // requires nothing extra.
+  if (process.env.STORAGE_PROVIDER === "s3") {
+    required.push(
+      "STORAGE_BUCKET",
+      "STORAGE_ENDPOINT",
+      "STORAGE_REGION",
+      "STORAGE_ACCESS_KEY_ID",
+      "STORAGE_SECRET_ACCESS_KEY",
+      "STORAGE_PUBLIC_BASE_URL"
+    );
+  }
+
   const missing = required.filter((key) => !process.env[key]);
   if (missing.length > 0) {
     throw new Error(

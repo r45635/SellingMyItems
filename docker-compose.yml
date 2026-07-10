@@ -46,6 +46,16 @@ services:
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       RESEND_FROM_EMAIL: ${RESEND_FROM_EMAIL:-SellingMyItems <onboarding@resend.dev>}
       NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:5050}
+      # Storage provider. Unset/"local" (default) → files under public/uploads
+      # (persisted via the `uploads` volume). Set STORAGE_PROVIDER=s3 to use an
+      # S3/R2 object store, which requires the STORAGE_* vars below.
+      STORAGE_PROVIDER: ${STORAGE_PROVIDER:-}
+      STORAGE_BUCKET: ${STORAGE_BUCKET:-}
+      STORAGE_ENDPOINT: ${STORAGE_ENDPOINT:-}
+      STORAGE_REGION: ${STORAGE_REGION:-}
+      STORAGE_ACCESS_KEY_ID: ${STORAGE_ACCESS_KEY_ID:-}
+      STORAGE_SECRET_ACCESS_KEY: ${STORAGE_SECRET_ACCESS_KEY:-}
+      STORAGE_PUBLIC_BASE_URL: ${STORAGE_PUBLIC_BASE_URL:-}
     volumes:
       - uploads:/app/public/uploads
     depends_on:

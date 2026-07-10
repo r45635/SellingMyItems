@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { writeFile, mkdir } from "fs/promises";
-import path from "path";
 import { randomUUID } from "crypto";
 import sharp from "sharp";
 import { getUser } from "@/lib/auth";
 import { consumeRateLimit } from "@/lib/security/rate-limit";
+import { getStorage } from "@/lib/storage";
 
 const ALLOWED_TYPES = [
   "image/jpeg",
@@ -57,8 +56,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const uploadDir = path.join(process.cwd(), "public", "uploads");
-  await mkdir(uploadDir, { recursive: true });
+  const storage = getStorage();
 
   const urls: string[] = [];
   const hdUrls: string[] = [];
@@ -81,10 +79,8 @@ export async function POST(request: NextRequest) {
     }
 
     const uuid = randomUUID();
-    const stdFileName = `${uuid}.webp`;
-    const hdFileName = `${uuid}_hd.webp`;
-    const stdPath = path.join(uploadDir, stdFileName);
-    const hdPath = path.join(uploadDir, hdFileName);
+    const stdKey = `${uuid}.webp`;
+    const hdKey = `${uuid}_hd.webp`;
 
     const rawBuffer = Buffer.from(await file.arrayBuffer());
 
@@ -111,11 +107,11 @@ export async function POST(request: NextRequest) {
       .webp({ quality: HD_QUALITY, effort: 4 })
       .toBuffer();
 
-    await writeFile(stdPath, stdProcessed);
-    await writeFile(hdPath, hdProcessed);
+    await storage.put(stdKey, stdProcessed, "image/webp");
+    await storage.put(hdKey, hdProcessed, "image/webp");
 
-    urls.push(`/uploads/${stdFileName}`);
-    hdUrls.push(`/uploads/${hdFileName}`);
+    urls.push(storage.url(stdKey));
+    hdUrls.push(storage.url(hdKey));
   }
 
   return NextResponse.json({ urls, hdUrls });

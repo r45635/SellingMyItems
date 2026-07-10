@@ -26,8 +26,7 @@ import { isCountryCode, type CountryCode } from "@/lib/countries";
 import { geocode, type GeocodeFailureReason } from "@/lib/geocoding";
 import { normalizePhone, phoneMatchesCountry } from "@/lib/phone";
 import bcrypt from "bcryptjs";
-import { unlink } from "fs/promises";
-import path from "path";
+import { getStorage, keyFromUrl } from "@/lib/storage";
 import { cookies } from "next/headers";
 
 /**
@@ -500,14 +499,20 @@ export async function deleteAccountAction(formData: FormData) {
   let imagesCount = 0;
   if (itemIds.length > 0) {
     const imgs = await db
-      .select({ url: itemImages.url })
+      .select({ url: itemImages.url, hdUrl: itemImages.hdUrl })
       .from(itemImages)
       .where(inArray(itemImages.itemId, itemIds));
     const files = await db
       .select({ url: itemFiles.url })
       .from(itemFiles)
       .where(inArray(itemFiles.itemId, itemIds));
-    diskUrls.push(...imgs.map((r) => r.url), ...files.map((r) => r.url));
+    // Collect BOTH the standard and HD variant of every image (the HD file
+    // used to be orphaned), plus any item files.
+    for (const img of imgs) {
+      diskUrls.push(img.url);
+      if (img.hdUrl) diskUrls.push(img.hdUrl);
+    }
+    diskUrls.push(...files.map((r) => r.url));
     imagesCount = imgs.length + files.length;
   }
 
@@ -543,13 +548,13 @@ export async function deleteAccountAction(formData: FormData) {
     intentsCount: intentsRows.length,
   });
 
-  // Remove uploaded files from disk (best-effort; ignore missing files).
-  const uploadsDir = path.join(process.cwd(), "public", "uploads");
+  // Remove uploaded files from storage (best-effort; ignore missing files).
+  const storage = getStorage();
   for (const url of diskUrls) {
-    const filename = path.basename(url);
-    if (filename && filename !== "." && filename !== "..") {
+    const key = keyFromUrl(url);
+    if (key && key !== "." && key !== "..") {
       try {
-        await unlink(path.join(uploadsDir, filename));
+        await storage.delete(key);
       } catch {
         // File already gone or never existed — not a fatal error.
       }
