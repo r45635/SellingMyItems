@@ -1,5 +1,5 @@
 import { Link } from "@/i18n/navigation";
-import { buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button-variants";
 import { SmiLogo } from "@/components/shared/smi-logo";
 
 export default function LocaleNotFound() {
