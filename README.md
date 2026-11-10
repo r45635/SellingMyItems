@@ -576,20 +576,24 @@ Developer pushes to main
        ▼
 GitHub Actions (deploy.yml)
        │
-       ├── SSH into VPS
-       ├── Pre-deploy: prune images + build cache
-       ├── Disk space check (abort if < 1GB free)
-       ├── Ensure shared-proxy network exists
-       ├── git pull origin main
-       ├── docker compose build --no-cache
-       ├── docker compose up -d --force-recreate --remove-orphans
-       ├── Health check (docker exec sellingmyitems-app wget /api/health)
-       └── Post-deploy: prune unused images
+       ├── Build the image on the runner (buildx, GHA layer cache) — never on the VPS
+       ├── Stream it over SSH (pinned host key): gzip | docker load
+       └── scripts/deploy-remote.sh on the VPS:
+             ├── Deploy lock + disk space check (abort if < 1GB free)
+             ├── Fast-forward the checkout to the built commit (compose + migration scripts)
+             ├── Tag the running image :previous, the new one :latest
+             ├── docker compose up -d --no-build --force-recreate --remove-orphans
+             ├── Run DB migrations
+             ├── Health check (docker exec sellingmyitems-app wget /api/health)
+             └── Drop older image tags + dangling layers
 ```
+
+Rollback to the image that ran before the last deploy (on the host, in the app directory):
+`SMI_IMAGE_TAG=previous docker compose up -d --no-build app`. Migrations are not rolled back.
 
 ### Required GitHub Actions secrets
 
-`VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY`, and optionally `VPS_PORT` (default 22) and `VPS_APP_DIR`.
+`VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY`, `VPS_HOST_KEY` (the server's `ssh-ed25519 AAAA…` public key, pinned for SSH), and optionally `VPS_PORT` (default 22) and `VPS_APP_DIR`.
 
 ### Self-hosting
 

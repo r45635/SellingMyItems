@@ -29,6 +29,9 @@ services:
       retries: 5
 
   app:
+    # In production the image is built by GitHub Actions and loaded on the host
+    # (scripts/deploy-remote.sh runs `up --no-build`); `build:` is for local use.
+    image: sellingmyitems-app:${SMI_IMAGE_TAG:-latest}
     build:
       context: .
       args:
