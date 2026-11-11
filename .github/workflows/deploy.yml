@@ -84,4 +84,14 @@ jobs:
       - name: Deploy on the VPS
         env:
           VPS_APP_DIR: ${{ secrets.VPS_APP_DIR }}
-        run: ssh vps 'bash -s' -- "$TAG" "$VPS_APP_DIR" < scripts/deploy-remote.sh
+        # Upload the script as a file, then run it with stdin closed. Never `bash -s < script`:
+        # any command in it that reads stdin (`docker compose exec -T` in run-migrations.sh does)
+        # swallows the rest of the script, and bash then exits 0 with the health check never run.
+        # The DEPLOY_OK marker turns any such truncation into a failure.
+        run: |
+          set -euo pipefail
+          ssh vps 'umask 077; cat > /tmp/sellingmyitems-deploy-remote.sh' < scripts/deploy-remote.sh
+          # shellcheck disable=SC2029  # $TAG and $VPS_APP_DIR are meant to expand on the runner
+          out=$(ssh vps bash /tmp/sellingmyitems-deploy-remote.sh "$TAG" "$VPS_APP_DIR" < /dev/null 2>&1) || { echo "$out"; exit 1; }
+          echo "$out"
+          grep -qx "DEPLOY_OK $TAG" <<<"$out" || { echo "❌ deploy-remote.sh ended without DEPLOY_OK: truncated run"; exit 1; }

@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Runs ON the VPS, fed over SSH by .github/workflows/deploy.yml:
-#   ssh vps 'bash -s' -- <image-tag> [app-dir] < scripts/deploy-remote.sh
+# Runs ON the VPS, uploaded and started over SSH by .github/workflows/deploy.yml:
+#   bash /tmp/sellingmyitems-deploy-remote.sh <image-tag> [app-dir] < /dev/null
+# Never feed it through `bash -s` on stdin: a command reading stdin would eat the rest of it.
 # The image is built in GitHub Actions and already `docker load`ed here.
 # This script never builds: a small VPS must not run a Next.js build.
 set -euo pipefail
@@ -52,7 +53,7 @@ running=$(docker inspect -f '{{.Config.Image}}' sellingmyitems-app)
 # Idempotent — see scripts/run-migrations.sh.
 echo "==> Running DB migrations..."
 chmod +x scripts/run-migrations.sh
-./scripts/run-migrations.sh
+./scripts/run-migrations.sh < /dev/null   # its `docker compose exec -T` reads stdin
 
 # /api/health does a SELECT on profiles, so a missing column or enum drift fails here.
 # Use 127.0.0.1 not localhost — Alpine's busybox wget may prefer ::1 while Next.js binds 0.0.0.0.
@@ -83,3 +84,4 @@ docker builder prune -f >/dev/null 2>&1 || true   # leftovers from the era of bu
 
 echo "==> Disk space AFTER deploy:"
 df -h / | tail -1
+echo "DEPLOY_OK $TAG"   # the workflow requires this exact last line
